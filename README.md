@@ -9,72 +9,31 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
 ![Version](https://img.shields.io/badge/version-1.0.1-blue)
 
+> **VirusTotal says 2/71.** Arctic Wolf and SecureAge flag the installer; the other 69 engines, including Microsoft, Kaspersky, ESET, Bitdefender and Symantec, report clean. The two are heuristic verdicts on an unsigned, freshly built installer, not a detection of anything inside Flip. The section below explains the Windows warning and how to check your download.
+
 ---
 
 ## Windows will warn you - that is expected
 
-The first time you run the installer, Windows shows a blue box:
+The first run shows **"Windows protected your PC"** with *Publisher: Unknown publisher*. That means SmartScreen has no record of the file, not that it found something bad: the installer is not code-signed, so it starts at zero reputation.
 
-> **Windows protected your PC**
-> Microsoft Defender SmartScreen prevented an unrecognized app from starting.
-> App: `Flip_1.0.1_x64-setup.exe`
-> Publisher: Unknown publisher
+**To install:** click **Run anyway**. Some Windows versions hide that button behind **More info** first.
 
-This is not a virus detection. SmartScreen says *unrecognized*, not *detected*. The installer is not code-signed, so Windows has no publisher name to show, and an unsigned file starts with zero reputation - the warning stays until enough people have downloaded and run that exact file.
-
-**To install:** click **Run anyway**. On some Windows versions the button is hidden until you click **More info** first.
-
-The whole source is in this repository, so you can read or [build it yourself](#build-from-source) instead of trusting a binary.
-
-### Check the file is the one that was built
-
-Every release ships a SHA-256 hash. For 1.0.1:
-
-```
-11e146e751bbf95ba7d621ff0b814c0355fcae8e31749fb82ccfa29deadf47fd
-```
-
-Compare it after downloading - in PowerShell:
+**To check your download is the one built here:**
 
 ```powershell
 Get-FileHash .\Flip_1.0.1_x64-setup.exe -Algorithm SHA256
 ```
 
-or from a command prompt:
+For 1.0.1 that prints:
 
 ```
-certutil -hashfile Flip_1.0.1_x64-setup.exe SHA256
+11e146e751bbf95ba7d621ff0b814c0355fcae8e31749fb82ccfa29deadf47fd
 ```
 
-If the hash does not match, delete the file and download it again.
+**To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
 
-### Silence the warning for yourself
-
-Right-click the downloaded `.exe` > **Properties** > tick **Unblock** > **OK**. In PowerShell that is:
-
-```powershell
-Unblock-File .\Flip_1.0.1_x64-setup.exe
-```
-
-This clears Windows' "downloaded from the internet" mark for that file only. Everyone else still sees the warning.
-
-### Remove it for everyone: code signing
-
-The notice disappears for all users only when the installer is signed by a certificate SmartScreen recognizes. The realistic options, cheapest first:
-
-| Route | Cost | Publisher name users see |
-| --- | --- | --- |
-| [SignPath Foundation](https://signpath.org/) (open source) | free for OSI-licensed projects | SignPath Foundation |
-| Certum Open Source certificate | from about 49 EUR/year | Open Source Developer, plus your name |
-| Standard OV certificate (DigiCert, Sectigo, ...) | about 150-300 USD/year | your verified name |
-| EV certificate | 400+ USD/year | your verified name |
-
-Two things worth knowing before buying one:
-
-- Signing does not finish the job by itself. A freshly signed build is still a new file to SmartScreen, and Microsoft says a warning can persist for weeks until that hash or certificate gathers clean downloads. Reputation only carries over between releases signed by the same publisher.
-- An EV certificate no longer bypasses SmartScreen the way it used to; Microsoft stopped granting it immediate reputation in 2024.
-
-Flip is unsigned today, which is why the notice appears. Signing it is on the list for a future release.
+For everyone else it goes away only when the installer is signed, and even then a new build can warn until it has some downloads behind it. Free signing for open-source projects exists ([SignPath Foundation](https://signpath.org/)). Or skip binaries entirely and [build from source](#build-from-source).
 
 ---
 
