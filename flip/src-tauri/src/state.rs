@@ -32,6 +32,8 @@ pub struct Snapshot {
     pub sound: bool,
     /// False only before the first-run setup has been dealt with.
     pub onboarded: bool,
+    /// "extra", "normal" or "fast".
+    pub motion: String,
     /// The colour the user picked; the UI derives weights and ink from it.
     pub accent: String,
     /// Length of one focus session, in seconds.
@@ -92,6 +94,7 @@ impl Core {
             language: self.settings.language.clone(),
             sound: self.settings.sound,
             onboarded: self.settings.onboarded,
+            motion: self.settings.motion.clone(),
             accent: self.settings.accent.clone(),
             focus_secs: self.settings.focus_secs,
             dashboard: self.settings.dashboard.clone(),

@@ -4414,7 +4414,7 @@ input[type="checkbox"]:checked:hover,
 
 /* toasts fade up without touching their centring transform */
 .toast:not([hidden]) {
-  animation: flip-fade 0.24s ease both;
+  animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.25, 1) both;
 }
 
 /* controls answer the press */
@@ -4623,14 +4623,12 @@ input[type="checkbox"]:checked:hover,
   }
 }
 
-/* every subject on the timetable pushes up into place */
-@keyframes tt-push-up {
+/* --------------------------------------------------- motion: three modes */
+
+@keyframes modal-spring {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.95);
-  }
-  55% {
-    opacity: 1;
+    transform: scale(0.93) translateY(8px);
   }
   to {
     opacity: 1;
@@ -4638,20 +4636,148 @@ input[type="checkbox"]:checked:hover,
   }
 }
 
-.stagger .tt-cell.filled {
-  animation: tt-push-up 0.5s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+@keyframes soft-breathe {
+  0%,
+  100% {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+  50% {
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.11);
+  }
 }
 
-.stagger .tt-cell.filled:nth-child(2) { animation-delay: 24ms; }
-.stagger .tt-cell.filled:nth-child(3) { animation-delay: 48ms; }
-.stagger .tt-cell.filled:nth-child(4) { animation-delay: 72ms; }
-.stagger .tt-cell.filled:nth-child(5) { animation-delay: 96ms; }
-.stagger .tt-cell.filled:nth-child(6) { animation-delay: 120ms; }
-.stagger .tt-cell.filled:nth-child(7) { animation-delay: 144ms; }
-.stagger .tt-cell.filled:nth-child(8) { animation-delay: 168ms; }
+@keyframes week-shimmer {
+  from {
+    background-position: -200px 0;
+  }
+  to {
+    background-position: calc(100% + 200px) 0;
+  }
+}
+
+@keyframes tab-pop {
+  from {
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* always on, in every mode */
+.tab.active {
+  animation: tab-pop 0.26s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ---- Extra: longer, wider, with a little life at rest ---- */
+html[data-motion="extra"] .view.active {
+  animation-duration: 0.4s;
+}
+
+html[data-motion="extra"] .stagger .widget,
+html[data-motion="extra"] .stagger .task,
+html[data-motion="extra"] .stagger .day-col {
+  animation-duration: 0.58s;
+  animation-delay: 55ms;
+}
+
+html[data-motion="extra"] .stagger .tt-cell {
+  animation-duration: 0.62s;
+}
+
+html[data-motion="extra"] .modal {
+  animation: modal-spring 0.34s cubic-bezier(0.18, 0.9, 0.3, 1.1) both;
+}
+
+html[data-motion="extra"] .task:hover {
+  transform: translateY(-3px) scale(1.005);
+}
+
+html[data-motion="extra"] .widget:hover {
+  transform: translateY(-4px);
+}
+
+html[data-motion="extra"] #timer-group {
+  animation: soft-breathe 5.5s ease-in-out infinite;
+}
+
+html[data-motion="extra"] #week-bar-fill {
+  background-image: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 75%
+  );
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: week-shimmer 2.8s ease-in-out infinite;
+}
+
+/* ---- Fast: everything shortens, nothing loops ---- */
+html[data-motion="fast"] .view.active {
+  animation-duration: 0.14s;
+}
+
+html[data-motion="fast"] .stagger .widget,
+html[data-motion="fast"] .stagger .task,
+html[data-motion="fast"] .stagger .day-col,
+html[data-motion="fast"] .stagger .setting-row {
+  animation-duration: 0.2s;
+  animation-delay: 0ms;
+}
+
+html[data-motion="fast"] .stagger .tt-cell {
+  animation-duration: 0.22s;
+}
+
+html[data-motion="fast"] .modal {
+  animation-duration: 0.14s;
+}
+
+html[data-motion="fast"] .task,
+html[data-motion="fast"] .widget,
+html[data-motion="fast"] .tt-cell,
+html[data-motion="fast"] .btn,
+html[data-motion="fast"] .tab,
+html[data-motion="fast"] #week-bar-fill {
+  transition-duration: 0.1s;
+}
+
+html[data-motion="fast"] .tab.active {
+  animation: none;
+}
+
+html[data-motion="fast"] #timer-group,
+html[data-motion="fast"] #week-bar-fill {
+  animation: none;
+}
+
+html[data-motion="fast"] #week-bar-fill {
+  background-image: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .stagger .tt-cell.filled {
+  .tab.active,
+  html[data-motion="extra"] .modal,
+  html[data-motion="extra"] #timer-group,
+  html[data-motion="extra"] #week-bar-fill {
     animation: none;
+  }
+
+  html[data-motion="extra"] .task:hover,
+  html[data-motion="extra"] .widget:hover,
+  .btn:hover {
+    transform: none;
   }
 }

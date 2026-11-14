@@ -578,6 +578,41 @@
     });
     setupRow.appendChild(setupButton);
     generalPane.appendChild(setupRow);
+
+    var motionRow = Board.el("div", "setting-row");
+    var motionText = Board.el("div", "setting-text");
+    motionText.appendChild(Board.el("div", "setting-title", "Animations"));
+    motionText.appendChild(Board.el("div", "sub", "Extra is livelier, Fast is quieter"));
+    motionRow.appendChild(motionText);
+
+    var motionSeg = Board.el("div", "seg");
+    motionSeg.setAttribute("role", "group");
+    motionSeg.setAttribute("aria-label", "Animations");
+    var motionNow = String(snap.motion || "normal");
+    var motionButtons = [["extra", "Extra"], ["normal", "Normal"], ["fast", "Fast"]].map(function (option) {
+      var button = Board.el(
+        "button",
+        "seg-btn" + (option[0] === motionNow ? " active" : ""),
+        option[1]
+      );
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(option[0] === motionNow));
+      button.addEventListener("click", function () {
+        motionButtons.forEach(function (node) {
+          node.classList.toggle("active", node === button);
+          node.setAttribute("aria-pressed", String(node === button));
+        });
+        invoke("set_motion", { motion: option[0] })
+          .then(render)
+          .catch(function (err) {
+            console.error("flip: set_motion failed", err);
+          });
+      });
+      motionSeg.appendChild(button);
+      return button;
+    });
+    motionRow.appendChild(motionSeg);
+    generalPane.appendChild(motionRow);
     generalPane.appendChild(clockRow);
     generalPane.appendChild(accentRow);
 
@@ -641,8 +676,17 @@
 
   /* ------------------------------------------------------------------ render */
 
+  /* How lively the interface is: extra, normal or fast. */
+  function applyMotion(mode) {
+    var wanted = mode === "extra" || mode === "fast" ? mode : "normal";
+    if (document.documentElement.getAttribute("data-motion") !== wanted) {
+      document.documentElement.setAttribute("data-motion", wanted);
+    }
+  }
+
   function render(snap) {
     soundOn = snap.sound !== false;
+    applyMotion(snap.motion);
     if (!snap) return;
     lastSnapshot = snap;
     applyTheme(snap.theme);

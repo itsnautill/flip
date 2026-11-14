@@ -173,6 +173,27 @@ pub fn set_onboarded(core: State<'_, SharedCore>, done: bool) -> Snapshot {
 }
 
 #[tauri::command]
+pub fn set_motion(core: State<'_, SharedCore>, motion: String) -> Snapshot {
+    let mut c = lock(core.inner());
+    let motion = match motion.as_str() {
+        "extra" => "extra",
+        "fast" => "fast",
+        _ => "normal",
+    }
+    .to_string();
+    if c.settings.motion != motion {
+        c.settings.motion = motion;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+#[tauri::command]
 pub fn set_hour_format(core: State<'_, SharedCore>, use12h: bool) -> Snapshot {
     let mut c = lock(core.inner());
     if c.settings.use_12h != use12h {

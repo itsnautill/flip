@@ -137,6 +137,7 @@ pub fn run() {
             commands::set_language,
             commands::set_sound,
             commands::set_onboarded,
+            commands::set_motion,
             commands::open_url,
             commands::app_version,
             commands::save_template,

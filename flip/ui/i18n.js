@@ -201,6 +201,11 @@
     "Walk through the basics again": "Xem lại các bước cơ bản",
     "Welcome to Flip": "Chào mừng đến với Flip",
     "Choose your language": "Chọn ngôn ngữ",
+    "Animations": "Chuyển động",
+    "Extra is livelier, Fast is quieter": "Nhiều thì sinh động hơn, Nhanh thì nhẹ nhàng hơn",
+    "Extra": "Nhiều",
+    "Normal": "Vừa",
+    "Fast": "Nhanh",
     "You can switch any time in Settings.": "Có thể đổi bất cứ lúc nào trong Cài đặt.",
     "A quiet place to study": "Một góc yên tĩnh để học",
     "Your timetable, tasks and focus time, in one window that stays out of the way. Four short steps and you're in.":

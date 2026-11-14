@@ -65,6 +65,8 @@ pub struct Settings {
     pub sound: bool,
     /// False until the first-run setup has been finished or skipped.
     pub onboarded: bool,
+    /// "extra", "normal" or "fast" — how lively the interface feels.
+    pub motion: String,
     /// Any colour the user picked, `#RRGGBB`. The UI adapts its weight per theme.
     pub accent: String,
     /// Length of a focus session, in seconds.
@@ -81,6 +83,7 @@ impl Default for Settings {
             language: "en".into(),
             sound: true,
             onboarded: false,
+            motion: "normal".into(),
             accent: DEFAULT_ACCENT.into(),
             focus_secs: DEFAULT_FOCUS_SECS,
             dashboard: Dashboard::default(),
