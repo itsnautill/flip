@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
 
 ---
 
@@ -17,7 +17,7 @@ The first time you run the installer, Windows shows a blue box:
 
 > **Windows protected your PC**
 > Microsoft Defender SmartScreen prevented an unrecognized app from starting.
-> App: `Flip_1.0.0_x64-setup.exe`
+> App: `Flip_1.0.1_x64-setup.exe`
 > Publisher: Unknown publisher
 
 This is not a virus detection. SmartScreen says *unrecognized*, not *detected*. The installer is not code-signed, so Windows has no publisher name to show, and an unsigned file starts with zero reputation - the warning stays until enough people have downloaded and run that exact file.
@@ -28,22 +28,22 @@ The whole source is in this repository, so you can read or [build it yourself](#
 
 ### Check the file is the one that was built
 
-Every release ships a SHA-256 hash. For 1.0.0:
+Every release ships a SHA-256 hash. For 1.0.1:
 
 ```
-cabbe10aec1067785875f6b6dd3670a3e5b2c5f95cc46aabf9f3b421db759f4a
+11e146e751bbf95ba7d621ff0b814c0355fcae8e31749fb82ccfa29deadf47fd
 ```
 
 Compare it after downloading - in PowerShell:
 
 ```powershell
-Get-FileHash .\Flip_1.0.0_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Flip_1.0.1_x64-setup.exe -Algorithm SHA256
 ```
 
 or from a command prompt:
 
 ```
-certutil -hashfile Flip_1.0.0_x64-setup.exe SHA256
+certutil -hashfile Flip_1.0.1_x64-setup.exe SHA256
 ```
 
 If the hash does not match, delete the file and download it again.
@@ -53,7 +53,7 @@ If the hash does not match, delete the file and download it again.
 Right-click the downloaded `.exe` > **Properties** > tick **Unblock** > **OK**. In PowerShell that is:
 
 ```powershell
-Unblock-File .\Flip_1.0.0_x64-setup.exe
+Unblock-File .\Flip_1.0.1_x64-setup.exe
 ```
 
 This clears Windows' "downloaded from the internet" mark for that file only. Everyone else still sees the warning.
@@ -142,7 +142,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_1.0.0_x64-setup.exe` from [Releases](../../releases/latest)
+1. Download `Flip_1.0.1_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed - see [Windows will warn you](#windows-will-warn-you---that-is-expected) for why, how to check the file, and how to get rid of the notice
 
