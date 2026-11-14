@@ -1,0 +1,21 @@
+# Rust build output (large: ~5 GB, never commit it)
+flip/src-tauri/target/
+target/
+
+# freebuff's own markers
+.freebuff/
+
+# editors and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# logs and local scratch files
+*.log
+*.tmp
+
+# never commit update signing keys if you add them later
+*.key
+*.key.pub

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Flip",
+  "version": "0.1.0",
+  "identifier": "com.nautill.flip",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "security": { "csp": null },
+    "windows": [{
+      "label": "main", "title": "Flip",
+      "width": 960, "height": 600, "minWidth": 480, "minHeight": 300,
+      "center": true, "resizable": true, "fullscreen": false,
+      "titleBarStyle": "Overlay", "hiddenTitle": true,
+      "dragDropEnabled": false
+    }]
+  },
+  "bundle": {
+    "active": true, "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+  }
+}

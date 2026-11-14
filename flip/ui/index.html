@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beige">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Flip</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="i18n.js" defer></script>
+  <script src="flipcard.js" defer></script>
+  <script src="board.js" defer></script>
+  <script src="xlsx.js" defer></script>
+  <script src="timetable.js" defer></script>
+  <script src="tasks.js" defer></script>
+  <script src="dashboard.js" defer></script>
+  <script src="data.js" defer></script>
+  <script src="update.js" defer></script>
+  <script src="setup.js" defer></script>
+  <script src="about.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header id="chrome" data-tauri-drag-region>
+    <span class="brand">Flip</span>
+    <nav id="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" role="tab" id="tab-dashboard" data-view="dashboard" aria-selected="true" aria-controls="dashboard">Dashboard</button>
+      <button class="tab" role="tab" id="tab-timer" data-view="timer" aria-selected="false" aria-controls="stage">Timer</button>
+      <button class="tab" role="tab" id="tab-timetable" data-view="timetable" aria-selected="false" aria-controls="timetable">Timetable</button>
+      <button class="tab" role="tab" id="tab-tasks" data-view="tasks" aria-selected="false" aria-controls="tasks">Tasks</button>
+    </nav>
+    <div class="chrome-right">
+      <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen (F11)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
+        </svg>
+      </button>
+      <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="3.2"></circle>
+          <path d="M19.4 13.9a1.6 1.6 0 0 0 .32 1.76l.06.06a1.9 1.9 0 1 1-2.7 2.7l-.06-.06a1.6 1.6 0 0 0-1.76-.32 1.6 1.6 0 0 0-.97 1.47V20a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.76.32l-.06.06a1.9 1.9 0 1 1-2.7-2.7l.06-.06a1.6 1.6 0 0 0 .32-1.76 1.6 1.6 0 0 0-1.47-.97H4a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.76l-.06-.06a1.9 1.9 0 1 1 2.7-2.7l.06.06a1.6 1.6 0 0 0 1.76.32H9.8a1.6 1.6 0 0 0 .97-1.47V4a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 .97 1.47 1.6 1.6 0 0 0 1.76-.32l.06-.06a1.9 1.9 0 1 1 2.7 2.7l-.06.06a1.6 1.6 0 0 0-.32 1.76V9.8a1.6 1.6 0 0 0 1.47.97H20a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.47.97z"></path>
+        </svg>
+      </button>
+      <button id="shortcuts-btn" class="icon-btn text-icon" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" aria-haspopup="dialog">?</button>
+      <button id="theme-btn" class="icon-btn" type="button" aria-label="Switch colour theme" title="Switch colour theme">◐</button>
+      <span class="drag-fill" data-tauri-drag-region></span>
+    </div>
+  </header>
+
+  <div id="app">
+    <!-- Dashboard: the hub, built from widgets the user can rearrange -->
+    <section id="dashboard" class="view active" data-view="dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="view-head dash-head">
+        <div class="view-title">
+          <h1 id="dash-greeting">Today</h1>
+          <p class="sub" id="dash-sub">—</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn small" type="button" id="dash-arrange" aria-pressed="false">Arrange</button>
+          <button class="btn small" type="button" id="dash-reset" hidden>Reset layout</button>
+          <button class="btn primary" type="button" id="dash-new-task">New task</button>
+        </div>
+      </div>
+      <div id="dash-grid" class="dash-grid"></div>
+    </section>
+
+    <!-- Timer: the original flip display -->
+    <main id="stage" class="view" data-view="timer" role="tabpanel" aria-labelledby="tab-timer" hidden>
+      <div id="clock-group" class="group l2 active"></div>
+      <div id="timer-group" class="group l2"></div>
+      <div id="timer-tools">
+        <button id="timer-set" class="icon-btn" type="button" aria-label="Set timer duration" title="Set timer (S)">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="13.5" r="7"></circle>
+            <path d="M12 10v4l2.6 1.6M9.5 2.5h5M12 2.5V6"></path>
+          </svg>
+        </button>
+        <button id="timer-clear" class="icon-btn" type="button" aria-label="Reset timer" title="Reset timer (R)">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
+            <path d="M20 4.5V10h-5.5"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="dots">
+        <i class="dot active"></i>
+        <i class="dot"></i>
+      </div>
+    </main>
+
+    <!-- Timetable: one column per day, one row per period -->
+    <section id="timetable" class="view" data-view="timetable" role="tabpanel" aria-labelledby="tab-timetable" hidden>
+      <div class="view-head">
+        <div class="view-title">
+          <h1>Timetable</h1>
+          <p class="sub">Click a slot to add a subject. Click a filled slot to open its tasks. :)</p>
+        </div>
+        <div class="head-actions">
+          <label class="check"><input type="checkbox" id="tt-weekend"> <span>Weekend</span></label>
+          <button class="btn" type="button" id="tt-import" title="Import an .xlsx timetable — hold Shift to save a template">Import</button>
+          <button class="btn" type="button" id="tt-add-period">Add row</button>
+          <button class="btn danger" type="button" id="tt-reset">Reset</button>
+          <input type="file" id="tt-file" accept=".xlsx" hidden>
+        </div>
+      </div>
+      <div class="tt-scroll">
+        <div id="tt-grid" class="tt-grid" role="grid" aria-label="Weekly timetable"></div>
+      </div>
+    </section>
+
+    <!-- Tasks: week board, list and smart suggestions -->
+    <section id="tasks" class="view" data-view="tasks" role="tabpanel" aria-labelledby="tab-tasks" hidden>
+      <div class="view-head">
+        <div class="view-title">
+          <h1>Tasks</h1>
+          <p class="sub">Drag a card to another day, or use ⋯ to reschedule it without dragging.</p>
+        </div>
+        <div class="head-actions">
+          <label class="field inline">
+            <span>Subject</span>
+            <select id="filter-subject"><option value="">All subjects</option></select>
+          </label>
+          <label class="check"><input type="checkbox" id="hide-done"> <span>Hide done</span></label>
+          <label class="check"><input type="checkbox" id="week-sun"> <span>Week starts Sunday</span></label>
+          <div class="seg" role="group" aria-label="Task layout">
+            <button class="seg-btn active" type="button" id="view-board" aria-pressed="true">Week</button>
+            <button class="seg-btn" type="button" id="view-list" aria-pressed="false">List</button>
+          </div>
+          <button class="btn primary" type="button" id="new-task">New task</button>
+        </div>
+      </div>
+
+      <div class="week-bar">
+        <button class="icon-btn" type="button" id="week-prev" aria-label="Previous week">‹</button>
+        <strong id="week-range">—</strong>
+        <button class="btn small" type="button" id="week-today">Today</button>
+        <button class="icon-btn" type="button" id="week-next" aria-label="Next week">›</button>
+        <div class="progress">
+          <div class="track"><span id="week-bar-fill"></span></div>
+          <span id="week-count">0 of 0 done this week</span>
+        </div>
+      </div>
+
+      <div id="suggestions" class="suggestions"></div>
+      <div id="task-board" class="task-board"></div>
+      <div id="task-list" class="task-list" hidden></div>
+    </section>
+  </div>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
