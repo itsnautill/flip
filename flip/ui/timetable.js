@@ -8,7 +8,7 @@
   var importButton = null;
   var fileInput = null;
 
-  var EMPTY_TEXT = "No subjects yet — click a slot to add one.";
+  var EMPTY_TEXT = "No subjects yet - click a slot to add one.";
 
   function nowMinutes() {
     var now = new Date();
@@ -383,7 +383,7 @@
           end: endInput.value,
           isBreak: breakInput.checked,
         }).then(function (ok) {
-          return ok ? null : "That time was not saved — check the message at the bottom.";
+          return ok ? null : "That time was not saved - check the message at the bottom.";
         });
       },
       onDelete: function () {

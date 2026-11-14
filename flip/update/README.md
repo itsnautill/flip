@@ -29,9 +29,9 @@ var MANIFEST_URL = "https://github.com/itsnautill/flip/releases/latest/download/
 
 Good free homes, easiest first:
 
-- **GitHub Releases** — attach `latest.json` and the installer to a release,
+- **GitHub Releases** - attach `latest.json` and the installer to a release,
   then use the raw asset URL.
-- **GitHub Pages / Cloudflare Pages / Netlify** — drop both files in a folder.
+- **GitHub Pages / Cloudflare Pages / Netlify** - drop both files in a folder.
 - Anything that serves `application/json` over HTTPS.
 
 The address must be `https` for real use. `http` only makes sense against your
@@ -86,5 +86,5 @@ that is Tauri's `tauri-plugin-updater`: you generate a signing keypair, add the
 public key and an endpoint to `tauri.conf.json`, build with
 `createUpdaterArtifacts` enabled, and sign each release with the private key
 (`TAURI_SIGNING_PRIVATE_KEY`). It is more setup, and the private key becomes
-something you must never lose — which is why the simpler flow above is the
+something you must never lose - which is why the simpler flow above is the
 starting point.

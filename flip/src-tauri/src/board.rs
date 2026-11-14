@@ -604,7 +604,7 @@ impl Board {
         }
         match self.periods.iter().find(|p| p.id == period_id) {
             Some(period) if !period.is_break => {}
-            Some(_) => return Err("That row is a break — pick a class period.".into()),
+            Some(_) => return Err("That row is a break - pick a class period.".into()),
             None => return Err("That period no longer exists.".into()),
         }
         let name = name.trim();

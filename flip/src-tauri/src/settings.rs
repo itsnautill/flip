@@ -65,7 +65,7 @@ pub struct Settings {
     pub sound: bool,
     /// False until the first-run setup has been finished or skipped.
     pub onboarded: bool,
-    /// "extra", "normal" or "fast" — how lively the interface feels.
+    /// "extra", "normal" or "fast" - how lively the interface feels.
     pub motion: String,
     /// Any colour the user picked, `#RRGGBB`. The UI adapts its weight per theme.
     pub accent: String,

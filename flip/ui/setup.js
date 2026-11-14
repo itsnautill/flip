@@ -130,7 +130,7 @@
     var wrap = el("div", "setup-step");
     wrap.appendChild(el("p", "setup-kicker", "Step 2"));
     wrap.appendChild(el("h2", "setup-title", "Pick a look"));
-    wrap.appendChild(el("p", "sub", "Change it later in Settings — nothing here is permanent."));
+    wrap.appendChild(el("p", "sub", "Change it later in Settings - nothing here is permanent."));
 
     var themeRow = el("div", "setup-control");
     themeRow.appendChild(el("span", "setup-label", "Theme"));

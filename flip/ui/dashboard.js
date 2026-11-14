@@ -161,7 +161,7 @@
       if (info.kind === "free") {
         body.appendChild(el("p", "hero-eyebrow", "Nothing scheduled"));
         body.appendChild(el("p", "hero-title", "No classes today"));
-        body.appendChild(el("p", "dash-hint", "Enjoy the quiet — or get ahead on a task."));
+        body.appendChild(el("p", "dash-hint", "Enjoy the quiet - or get ahead on a task."));
         body.appendChild(actionLink("Open timetable", "timetable"));
         return;
       }
@@ -518,7 +518,7 @@
     var hidden = hiddenList().slice();
     if (hidden.indexOf(id) < 0) hidden.push(id);
     saveLayout(currentOrder(), hidden);
-    Board.toast("Widget hidden — Reset layout brings it back");
+    Board.toast("Widget hidden - Reset layout brings it back");
   }
 
   function resetLayout() {

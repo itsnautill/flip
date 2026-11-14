@@ -1,4 +1,4 @@
-/* FlipCard: four-layer flip animation. Never times anything with setTimeout —
+/* FlipCard: four-layer flip animation. Never times anything with setTimeout -
    the end state is driven by the flap-bottom animationend event. */
 (function () {
   "use strict";

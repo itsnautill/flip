@@ -2,7 +2,7 @@
 
 A quiet study dashboard for Windows: a flip clock, a timer that gets out of your way, a timetable you can import from Excel, and a week board for the work in between.
 
-Built with Rust and Tauri 2. Everything stays on your machine — no account, no sync, no telemetry.
+Built with Rust and Tauri 2. Everything stays on your machine - no account, no sync, no telemetry.
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
@@ -41,7 +41,7 @@ Both views have 12- and 24-hour formats, and the window can go fullscreen for a 
 
 A week grid of periods and days, colour-coded per subject, with the current period and the next one marked so you can see where you are in the day.
 
-- Fill cells by clicking, or **import a whole timetable from an `.xlsx`** file (Flip reads the first worksheet with its own ZIP + XML reader — no Excel required, no extra dependency)
+- Fill cells by clicking, or **import a whole timetable from an `.xlsx`** file (Flip reads the first worksheet with its own ZIP + XML reader - no Excel required, no extra dependency)
 - Export a ready-to-fill template spreadsheet
 - Hide weekends to fit a five-day week
 - Duplicate one subject across every cell that shares its name
@@ -56,7 +56,7 @@ A week board of cards you can drag between days, or a flat list when you want to
 
 ### Dashboard
 
-Six widgets on one page: the next lesson, today's list, what is due, tasks in flight, the current focus session, and a small stats card. The greeting follows the clock — morning, afternoon or evening. Drag them to reorder, hide the ones you do not want.
+Six widgets on one page: the next lesson, today's list, what is due, tasks in flight, the current focus session, and a small stats card. The greeting follows the clock - morning, afternoon or evening. Drag them to reorder, hide the ones you do not want.
 
 ### Settings
 
@@ -66,7 +66,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 | Appearance | Light and dark, eight accent colours |
 | Data | Backups, restore, export |
 
-**Animations** has three modes — *Extra*, *Normal* and *Fast* — so the interface can feel lively or stay nearly still. `prefers-reduced-motion` always wins.
+**Animations** has three modes - *Extra*, *Normal* and *Fast* - so the interface can feel lively or stay nearly still. `prefers-reduced-motion` always wins.
 
 **Language** switches the whole interface between English and Vietnamese, including dates, durations and plural forms (`14 Thg 11`, `1g 30p`).
 
@@ -75,7 +75,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 ## Install
 
 1. Download `Flip_0.1.0_x64-setup.exe` from [Releases](../../releases/latest)
-2. Run it — it installs per user, no administrator prompt
+2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed. Choose **More info → Run anyway**
 
 Requires Windows 10 or 11 with WebView2 (already present on current Windows; the installer adds it if missing).
@@ -88,10 +88,10 @@ Uninstalling from **Settings → Apps** leaves your data untouched.
 
 A four-step setup appears the first time you open Flip:
 
-1. **Choose your language** — English or Tiếng Việt, switches instantly
-2. **Pick a look** — light or dark, and one of eight accent colours
-3. **Your timetable** — weekdays shown, periods per day, sound on or off
-4. **All set** — straight into the app, or into the timetable to start filling it
+1. **Choose your language** - English or Tiếng Việt, switches instantly
+2. **Pick a look** - light or dark, and one of eight accent colours
+3. **Your timetable** - weekdays shown, periods per day, sound on or off
+4. **All set** - straight into the app, or into the timetable to start filling it
 
 Every step can be skipped, and **Settings → General → Setup** runs it again at any time.
 
@@ -146,10 +146,10 @@ Flip checks a small manifest and compares dotted versions:
 https://github.com/itsnautill/flip/releases/latest/download/latest.json
 ```
 
-**Settings → General → Updates** shows the current version and, if one exists, what changed in the new one. The download opens in your browser — Flip does not replace its own files.
+**Settings → General → Updates** shows the current version and, if one exists, what changed in the new one. The download opens in your browser - Flip does not replace its own files.
 
-For the full picture — how the comparison works, where to host the manifest, how to test it
-locally against `python -m http.server`, and what a signed in-place updater would take —
+For the full picture - how the comparison works, where to host the manifest, how to test it
+locally against `python -m http.server`, and what a signed in-place updater would take -
 see [`flip/update/README.md`](flip/update/README.md).
 
 ### Publishing a release
@@ -188,7 +188,7 @@ Because the manifest is fetched from `releases/latest/download/`, the URL in the
 cargo install tauri-cli --version "^2"
 ```
 
-There is no npm step — the frontend is plain JavaScript served straight from `flip/ui`.
+There is no npm step - the frontend is plain JavaScript served straight from `flip/ui`.
 
 ```bash
 git clone https://github.com/itsnautill/flip.git
@@ -238,7 +238,7 @@ flip/
     └── README.md         release notes for publishers
 ```
 
-Two rules keep the code honest: **Rust is the only thing that writes to disk**, and **the frontend never holds state that matters** — it renders snapshots and asks Rust to change things.
+Two rules keep the code honest: **Rust is the only thing that writes to disk**, and **the frontend never holds state that matters** - it renders snapshots and asks Rust to change things.
 
 ---
 
@@ -270,4 +270,4 @@ The frontend has no test runner by design; it is verified by building and using 
 
 Made by [@itsnautill](https://github.com/itsnautill). Built on [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) and [Chrono](https://github.com/chronotope/chrono).
 
-Sound effects are synthesised at runtime with the Web Audio API — there are no audio files in the repository.
+Sound effects are synthesised at runtime with the Web Audio API - there are no audio files in the repository.

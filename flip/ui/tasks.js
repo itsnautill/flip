@@ -33,7 +33,7 @@
 
     emptyEl = document.createElement("p");
     emptyEl.className = "empty";
-    emptyEl.textContent = "No tasks yet — add one with New task, or click a subject on the timetable.";
+    emptyEl.textContent = "No tasks yet - add one with New task, or click a subject on the timetable.";
     boardEl.parentNode.insertBefore(emptyEl, boardEl);
 
     document.getElementById("view-board").addEventListener("click", function () {
