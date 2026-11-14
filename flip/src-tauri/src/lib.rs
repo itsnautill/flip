@@ -19,19 +19,18 @@ use state::{Core, Mode, SharedCore};
 const DATA_DIR: &str = "FlipData";
 const DATA_FILES: [&str; 2] = ["settings.json", "board.json"];
 
-/// `C:\Users\<name>\AppData\Local\Roaming\FlipData`, taken from the environment
-/// rather than a hard-coded user name.
+/// `C:\Users\<name>\AppData\Roaming\FlipData`, taken from the environment rather
+/// than a hard-coded user name.
 #[cfg(windows)]
 fn preferred_data_dir() -> Option<PathBuf> {
-    // %LOCALAPPDATA% is `…\AppData\Local`.
-    if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-        return Some(PathBuf::from(local).join("Roaming").join(DATA_DIR));
+    // %APPDATA% is `…\AppData\Roaming`.
+    if let Some(roaming) = std::env::var_os("APPDATA") {
+        return Some(PathBuf::from(roaming).join(DATA_DIR));
     }
     if let Some(profile) = std::env::var_os("USERPROFILE") {
         return Some(
             PathBuf::from(profile)
                 .join("AppData")
-                .join("Local")
                 .join("Roaming")
                 .join(DATA_DIR),
         );
@@ -44,23 +43,38 @@ fn preferred_data_dir() -> Option<PathBuf> {
     None
 }
 
-/// The `…\AppData\FlipData` folder an earlier build used.
+/// Folders earlier builds wrote to, newest first: 0.1.0 - 0.1.3 used
+/// `…\AppData\Local\Roaming`, which is not a folder Windows really has, and the
+/// very first builds used `…\AppData\FlipData`.
 #[cfg(windows)]
-fn previous_data_dir() -> Option<PathBuf> {
-    if let Some(profile) = std::env::var_os("USERPROFILE") {
-        return Some(PathBuf::from(profile).join("AppData").join(DATA_DIR));
+fn legacy_data_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+        dirs.push(PathBuf::from(local).join("Roaming").join(DATA_DIR));
     }
-    None
+    if let Some(profile) = std::env::var_os("USERPROFILE") {
+        dirs.push(PathBuf::from(&profile).join("AppData").join(DATA_DIR));
+        if std::env::var_os("LOCALAPPDATA").is_none() {
+            dirs.push(
+                PathBuf::from(&profile)
+                    .join("AppData")
+                    .join("Local")
+                    .join("Roaming")
+                    .join(DATA_DIR),
+            );
+        }
+    }
+    dirs
 }
 
 #[cfg(not(windows))]
-fn previous_data_dir() -> Option<PathBuf> {
-    None
+fn legacy_data_dirs() -> Vec<PathBuf> {
+    Vec::new()
 }
 
-/// Adopts the files from older homes, newest first, the first time Flip starts
-/// with the current one. A file already in the current folder always wins, and
-/// the older folders are left in place as backups.
+/// Moves the files from an older home into the current one the first time Flip
+/// starts with it. A file already in the current folder always wins, and a file
+/// that has been copied is removed from the old folder so there is one truth.
 fn migrate(sources: &[PathBuf], data: &Path) {
     for name in DATA_FILES {
         let target = data.join(name);
@@ -76,10 +90,52 @@ fn migrate(sources: &[PathBuf], data: &Path) {
                 continue;
             }
             match std::fs::copy(&from, &target) {
-                Ok(_) => println!("flip: kept {name} from {}", source.display()),
-                Err(e) => eprintln!("flip: could not copy {name}: {e}"),
+                Ok(_) => {
+                    println!("flip: moved {name} from {}", source.display());
+                    let _ = std::fs::remove_file(&from);
+                }
+                Err(e) => eprintln!("flip: could not move {name}: {e}"),
             }
             break;
+        }
+    }
+    migrate_backups(sources, data);
+}
+
+/// Backups are the user's safety net, so they travel with the settings rather
+/// than being stranded in a folder nobody would look in.
+fn migrate_backups(sources: &[PathBuf], data: &Path) {
+    let target_dir = data.join("backups");
+    for source in sources {
+        if source.as_path() == data {
+            continue;
+        }
+        let from_dir = source.join("backups");
+        let Ok(entries) = std::fs::read_dir(&from_dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(name) = path.file_name() else {
+                continue;
+            };
+            let target = target_dir.join(name);
+            if target.exists() {
+                continue;
+            }
+            if let Err(e) = std::fs::create_dir_all(&target_dir) {
+                eprintln!("flip: could not create backups folder: {e}");
+                return;
+            }
+            match std::fs::copy(&path, &target) {
+                Ok(_) => {
+                    let _ = std::fs::remove_file(&path);
+                }
+                Err(e) => eprintln!("flip: could not move backup {}: {e}", path.display()),
+            }
         }
     }
 }
@@ -95,10 +151,7 @@ pub fn run() {
             if let Err(e) = std::fs::create_dir_all(&data_dir) {
                 eprintln!("flip: could not create data directory: {e}");
             }
-            let mut sources: Vec<PathBuf> = Vec::new();
-            if let Some(previous) = previous_data_dir() {
-                sources.push(previous);
-            }
+            let mut sources: Vec<PathBuf> = legacy_data_dirs();
             if let Some(identifier) = identifier_dir {
                 sources.push(identifier);
             }
@@ -219,6 +272,29 @@ mod tests {
             std::fs::read_to_string(data.join("settings.json")).unwrap(),
             "{\"older\":true}"
         );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn migrate_moves_backups_and_clears_the_old_home() {
+        let root = scratch("migrate-backups");
+        let legacy = root.join("legacy");
+        let data = root.join("data");
+        std::fs::create_dir_all(legacy.join("backups")).unwrap();
+        std::fs::create_dir_all(&data).unwrap();
+        std::fs::write(legacy.join("settings.json"), "{}").unwrap();
+        std::fs::write(legacy.join("backups").join("flip-backup-2026.json"), "{}").unwrap();
+
+        migrate(std::slice::from_ref(&legacy), &data);
+
+        assert!(data.join("settings.json").exists());
+        assert!(data.join("backups").join("flip-backup-2026.json").exists());
+        assert!(!legacy.join("settings.json").exists());
+        assert!(!legacy
+            .join("backups")
+            .join("flip-backup-2026.json")
+            .exists());
 
         let _ = std::fs::remove_dir_all(&root);
     }
