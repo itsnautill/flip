@@ -24,7 +24,7 @@ Put the manifest somewhere public and paste that address into
 `flip/ui/update.js`:
 
 ```js
-var MANIFEST_URL = "https://example.com/flip/latest.json";
+var MANIFEST_URL = "https://github.com/itsnautill/flip/releases/latest/download/latest.json";
 ```
 
 Good free homes, easiest first:

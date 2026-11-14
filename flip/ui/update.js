@@ -15,7 +15,7 @@
   "use strict";
 
   /* Replace this with the address of your own latest.json. */
-  var MANIFEST_URL = "https://example.com/flip/latest.json";
+  var MANIFEST_URL = "https://github.com/itsnautill/flip/releases/latest/download/latest.json";
 
   var invoke =
     window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core.invoke : null;
