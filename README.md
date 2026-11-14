@@ -11,8 +11,76 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 
 ---
 
+## Windows will warn you - that is expected
+
+The first time you run the installer, Windows shows a blue box:
+
+> **Windows protected your PC**
+> Microsoft Defender SmartScreen prevented an unrecognized app from starting.
+> App: `Flip_0.1.5_x64-setup.exe`
+> Publisher: Unknown publisher
+
+This is not a virus detection. SmartScreen says *unrecognized*, not *detected*. The installer is not code-signed, so Windows has no publisher name to show, and an unsigned file starts with zero reputation - the warning stays until enough people have downloaded and run that exact file.
+
+**To install:** click **Run anyway**. On some Windows versions the button is hidden until you click **More info** first.
+
+The whole source is in this repository, so you can read or [build it yourself](#build-from-source) instead of trusting a binary.
+
+### Check the file is the one that was built
+
+Every release ships a SHA-256 hash. For 0.1.5:
+
+```
+18f11aecf4b81611a44a75e44c8b000e51a7e4681d5434b06779b93403b8370c
+```
+
+Compare it after downloading - in PowerShell:
+
+```powershell
+Get-FileHash .\Flip_0.1.5_x64-setup.exe -Algorithm SHA256
+```
+
+or from a command prompt:
+
+```
+certutil -hashfile Flip_0.1.5_x64-setup.exe SHA256
+```
+
+If the hash does not match, delete the file and download it again.
+
+### Silence the warning for yourself
+
+Right-click the downloaded `.exe` > **Properties** > tick **Unblock** > **OK**. In PowerShell that is:
+
+```powershell
+Unblock-File .\Flip_0.1.5_x64-setup.exe
+```
+
+This clears Windows' "downloaded from the internet" mark for that file only. Everyone else still sees the warning.
+
+### Remove it for everyone: code signing
+
+The notice disappears for all users only when the installer is signed by a certificate SmartScreen recognizes. The realistic options, cheapest first:
+
+| Route | Cost | Publisher name users see |
+| --- | --- | --- |
+| [SignPath Foundation](https://signpath.org/) (open source) | free for OSI-licensed projects | SignPath Foundation |
+| Certum Open Source certificate | from about 49 EUR/year | Open Source Developer, plus your name |
+| Standard OV certificate (DigiCert, Sectigo, ...) | about 150-300 USD/year | your verified name |
+| EV certificate | 400+ USD/year | your verified name |
+
+Two things worth knowing before buying one:
+
+- Signing does not finish the job by itself. A freshly signed build is still a new file to SmartScreen, and Microsoft says a warning can persist for weeks until that hash or certificate gathers clean downloads. Reputation only carries over between releases signed by the same publisher.
+- An EV certificate no longer bypasses SmartScreen the way it used to; Microsoft stopped granting it immediate reputation in 2024.
+
+Flip is unsigned today, which is why the notice appears. Signing it is on the list for a future release.
+
+---
+
 ## Contents
 
+- [Windows will warn you](#windows-will-warn-you---that-is-expected)
 - [What it does](#what-it-does)
 - [Install](#install)
 - [First run](#first-run)
@@ -76,7 +144,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 1. Download `Flip_0.1.5_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
-3. Windows will show *"Windows protected your PC"* because the installer is not code-signed. Choose **More info → Run anyway**
+3. Windows will show *"Windows protected your PC"* because the installer is not code-signed - see [Windows will warn you](#windows-will-warn-you---that-is-expected) for why, how to check the file, and how to get rid of the notice
 
 Requires Windows 10 or 11 with WebView2 (already present on current Windows; the installer adds it if missing).
 
