@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-0.1.3-blue)
 
 ---
 
@@ -74,7 +74,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_0.1.2_x64-setup.exe` from [Releases](../../releases/latest)
+1. Download `Flip_0.1.3_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed. Choose **More info → Run anyway**
 

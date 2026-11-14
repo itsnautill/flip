@@ -1,135 +1,194 @@
 """Generate the Flip app icon set.
 
-Artwork: charcoal rounded tile with three horizontal lines — cream, rust,
-cream — vertically symmetrical about the middle line. This is the only icon
-design now; it is drawn fresh at every size so it stays crisp.
+Artwork: a deep navy rounded tile with a split flip card - two cyan-to-blue
+leaves hinged on a dark bar. Drawn fresh at every size so it stays crisp and
+the small sizes keep the hinge readable.
 
 Run from this folder:  python make_icons.py
 """
 
-import io
-import struct
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).parent
 BASE = 1024
 
-BG = (52, 50, 51, 255)
-CREAM = (246, 240, 221, 255)
-RUST = (176, 81, 28, 255)
+TILE_TOP = (16, 27, 58, 255)
+TILE_BOTTOM = (5, 9, 22, 255)
+TILE_GLOW = (26, 42, 86, 255)
 
-LEFT_X = 0.158
-RIGHT_X = 0.845
-# Fractions of the tile height, measured from the middle.
-OFFSETS = (-0.235, 0.0, 0.235)
-WIDTH = 0.075  # line thickness as a fraction of the tile
+BAR = (7, 11, 26, 255)
+KNOB = (43, 52, 78, 255)
+KNOB_LIGHT = (62, 74, 106, 255)
 
-
-def stroke(draw, x1, y1, x2, y2, width, fill):
-    draw.line((x1, y1, x2, y2), fill=fill, width=max(1, round(width)))
-    r = width / 2
-    for cx, cy in ((x1, y1), (x2, y2)):
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=fill)
+CARD_A = (112, 232, 235)  # cyan
+CARD_B = (31, 101, 255)  # blue
 
 
-def draw_icon(edge: int) -> Image.Image:
-    ss = 8 if edge <= 128 else 4
-    size = edge * ss
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(img).rounded_rectangle(
-        (0, 0, size - 1, size - 1), radius=round(0.219 * size), fill=BG
+def lerp(a, b, t):
+    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(len(a)))
+
+
+def rounded_mask(size, radius):
+    """A rounded square alpha mask for the tile itself."""
+    scale = 4
+    big = Image.new("L", (size * scale, size * scale), 0)
+    ImageDraw.Draw(big).rounded_rectangle(
+        (0, 0, size * scale - 1, size * scale - 1),
+        radius=radius * scale,
+        fill=255,
+    )
+    return big.resize((size, size), Image.LANCZOS)
+
+
+def tile(size):
+    """The background: a dark rounded square with a soft centre glow."""
+    small = 48
+    grad = Image.new("RGB", (small, small))
+    px = grad.load()
+    for y in range(small):
+        base = lerp(TILE_TOP, TILE_BOTTOM, y / (small - 1))
+        px_row = [lerp(base, TILE_GLOW, 0) for _ in range(small)]
+        px_row = [px_row[0]] * small
+        for x in range(small):
+            px[x, y] = px_row[x]
+
+    # radial lift towards the middle, so the tile is not a flat slab
+    glow = Image.new("L", (small, small), 0)
+    glow_draw = ImageDraw.Draw(glow)
+    glow_draw.ellipse((small * 0.12, small * 0.06, small * 0.88, small * 0.72), fill=90)
+    glow = glow.filter(ImageFilter.GaussianBlur(small * 0.16))
+    lit = Image.composite(Image.new("RGB", (small, small), TILE_GLOW), grad, glow)
+
+    img = lit.resize((size, size), Image.BICUBIC).convert("RGBA")
+    img.putalpha(rounded_mask(size, int(size * 0.222)))
+    return img
+
+
+def gradient_tile(size, start, end, horizontal=False):
+    """A small gradient stretched to size; cheap and smooth."""
+    small = 32
+    grad = Image.new("RGB", (small, small))
+    px = grad.load()
+    for y in range(small):
+        for x in range(small):
+            t = (x / (small - 1)) if horizontal else ((x + y) / (2 * (small - 1)))
+            px[x, y] = lerp(start, end, t)
+    return grad.resize((size, size), Image.BICUBIC)
+
+
+def leaf(size, quad, radius, start, end, horizontal=False):
+    """A rounded parallelogram filled with a diagonal gradient."""
+    big = size * 4
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).polygon([(x * big, y * big) for x, y in quad], fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(big * radius * 0.42))
+    mask = mask.point(lambda v: 255 if v > 128 else 0)
+    mask = mask.resize((size, size), Image.LANCZOS)
+
+    fill = gradient_tile(size, start, end, horizontal)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(fill, (0, 0), mask)
+    return out
+
+
+def draw_icon(size):
+    img = tile(size)
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    # The upper leaf leans left as it goes down; the lower one mirrors the lean.
+    top = [
+        (0.245, 0.222),
+        (0.815, 0.222),
+        (0.735, 0.476),
+        (0.165, 0.476),
+    ]
+    bottom = [
+        (0.215, 0.505),
+        (0.785, 0.505),
+        (0.705, 0.759),
+        (0.135, 0.759),
+    ]
+
+    img.alpha_composite(leaf(size, top, 0.055, CARD_A, CARD_B))
+    img.alpha_composite(
+        leaf(size, bottom, 0.055, (44, 108, 255), (118, 231, 234), horizontal=True)
     )
 
-    draw = ImageDraw.Draw(img)
-    width = WIDTH * size
-    for offset in OFFSETS:
-        rust = offset == 0.0
-        stroke(
-            draw,
-            LEFT_X * size,
-            (0.5 + offset) * size,
-            RIGHT_X * size,
-            (0.5 + offset) * size,
-            width * (1.25 if rust else 1.0),
-            RUST if rust else CREAM,
-        )
-    return img.resize((edge, edge), Image.LANCZOS)
-
-
-def dib_payload(im: Image.Image) -> bytes:
-    """32bpp bottom-up DIB plus AND mask: what Windows expects below 256px."""
-    im = im.convert("RGBA")
-    width, height = im.size
-    pixels = im.load()
-    xor = bytearray()
-    for y in range(height - 1, -1, -1):
-        for x in range(width):
-            r, g, b, a = pixels[x, y]
-            xor += bytes((b, g, r, a))
-    mask_stride = ((width + 31) // 32) * 4
-    and_mask = bytes(mask_stride * height)
-    header = struct.pack(
-        "<IiiHHIIiiII", 40, width, height * 2, 1, 32, 0, len(xor) + len(and_mask), 0, 0, 0, 0
+    # hinge bar, drawn over the leaves so it reads as the fold
+    bar = (0.150, 0.473, 0.800, 0.512)
+    draw.rounded_rectangle(
+        (
+            bar[0] * size,
+            bar[1] * size,
+            bar[2] * size,
+            bar[3] * size,
+        ),
+        radius=size * 0.021,
+        fill=BAR,
     )
-    return header + bytes(xor) + and_mask
 
-
-def write_ico(path: Path, images) -> None:
-    payloads = []
-    for im in images:
-        if im.width >= 256:
-            buffer = io.BytesIO()
-            im.save(buffer, format="PNG")
-            payloads.append(buffer.getvalue())
-        else:
-            payloads.append(dib_payload(im))
-
-    header = struct.pack("<HHH", 0, 1, len(images))
-    entries = b""
-    offset = 6 + 16 * len(payloads)
-    for im, payload in zip(images, payloads):
-        entries += struct.pack(
-            "<BBBBHHII",
-            0 if im.width >= 256 else im.width,
-            0 if im.height >= 256 else im.height,
-            0,
-            0,
-            1,
-            32,
-            len(payload),
-            offset,
+    # the two hinge knobs
+    for cx in (0.172, 0.778):
+        cy = 0.4925
+        r = 0.049
+        draw.ellipse(
+            (
+                (cx - r) * size,
+                (cy - r) * size,
+                (cx + r) * size,
+                (cy + r) * size,
+            ),
+            fill=KNOB,
         )
-        offset += len(payload)
-    path.write_bytes(header + entries + b"".join(payloads))
+        draw.ellipse(
+            (
+                (cx - r * 0.62) * size,
+                (cy - r * 0.72) * size,
+                (cx + r * 0.34) * size,
+                (cy + r * 0.24) * size,
+            ),
+            fill=KNOB_LIGHT,
+        )
+
+    return img
 
 
-def main() -> None:
+def main():
     master = draw_icon(BASE)
     master.save(HERE / "icon.png")
 
-    for edge in (16, 24, 32, 48, 64, 128, 256, 512):
-        draw_icon(edge).save(HERE / f"{edge}x{edge}.png")
-    draw_icon(256).save(HERE / "128x128@2x.png")
+    sizes = [16, 24, 32, 48, 64, 128, 256, 512]
+    for size in sizes:
+        icon = draw_icon(size) if size >= 64 else master.resize((size, size), Image.LANCZOS)
+        if size == 256:
+            icon.save(HERE / "128x128@2x.png")
+        icon.save(HERE / f"{size}x{size}.png")
 
-    for edge in (30, 44, 71, 89, 107, 142, 150, 284, 310):
-        draw_icon(edge).save(HERE / f"Square{edge}x{edge}Logo.png")
-    draw_icon(50).save(HERE / "StoreLogo.png")
+    # Windows Store style tiles, all square and full bleed
+    for name, size in [
+        ("Square30x30Logo.png", 30),
+        ("Square44x44Logo.png", 44),
+        ("Square71x71Logo.png", 71),
+        ("Square89x89Logo.png", 89),
+        ("Square107x107Logo.png", 107),
+        ("Square142x142Logo.png", 142),
+        ("Square150x150Logo.png", 150),
+        ("Square284x284Logo.png", 284),
+        ("Square310x310Logo.png", 310),
+        ("StoreLogo.png", 50),
+    ]:
+        master.resize((size, size), Image.LANCZOS).save(HERE / name)
 
-    write_ico(
+    # A multi-resolution .ico, each frame drawn at its own size.
+    frames = [draw_icon(size) for size in (16, 24, 32, 48, 64, 128, 256)]
+    frames[-1].save(
         HERE / "icon.ico",
-        [draw_icon(edge) for edge in (16, 24, 32, 48, 64, 128, 256)],
+        format="ICO",
+        sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)],
     )
-
-    flipped = ImageOps.flip(master)
-    diff = ImageChops.difference(master.convert("RGB"), flipped.convert("RGB"))
-    mean = sum(sum(ch.get_flattened_data()) for ch in diff.split()) / (3 * BASE * BASE)
-    print(f"symmetry mean delta {mean:.3f}")
-
-    with Image.open(HERE / "icon.ico") as check:
-        print("ico frames:", sorted(check.info.get("sizes", [])))
-    print("wrote icon set to", HERE)
+    print("wrote icon.png, %d PNG sizes, store tiles and icon.ico" % len(sizes))
 
 
 if __name__ == "__main__":
