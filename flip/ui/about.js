@@ -17,7 +17,7 @@
   function show(version) {
     var body = el("div", "about");
 
-    body.appendChild(el("p", "about-version", "Flip " + version));
+    body.appendChild(el("p", "about-version", version ? "Flip " + version : "Flip"));
     body.appendChild(
       el("p", "sub", "A small study dashboard for your desktop.")
     );
@@ -44,14 +44,14 @@
       app
         .getVersion()
         .then(function (version) {
-          show(version || "0.1.0");
+          show(version || "");
         })
         .catch(function () {
-          show("0.1.0");
+          show("");
         });
       return;
     }
-    show("0.1.0");
+    show("");
   }
 
   function boot() {

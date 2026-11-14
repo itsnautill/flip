@@ -396,6 +396,11 @@
       dataTab.classList.toggle("active", isData);
       generalTab.setAttribute("aria-selected", String(!isData));
       dataTab.setAttribute("aria-selected", String(isData));
+      /* A shorter pane should not inherit the other one's scroll offset. The
+         dialog scrolls on the .settings element, not on .modal itself. */
+      body.scrollTop = 0;
+      var panel = document.querySelector("#modal-root .modal");
+      if (panel) panel.scrollTop = 0;
     }
 
     generalTab.addEventListener("click", function () {
@@ -700,10 +705,14 @@
       onClose: commitAccent,
     });
 
-    /* Start on the current format rather than the colour swatch. */
+    /* Start on the current format rather than the colour swatch, and without
+       scrolling the dialog down to it. */
     setTimeout(function () {
       var active = clockButtons[isTwelve ? 1 : 0];
-      if (active) active.focus();
+      if (active) active.focus({ preventScroll: true });
+      body.scrollTop = 0;
+      var panel = document.querySelector("#modal-root .modal");
+      if (panel) panel.scrollTop = 0;
     }, 0);
   }
 
@@ -739,10 +748,10 @@
   }
 
   function render(snap) {
+    if (!snap) return;
     soundOn = snap.sound !== false;
     applyMotion(snap.motion);
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
-    if (!snap) return;
     lastSnapshot = snap;
     applyTheme(snap.theme);
     /* A preview inside the settings dialog wins until it is committed. */

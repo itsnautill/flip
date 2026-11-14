@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
-  "notes": "The update check now reads its manifest from the repository, so it can actually find new versions.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v0.1.5/Flip_0.1.5_x64-setup.exe"
+  "version": "1.0.0",
+  "notes": "1.0: settings opens at the top, update checks work, and Flip now keeps its data in AppData\Roaming.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.0.0/Flip_1.0.0_x64-setup.exe"
 }

@@ -317,8 +317,23 @@
     document.addEventListener("keydown", onKeyDown, true);
 
     closeCurrentModal = close;
-    var firstField = panel.querySelector("input:not([type=checkbox]), select, textarea, .btn.primary");
-    if (firstField) setTimeout(function () { firstField.focus(); }, 0);
+    /* Colours, radios, files and hidden inputs are not where a dialog should
+       start: focusing one of those scrolls the body down to it. Focus the first
+       real field, and never let that focus move the panel. */
+    var firstField = panel.querySelector(
+      "input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=hidden]), select, textarea, .btn.primary"
+    );
+    if (firstField) {
+      setTimeout(function () {
+        firstField.focus({ preventScroll: true });
+        /* A dialog can scroll at more than one level (the panel, and a pane
+           inside it), so put every one of them back to the top. */
+        panel.scrollTop = 0;
+        Array.prototype.forEach.call(panel.querySelectorAll(".modal-body, .modal-body *"), function (node) {
+          if (node.scrollTop) node.scrollTop = 0;
+        });
+      }, 0);
+    }
     return close;
   }
 
