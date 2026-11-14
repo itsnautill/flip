@@ -173,6 +173,26 @@ pub fn set_onboarded(core: State<'_, SharedCore>, done: bool) -> Snapshot {
 }
 
 #[tauri::command]
+pub fn set_telemetry(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    let mut c = lock(core.inner());
+    let mut changed = c.settings.telemetry != enabled;
+    if enabled && c.settings.install_id.is_empty() {
+        c.settings.install_id = settings::new_install_id();
+        changed = true;
+    }
+    if changed {
+        c.settings.telemetry = enabled;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+#[tauri::command]
 pub fn set_motion(core: State<'_, SharedCore>, motion: String) -> Snapshot {
     let mut c = lock(core.inner());
     let motion = match motion.as_str() {

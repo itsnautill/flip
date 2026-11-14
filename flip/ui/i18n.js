@@ -201,6 +201,15 @@
     "Walk through the basics again": "Xem lại các bước cơ bản",
     "Welcome to Flip": "Chào mừng đến với Flip",
     "Choose your language": "Chọn ngôn ngữ",
+    "Share anonymous usage": "Chia sẻ thống kê ẩn danh",
+    "Off unless you turn it on. One ping a day, and nothing personal.":
+      "Mặc định tắt. Mỗi ngày một tín hiệu, không có gì cá nhân.",
+    "Sends: a random install id made on this computer, the app version, your interface language, and the date.":
+      "Gửi: một mã cài đặt ngẫu nhiên tạo trên máy này, phiên bản ứng dụng, ngôn ngữ giao diện và ngày.",
+    "Never sends: tasks, subjects, timetable, notes, timers, settings, file names, your name, or anything that identifies your PC.":
+      "Không bao giờ gửi: công việc, môn học, thời khóa biểu, ghi chú, hẹn giờ, cài đặt, tên tệp, tên bạn hay bất cứ gì nhận dạng được máy bạn.",
+    "Your IP address is not stored, and nothing is linked to an account. Leave it off and Flip sends nothing at all.":
+      "Địa chỉ IP không được lưu và không liên kết với tài khoản nào. Để tắt thì Flip không gửi gì cả.",
     "Animations": "Chuyển động",
     "Extra is livelier, Fast is quieter": "Nhiều thì sinh động hơn, Nhanh thì nhẹ nhàng hơn",
     "Extra": "Nhiều",

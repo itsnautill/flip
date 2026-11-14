@@ -558,6 +558,60 @@
     generalPane.appendChild(langRow);
     generalPane.appendChild(soundRow);
 
+    var telemetryRow = Board.el("div", "setting-row column");
+    var telemetryText = Board.el("div", "setting-text");
+    telemetryText.appendChild(Board.el("div", "setting-title", "Share anonymous usage"));
+    telemetryText.appendChild(
+      Board.el("div", "sub", "Off unless you turn it on. One ping a day, and nothing personal.")
+    );
+    var telemetryDetail = Board.el("div", "setting-detail");
+    telemetryDetail.appendChild(
+      Board.el("div", "", "Sends: a random install id made on this computer, the app version, your interface language, and the date.")
+    );
+    telemetryDetail.appendChild(
+      Board.el("div", "", "Never sends: tasks, subjects, timetable, notes, timers, settings, file names, your name, or anything that identifies your PC.")
+    );
+    telemetryDetail.appendChild(
+      Board.el("div", "", "Your IP address is not stored, and nothing is linked to an account. Leave it off and Flip sends nothing at all.")
+    );
+    telemetryText.appendChild(telemetryDetail);
+    telemetryText.title =
+      "Anonymous and optional. On, Flip sends one HTTPS request per day with: a random 32-character install id (made locally, tied to nothing), the app version, the interface language (en or vi), and the date. " +
+      "Never sent: your tasks, subjects, timetable, notes, timer history, settings, file names, account details, hardware ids or location. The server does not store IP addresses. Turning this off deletes nothing and stops all requests immediately.";
+    telemetryRow.appendChild(telemetryText);
+
+    var telemetrySeg = Board.el("div", "seg");
+    telemetrySeg.setAttribute("role", "group");
+    telemetrySeg.setAttribute("aria-label", "Share anonymous usage");
+    var telemetryNow = snap.telemetry === true;
+    var telemetryButtons = [[true, "On"], [false, "Off"]].map(function (option) {
+      var button = Board.el(
+        "button",
+        "seg-btn" + (option[0] === telemetryNow ? " active" : ""),
+        option[1]
+      );
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(option[0] === telemetryNow));
+      button.addEventListener("click", function () {
+        telemetryButtons.forEach(function (node) {
+          node.classList.toggle("active", node === button);
+          node.setAttribute("aria-pressed", String(node === button));
+        });
+        invoke("set_telemetry", { enabled: option[0] })
+          .then(function (next) {
+            render(next);
+            if (option[0] && window.FlipTelemetry) window.FlipTelemetry.pingNow();
+          })
+          .catch(function (err) {
+            console.error("flip: set_telemetry failed", err);
+          });
+      });
+      telemetrySeg.appendChild(button);
+      return button;
+    });
+    telemetryRow.appendChild(telemetrySeg);
+    generalPane.appendChild(telemetryRow);
+
     var updateBox = Board.el("div", "setting-row column");
     var updateText = Board.el("div", "setting-text");
     updateText.appendChild(Board.el("div", "setting-title", "Updates"));
@@ -687,6 +741,7 @@
   function render(snap) {
     soundOn = snap.sound !== false;
     applyMotion(snap.motion);
+    if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     if (!snap) return;
     lastSnapshot = snap;
     applyTheme(snap.theme);

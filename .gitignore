@@ -19,3 +19,7 @@ desktop.ini
 # never commit update signing keys if you add them later
 *.key
 *.key.pub
+
+# local tooling
+node_modules/
+.wrangler/

@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.2-blue)
 
 ---
 
@@ -74,7 +74,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_0.1.0_x64-setup.exe` from [Releases](../../releases/latest)
+1. Download `Flip_0.1.2_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed. Choose **More info → Run anyway**
 
@@ -135,6 +135,24 @@ Both files are plain JSON you can read and edit. Flip writes them through Rust, 
 **Export** produces CSV of your tasks and timetable, the settings as JSON, or a complete backup you can move to another machine.
 
 There is no cloud, no account and no network traffic except the update check when you ask for it.
+
+### Optional usage sharing
+
+**Off by default.** Nothing is ever sent unless you switch it on in **Settings → General → Share anonymous usage**, and the toggle carries the full disclosure next to it.
+
+When it is on, Flip sends exactly one HTTPS request per day:
+
+| Sent | Never sent |
+| --- | --- |
+| A random 32-character install id, generated on your machine | Tasks, subjects, timetable, notes |
+| The app version | Timer history, settings, file names |
+| Your interface language (`en` or `vi`) | Your name, account, hardware ids, location |
+| The date, added by the server | Your IP address is not stored |
+
+The id is capped by the machine and linked to nothing, so the dashboard shows counts, not people. Turn it off and the requests stop immediately.
+
+The public dashboard lives at <https://site-8afa0bdbe0764332b38e33193a775c95.freebuff.page> and the worker behind it is in [`stats/`](stats/).
+
 
 ---
 

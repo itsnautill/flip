@@ -138,6 +138,7 @@ pub fn run() {
             commands::set_sound,
             commands::set_onboarded,
             commands::set_motion,
+            commands::set_telemetry,
             commands::open_url,
             commands::app_version,
             commands::save_template,

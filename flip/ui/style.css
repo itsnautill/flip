@@ -4781,3 +4781,23 @@ html[data-motion="fast"] #week-bar-fill {
     transform: none;
   }
 }
+
+/* the exact disclosure under the telemetry toggle */
+.setting-detail {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  max-width: 46ch;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.setting-detail > div {
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.setting-row.column .seg {
+  margin-top: 10px;
+}

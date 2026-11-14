@@ -67,6 +67,11 @@ pub struct Settings {
     pub onboarded: bool,
     /// "extra", "normal" or "fast" - how lively the interface feels.
     pub motion: String,
+    /// Opt-in: send one anonymous ping a day. Off until the user turns it on.
+    pub telemetry: bool,
+    /// Random id made on this machine when telemetry is switched on. Not tied
+    /// to an account, an email, or any hardware.
+    pub install_id: String,
     /// Any colour the user picked, `#RRGGBB`. The UI adapts its weight per theme.
     pub accent: String,
     /// Length of a focus session, in seconds.
@@ -84,6 +89,8 @@ impl Default for Settings {
             sound: true,
             onboarded: false,
             motion: "normal".into(),
+            telemetry: false,
+            install_id: String::new(),
             accent: DEFAULT_ACCENT.into(),
             focus_secs: DEFAULT_FOCUS_SECS,
             dashboard: Dashboard::default(),
@@ -105,6 +112,44 @@ pub fn normalise_accent(value: &str) -> String {
     format!("#{}", expanded.to_ascii_uppercase())
 }
 
+/// A random id for this install, made without pulling in a random-number crate.
+/// Two freshly seeded hashers over the clock and the process id give 128 bits of
+/// hex; nothing about the machine can be derived from it.
+pub fn new_install_id() -> String {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let mut id = String::with_capacity(24);
+    for _ in 0..2 {
+        let mut hasher = RandomState::new().build_hasher();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        hasher.write_u128(nanos);
+        hasher.write_u32(std::process::id());
+        id.push_str(&format!("{:016x}", hasher.finish()));
+    }
+    id
+}
+
+/// Keeps an install id only if it looks like one we made, so a hand-edited
+/// settings file cannot smuggle anything else into the ping.
+pub fn normalise_install_id(value: &str) -> String {
+    let trimmed = value.trim();
+    let ok = (8..=64).contains(&trimmed.len())
+        && trimmed
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        && trimmed.chars().any(|c| c.is_ascii_digit());
+    if ok {
+        trimmed.to_string()
+    } else {
+        String::new()
+    }
+}
+
 /// Every value a stored or restored settings object can get wrong, repaired in
 /// one place so loading, restoring and importing all agree.
 pub fn normalise(mut settings: Settings) -> Settings {
@@ -115,6 +160,7 @@ pub fn normalise(mut settings: Settings) -> Settings {
         settings.language = "en".into();
     }
     settings.accent = normalise_accent(&settings.accent);
+    settings.install_id = normalise_install_id(&settings.install_id);
     if settings.timer_preset_secs > crate::timer::MAX_SECS {
         settings.timer_preset_secs = crate::timer::MAX_SECS;
     }
