@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
-  "notes": "The installer carries the WebView2 stub, so it no longer fetches one from the network while installing.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.0.1/Flip_1.0.1_x64-setup.exe"
+  "version": "1.0.2",
+  "notes": "Updates install themselves now: Flip downloads the new setup in the background and runs it.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.0.2/Flip_1.0.2_x64-setup.exe"
 }

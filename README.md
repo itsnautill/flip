@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://img.shields.io/badge/version-1.0.2-blue)
 
 > **VirusTotal says 2/71.** Arctic Wolf and SecureAge flag the installer; the other 69 engines, including Microsoft, Kaspersky, ESET, Bitdefender and Symantec, report clean. The two are heuristic verdicts on an unsigned, freshly built installer, not a detection of anything inside Flip. The section below explains the Windows warning and how to check your download.
 
@@ -22,13 +22,13 @@ The first run shows **"Windows protected your PC"** with *Publisher: Unknown pub
 **To check your download is the one built here:**
 
 ```powershell
-Get-FileHash .\Flip_1.0.1_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Flip_1.0.2_x64-setup.exe -Algorithm SHA256
 ```
 
-For 1.0.1 that prints:
+For 1.0.2 that prints:
 
 ```
-11e146e751bbf95ba7d621ff0b814c0355fcae8e31749fb82ccfa29deadf47fd
+8dc884f0eb640f4d1693140b2cedc7c0f1ffa119a4f3928eaf5b8e97a312a61b
 ```
 
 **To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
@@ -101,7 +101,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_1.0.1_x64-setup.exe` from [Releases](../../releases/latest)
+1. Download `Flip_1.0.2_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed - see [Windows will warn you](#windows-will-warn-you---that-is-expected) for why, how to check the file, and how to get rid of the notice
 
@@ -185,43 +185,24 @@ The public dashboard lives at <https://site-8afa0bdbe0764332b38e33193a775c95.fre
 
 ## Updates
 
-Flip checks a small manifest and compares dotted versions:
+**Settings -> General -> Updates** compares your version with a manifest, then works in two steps: **Download update** fetches the installer into `%TEMP%\FlipUpdates\` in the background, and **Install and restart** runs it and closes Flip, so the installer replaces the old version and removes it.
+
+The manifest is read from the repository first, with the release copy as a fallback:
 
 ```
-https://github.com/itsnautill/flip/releases/latest/download/latest.json
+https://raw.githubusercontent.com/itsnautill/flip/main/flip/update/latest.json
 ```
 
-**Settings → General → Updates** shows the current version and, if one exists, what changed in the new one. The download opens in your browser - Flip does not replace its own files.
-
-For the full picture - how the comparison works, where to host the manifest, how to test it
-locally against `python -m http.server`, and what a signed in-place updater would take -
-see [`flip/update/README.md`](flip/update/README.md).
+Downloads are only accepted over HTTPS from GitHub's release hosts, and the file has to look like a Windows installer before it is ever run. Nothing installs itself without that second click.
 
 ### Publishing a release
 
-```bash
-# 1. bump the version in both files
-#    flip/src-tauri/Cargo.toml
-#    flip/src-tauri/tauri.conf.json
+1. Bump the version in `flip/src-tauri/Cargo.toml`, `flip/src-tauri/tauri.conf.json`, `flip/update/latest.json` and this README (badge, installer name, SHA-256).
+2. Build: `cd flip && cargo tauri build`.
+3. Commit, tag, push: `git add -A && git commit -m "Release 1.0.2" && git tag v1.0.2 && git push && git push --tags`.
+4. GitHub: **Releases -> Draft a new release**, pick the tag, attach `flip/src-tauri/target/release/bundle/nsis/Flip_1.0.2_x64-setup.exe`.
 
-# 2. build
-cd flip
-cargo tauri build
-
-# 3. commit, tag, push
-cd ..
-git add -A
-git commit -m "Release 0.2.0"
-git tag v0.2.0
-git push && git push --tags
-```
-
-Then on GitHub: **Releases → Draft a new release**, pick the tag, and attach two files:
-
-- `flip/src-tauri/target/release/bundle/nsis/Flip_0.2.0_x64-setup.exe`
-- `flip/update/latest.json`, with the new version and the exact asset URL
-
-Because the manifest is fetched from `releases/latest/download/`, the URL in the app never has to change again.
+The manifest lives in the repository, so it needs no upload. See [`flip/update/README.md`](flip/update/README.md) for the internals.
 
 ---
 
@@ -306,7 +287,7 @@ The frontend has no test runner by design; it is verified by building and using 
 
 - **Windows only.** The build targets x64 NSIS; macOS and Linux would need their own bundling.
 - **Unsigned installer**, so SmartScreen warns on first run.
-- **Updates are download-and-install manually**, not in-place. Tauri's signed updater is the natural upgrade path if that becomes worth the key management.
+- **Updates run the new installer in place** but are not signed, so Windows asks before it runs and a heuristic engine or two may still flag a fresh build.
 - **English and Vietnamese only**, and only the first worksheet of an imported `.xlsx` is read.
 
 ---

@@ -6,6 +6,7 @@ pub mod settings;
 pub mod state;
 pub mod ticker;
 pub mod timer;
+pub mod update;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -208,7 +209,9 @@ pub fn run() {
             commands::delete_backup,
             commands::restore_backup,
             commands::export_data,
-            commands::open_folder
+            commands::open_folder,
+            update::download_update,
+            update::install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running Flip");

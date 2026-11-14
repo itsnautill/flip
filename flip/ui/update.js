@@ -130,10 +130,42 @@
     });
 
     var target = "";
+    var latest = "";
+    var installer = "";
+    var phase = "check"; // check -> download -> install
+
+    function download() {
+      phase = "download";
+      button.disabled = true;
+      status.textContent = "Downloading…";
+      invoke("download_update", { url: target, version: latest })
+        .then(function (path) {
+          installer = path;
+          phase = "install";
+          button.disabled = false;
+          button.textContent = "Install and restart";
+          status.textContent = "Ready to install";
+        })
+        .catch(function (err) {
+          console.error("flip: download_update failed", err);
+          button.disabled = false;
+          status.textContent = "Could not download the update";
+        });
+    }
 
     button.addEventListener("click", function () {
-      if (target) {
-        open(target);
+      if (phase === "install") {
+        button.disabled = true;
+        status.textContent = "Installing…";
+        invoke("install_update", { path: installer }).catch(function (err) {
+          console.error("flip: install_update failed", err);
+          button.disabled = false;
+          status.textContent = "Could not start the installer";
+        });
+        return;
+      }
+      if (phase === "download") {
+        download();
         return;
       }
       button.disabled = true;
@@ -151,6 +183,8 @@
         status.textContent = "Version " + result.latest + " is available";
         if (!result.url) return;
         target = result.url;
+        latest = result.latest;
+        phase = "download";
         button.textContent = "Download update";
         button.classList.add("primary");
       });
