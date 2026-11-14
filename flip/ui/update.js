@@ -14,8 +14,17 @@
 (function () {
   "use strict";
 
-  /* Replace this with the address of your own latest.json. */
-  var MANIFEST_URL = "https://github.com/itsnautill/flip/releases/latest/download/latest.json";
+  /* Where the manifest is read from, in order. The copy in the repository is
+     first because raw.githubusercontent.com answers with CORS headers, which a
+     release download does not - a manifest attached to a release can never be
+     fetched from the app itself. The release copy stays as a fallback so a
+     manifest uploaded there is used the day it exists. */
+  var MANIFEST_URLS = [
+    "https://raw.githubusercontent.com/itsnautill/flip/main/flip/update/latest.json",
+    "https://github.com/itsnautill/flip/releases/latest/download/latest.json"
+  ];
+
+  var MANIFEST_URL = MANIFEST_URLS[0];
 
   var invoke =
     window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core.invoke : null;
@@ -54,13 +63,31 @@
 
   var ready = invoke ? invoke("app_version") : Promise.resolve("0.1.0");
 
+  function fetchOne(url) {
+    return fetch(url, { cache: "no-store" }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    });
+  }
+
+  /* Tries each address until one answers; the last error is the one reported. */
+  function fetchManifest() {
+    var index = 0;
+
+    function attempt() {
+      var url = MANIFEST_URLS[index++];
+      return fetchOne(url).catch(function (err) {
+        if (index >= MANIFEST_URLS.length) throw err;
+        return attempt();
+      });
+    }
+
+    return attempt();
+  }
+
   function check() {
     return ready.then(function (current) {
-      return fetch(MANIFEST_URL, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("HTTP " + response.status);
-          return response.json();
-        })
+      return fetchManifest()
         .then(function (data) {
           var latest = String((data && data.version) || "").trim();
           if (!latest) throw new Error("That file has no version.");
@@ -134,6 +161,7 @@
 
   window.FlipUpdate = {
     manifest: MANIFEST_URL,
+    manifests: MANIFEST_URLS,
     check: check,
     open: open,
     mount: mount,

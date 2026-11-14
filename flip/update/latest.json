@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4",
-  "notes": "Your data now lives in AppData\Roaming\FlipData, and existing files are moved there on first launch.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v0.1.4/Flip_0.1.4_x64-setup.exe"
+  "version": "0.1.5",
+  "notes": "The update check now reads its manifest from the repository, so it can actually find new versions.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v0.1.5/Flip_0.1.5_x64-setup.exe"
 }
