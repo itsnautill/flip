@@ -28,6 +28,17 @@
     row(list, "Data", "Kept on this computer, always");
     body.appendChild(list);
 
+    var download = el("button", "btn primary wide", "Download Flip for another PC");
+    download.type = "button";
+    download.addEventListener("click", function () {
+      var invoke = window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke;
+      if (!invoke) return;
+      invoke("open_url", { url: "https://projectflip.site.je" }).catch(function () {
+        /* nothing to recover: the browser simply did not open */
+      });
+    });
+    body.appendChild(download);
+
     if (window.FlipUpdate) window.FlipUpdate.mount(body);
 
     window.Board.modal({

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
-  "notes": "Updates install themselves now: Flip downloads the new setup in the background and runs it.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.0.2/Flip_1.0.2_x64-setup.exe"
+  "version": "1.1.0",
+  "notes": "A full visual pass, plus Discord presence: five themes, four animation modes, touch mode, window zoom, the gradient background on by default, and a small presence card you can switch off.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.1.0/Flip_1.1.0_x64-setup.exe"
 }

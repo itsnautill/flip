@@ -373,7 +373,6 @@
         actions.appendChild(open);
         body.appendChild(actions);
       } else {
-        body.appendChild(el("p", "dash-hint", "Pick a length, then start. Finished sessions are added to your study time."));
         var chips = el("div", "focus-chips");
         var chosen = total;
         var labels = [15, 25, 45, 50];

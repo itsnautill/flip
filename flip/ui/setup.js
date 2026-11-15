@@ -2,7 +2,10 @@
 
    Four short steps, each one changing the app as you go rather than saving at
    the end. Rust remembers whether it has been seen, so it opens once and can be
-   reopened from Settings. */
+   reopened from Settings.
+
+   The wizard also remembers where it was: switching language reloads the page,
+   and without that the setup used to close halfway through. */
 (function () {
   "use strict";
 
@@ -10,6 +13,17 @@
     window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core.invoke : null;
 
   var ACCENTS = ["#B4622D", "#B25C6B", "#4F7A5B", "#3F6E8C", "#6B5CA5", "#8A6A3B"];
+
+  var THEMES = [
+    ["light", "Light"],
+    ["light-hc", "Light High Contrast"],
+    ["dark", "Dark"],
+    ["dark-hc", "Dark High Contrast"],
+    ["flat", "Flat"],
+  ];
+
+  var STEP_KEY = "flip-setup-step";
+  var OPEN_KEY = "flip-setup-open";
 
   var overlay = null;
   var stepIndex = 0;
@@ -30,6 +44,35 @@
     if (window.Flip && next) window.Flip.apply(next);
   }
 
+  function remember() {
+    try {
+      window.sessionStorage.setItem(STEP_KEY, String(stepIndex));
+      window.sessionStorage.setItem(OPEN_KEY, "1");
+    } catch (_) {
+      /* private mode: the wizard still works, it just cannot resume */
+    }
+  }
+
+  function forget() {
+    try {
+      window.sessionStorage.removeItem(STEP_KEY);
+      window.sessionStorage.removeItem(OPEN_KEY);
+    } catch (_) {
+      /* nothing to clean up */
+    }
+  }
+
+  function savedStep() {
+    try {
+      var raw = window.sessionStorage.getItem(OPEN_KEY);
+      if (!raw) return 0;
+      var value = parseInt(window.sessionStorage.getItem(STEP_KEY) || "0", 10);
+      return value >= 0 && value < steps.length ? value : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   function finish(goToTimetable) {
     close();
     if (invoke) {
@@ -42,6 +85,11 @@
     if (goToTimetable) {
       var tab = document.querySelector('.tab[data-view="timetable"]');
       if (tab) tab.click();
+      if (window.Board) {
+        window.Board.toast("Timetable is ready. Click any slot to add a subject.", {
+          duration: 3000,
+        });
+      }
     }
   }
 
@@ -49,6 +97,7 @@
     if (!overlay) return;
     overlay.remove();
     overlay = null;
+    forget();
     document.removeEventListener("keydown", onKey, true);
   }
 
@@ -62,9 +111,11 @@
   /* ------------------------------------------------------------------ steps */
 
   /* Vietnamese can be applied live; going back to English needs a reload so the
-     already-translated nodes start from the source text again. */
+     already-translated nodes start from the source text again. The wizard
+     resumes on the same step after that reload. */
   function chooseLanguage(lang) {
     if (!invoke) return;
+    remember();
     snapshot().then(function (snap) {
       if (((snap && snap.language) || "en") === lang) return;
       invoke("set_language", { language: lang })
@@ -105,7 +156,10 @@
       });
     }
 
-    [["en", "English"], ["vi", "Tiếng Việt"]].forEach(function (option) {
+    [
+      ["en", "English"],
+      ["vi", "Tiếng Việt"],
+    ].forEach(function (option) {
       var button = el("button", "seg-btn", option[1]);
       button.type = "button";
       button.addEventListener("click", function () {
@@ -126,49 +180,70 @@
     return wrap;
   }
 
+  function themePreview() {
+    var box = el("div", "theme-preview");
+    var bar = el("div", "tp-bar");
+    for (var i = 0; i < 3; i++) bar.appendChild(el("i"));
+    box.appendChild(bar);
+    box.appendChild(el("div", "tp-head"));
+    var row = el("div", "tp-body");
+    var card = el("div", "tp-card");
+    card.appendChild(el("i"));
+    row.appendChild(card);
+    row.appendChild(el("div", "tp-side"));
+    box.appendChild(row);
+    return box;
+  }
+
+  function themeGrid() {
+    var grid = el("div", "theme-grid");
+    grid.setAttribute("role", "radiogroup");
+    grid.setAttribute("aria-label", "Theme");
+    var cards = [];
+
+    function paint(current) {
+      cards.forEach(function (entry) {
+        entry.card.setAttribute("aria-checked", String(entry.name === current));
+      });
+    }
+
+    THEMES.forEach(function (option) {
+      var card = el("button", "theme-card");
+      card.type = "button";
+      card.setAttribute("role", "radio");
+      card.setAttribute("data-theme-preview", option[0]);
+      card.setAttribute("aria-checked", "false");
+      card.appendChild(themePreview());
+      var name = el("span", "theme-name");
+      name.appendChild(el("span", "theme-dot"));
+      name.appendChild(el("span", "", option[1]));
+      card.appendChild(name);
+      card.addEventListener("click", function () {
+        paint(option[0]);
+        invoke("set_theme", { theme: option[0] })
+          .then(apply)
+          .catch(function (err) {
+            console.error("flip: set_theme failed", err);
+          });
+      });
+      grid.appendChild(card);
+      cards.push({ name: option[0], card: card });
+    });
+
+    snapshot().then(function (snap) {
+      paint((snap && snap.theme) || "light");
+    });
+
+    return grid;
+  }
+
   function lookStep() {
     var wrap = el("div", "setup-step");
     wrap.appendChild(el("p", "setup-kicker", "Step 2"));
     wrap.appendChild(el("h2", "setup-title", "Pick a look"));
-    wrap.appendChild(el("p", "sub", "Change it later in Settings - nothing here is permanent."));
+    wrap.appendChild(el("p", "sub", "Change it later in Settings."));
 
-    var themeRow = el("div", "setup-control");
-    themeRow.appendChild(el("span", "setup-label", "Theme"));
-    var themeSeg = el("div", "seg");
-    themeSeg.setAttribute("role", "group");
-    themeSeg.setAttribute("aria-label", "Theme");
-    var themeButtons = [];
-
-    function paintTheme(current) {
-      themeButtons.forEach(function (entry) {
-        var on = entry.name === current;
-        entry.button.classList.toggle("active", on);
-        entry.button.setAttribute("aria-pressed", String(on));
-      });
-    }
-
-    [["beige", "Light"], ["dark", "Dark"]].forEach(function (option) {
-      var button = el("button", "seg-btn", option[1]);
-      button.type = "button";
-      button.addEventListener("click", function () {
-        snapshot().then(function (snap) {
-          var current = (snap && snap.theme) || "beige";
-          if (current === option[0]) return;
-          invoke("toggle_theme")
-            .then(function (next) {
-              apply(next);
-              paintTheme(next.theme);
-            })
-            .catch(function (err) {
-              console.error("flip: toggle_theme failed", err);
-            });
-        });
-      });
-      themeSeg.appendChild(button);
-      themeButtons.push({ name: option[0], button: button });
-    });
-    themeRow.appendChild(themeSeg);
-    wrap.appendChild(themeRow);
+    wrap.appendChild(themeGrid());
 
     var accentRow = el("div", "setup-control");
     accentRow.appendChild(el("span", "setup-label", "Accent"));
@@ -195,10 +270,6 @@
     accentRow.appendChild(swatches);
     wrap.appendChild(accentRow);
 
-    snapshot().then(function (snap) {
-      paintTheme((snap && snap.theme) || "beige");
-    });
-
     return wrap;
   }
 
@@ -218,15 +289,9 @@
 
   function doneStep() {
     var wrap = el("div", "setup-step");
-    wrap.appendChild(el("p", "setup-kicker", "Last one"));
-    wrap.appendChild(el("h2", "setup-title", "All set"));
-    wrap.appendChild(
-      el(
-        "p",
-        "sub",
-        "Press ? for shortcuts. Click Flip in the top corner for the version. Run this again any time from Settings."
-      )
-    );
+    wrap.appendChild(el("p", "setup-kicker", "Done"));
+    wrap.appendChild(el("h2", "setup-title", "You're all set"));
+    wrap.appendChild(el("p", "sub", "Everything stays on this computer."));
     return wrap;
   }
 
@@ -240,11 +305,16 @@
     foot.textContent = "";
 
     var step = steps[stepIndex];
+    remember();
     body.appendChild(step.build());
     body.classList.remove("enter");
     void body.offsetWidth;
     body.classList.add("enter");
 
+    renderFoot(foot, step);
+  }
+
+  function renderFoot(foot, step) {
     if (stepIndex > 0) {
       var back = el("button", "btn small", "Back");
       back.type = "button";
@@ -255,11 +325,12 @@
       foot.appendChild(back);
     }
 
-    if (step.finish) {
+    if (step.kind === "timetable") {
       var skip = el("button", "btn small", "Skip for now");
       skip.type = "button";
       skip.addEventListener("click", function () {
-        finish(false);
+        stepIndex += 1;
+        render();
       });
       foot.appendChild(skip);
 
@@ -272,28 +343,35 @@
       return;
     }
 
+    if (step.kind === "done") {
+      var done = el("button", "btn primary", "Done");
+      done.type = "button";
+      done.addEventListener("click", function () {
+        finish(false);
+      });
+      foot.appendChild(done);
+      return;
+    }
+
     var next = el("button", "btn primary", stepIndex === 0 ? "Get started" : "Continue");
     next.type = "button";
     next.addEventListener("click", function () {
-      if (stepIndex === steps.length - 1) {
-        finish(false);
-        return;
-      }
       stepIndex += 1;
       render();
     });
     foot.appendChild(next);
   }
 
-  function open() {
+  function open(startAt) {
     if (overlay) return;
     steps = [
       { build: languageStep },
       { build: lookStep },
-      { build: timetableStep, finish: true },
-      { build: doneStep }
+      { build: timetableStep, kind: "timetable" },
+      { build: doneStep, kind: "done" },
     ];
-    stepIndex = 0;
+    var wanted = startAt == null ? savedStep() : startAt;
+    stepIndex = Math.min(Math.max(0, wanted), steps.length - 1);
 
     overlay = el("div", "overlay setup-overlay");
     var panel = el("div", "modal setup");
@@ -308,12 +386,34 @@
     render();
   }
 
-  window.FlipSetup = { open: open, close: close };
+  window.FlipSetup = {
+    /* From Settings: always start from the beginning. */
+    open: function () {
+      open(0);
+    },
+    /* At startup: pick up where the last run stopped, if it stopped mid-way. */
+    resume: function () {
+      open(null);
+    },
+    close: close,
+  };
 
-  /* The app opens it on first run; this covers a reload mid-wizard. */
+  /* The app opens it on first run; this also picks the wizard back up after the
+     reload that a language change causes. */
   document.addEventListener("DOMContentLoaded", function () {
+    if (overlay) return;
+    var flagged = false;
+    try {
+      flagged = window.sessionStorage.getItem(OPEN_KEY) === "1";
+    } catch (_) {
+      flagged = false;
+    }
     snapshot().then(function (snap) {
-      if (snap && snap.onboarded === false && !overlay) open();
+      if (!snap || overlay) return;
+      /* Reopened either because setup has never been finished (first run) or
+         because a reload interrupted it, which is what changing language does. */
+      if (!flagged && snap.onboarded !== false) return;
+      open(savedStep());
     });
   });
 })();

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="beige">
+<html lang="en" data-theme="light" data-motion="normal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>Flip</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="polish.css">
   <script src="i18n.js" defer></script>
   <script src="flipcard.js" defer></script>
   <script src="board.js" defer></script>
@@ -29,7 +30,10 @@
       <button class="tab" role="tab" id="tab-timetable" data-view="timetable" aria-selected="false" aria-controls="timetable">Timetable</button>
       <button class="tab" role="tab" id="tab-tasks" data-view="tasks" aria-selected="false" aria-controls="tasks">Tasks</button>
     </nav>
+    <span class="drag-fill" data-tauri-drag-region></span>
     <div class="chrome-right">
+      <button id="zoom-out" class="icon-btn text-icon" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+      <button id="zoom-in" class="icon-btn text-icon" type="button" aria-label="Zoom in" title="Zoom in">+</button>
       <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen (F11)">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
@@ -42,8 +46,6 @@
         </svg>
       </button>
       <button id="shortcuts-btn" class="icon-btn text-icon" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" aria-haspopup="dialog">?</button>
-      <button id="theme-btn" class="icon-btn" type="button" aria-label="Switch colour theme" title="Switch colour theme">◐</button>
-      <span class="drag-fill" data-tauri-drag-region></span>
     </div>
   </header>
 
@@ -93,11 +95,11 @@
       <div class="view-head">
         <div class="view-title">
           <h1>Timetable</h1>
-          <p class="sub">Click a slot to add a subject. Click a filled slot to open its tasks. :)</p>
         </div>
         <div class="head-actions">
           <label class="check"><input type="checkbox" id="tt-weekend"> <span>Weekend</span></label>
-          <button class="btn" type="button" id="tt-import" title="Import an .xlsx timetable - hold Shift to save a template">Import</button>
+          <button class="btn" type="button" id="tt-import" title="Import a timetable from an .xlsx file">Import</button>
+          <button class="btn" type="button" id="tt-template" title="Save an empty timetable you can fill in">Download Template</button>
           <button class="btn" type="button" id="tt-add-period">Add row</button>
           <button class="btn danger" type="button" id="tt-reset">Reset</button>
           <input type="file" id="tt-file" accept=".xlsx" hidden>
@@ -113,7 +115,6 @@
       <div class="view-head">
         <div class="view-title">
           <h1>Tasks</h1>
-          <p class="sub">Drag a card to another day, or use ⋯ to reschedule it without dragging.</p>
         </div>
         <div class="head-actions">
           <label class="field inline">

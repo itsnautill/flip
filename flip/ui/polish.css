@@ -1,0 +1,1167 @@
+/* ---------------------------------------------------------------------------
+   Flip, visual pass.
+
+   Loaded after style.css so it can restyle without editing the original rules.
+   It adds the five themes, the four animation modes, touch sizing and the
+   dialog layouts. Nothing here changes behaviour.
+   ------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------ themes */
+
+html[data-theme="light"] {
+  --bg: #F4F3EF;
+  --bg-accent: linear-gradient(180deg, #FAF9F6 0%, #F1F0EB 100%);
+  --panel: #FFFFFF;
+  --panel-2: #F4F3EF;
+  --panel-3: #EAE8E2;
+  --ink: #1B1A17;
+  --ink-soft: #45423C;
+  --muted: #6F6B63;
+  --line: #E2E0D9;
+  --line-2: #CFCCC3;
+  --accent-soft: #F4E3D0;
+  --danger: #B23B28;
+  --danger-soft: #FBEDE9;
+  --red: #D93025;
+  --focus: #8A4A1E;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #FBF9F4;
+  --card-bottom-a: #FBF9F4;
+  --card-bottom-b: #F5F2EB;
+  --digit: #1B1A17;
+  --split: rgba(72, 60, 40, .18);
+  --split-hi: rgba(255, 255, 255, .8);
+  --ring: rgba(120, 96, 64, .3);
+  --card-shadow: 0 1px 2px rgba(60, 50, 35, .07), 0 18px 40px rgba(60, 50, 35, .12);
+  --shadow-sm: 0 1px 2px rgba(60, 50, 35, .07);
+  --shadow: 0 2px 6px rgba(60, 50, 35, .05), 0 18px 40px rgba(60, 50, 35, .09);
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+html[data-theme="light-hc"] {
+  --bg: #FFFFFF;
+  --bg-accent: #FFFFFF;
+  --panel: #FFFFFF;
+  --panel-2: #F2F2F2;
+  --panel-3: #E6E6E6;
+  --ink: #000000;
+  --ink-soft: #000000;
+  --muted: #2A2A2A;
+  --line: #000000;
+  --line-2: #000000;
+  --accent-soft: #FFF2D6;
+  --danger: #A80000;
+  --danger-soft: #FFE3E0;
+  --red: #C00000;
+  --focus: #000000;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #FFFFFF;
+  --card-bottom-a: #FFFFFF;
+  --card-bottom-b: #F7F7F7;
+  --digit: #000000;
+  --split: rgba(0, 0, 0, .85);
+  --split-hi: #FFFFFF;
+  --ring: #000000;
+  --card-shadow: 0 0 0 2px #000000;
+  --shadow-sm: 0 0 0 1px #000000;
+  --shadow: 0 0 0 2px #000000;
+  --radius: 8px;
+  --radius-sm: 6px;
+}
+
+html[data-theme="dark"] {
+  --bg: #16181C;
+  --bg-accent: linear-gradient(180deg, #1B1E23 0%, #14161A 100%);
+  --panel: #1E2127;
+  --panel-2: #24272E;
+  --panel-3: #2C3038;
+  --ink: #ECEDEF;
+  --ink-soft: #C3C7CD;
+  --muted: #9AA1AA;
+  --line: #2E323A;
+  --line-2: #3D424B;
+  --accent: #D08A4F;
+  --accent-ink: #1A1410;
+  --accent-soft: #3A2E22;
+  --danger: #F0857A;
+  --danger-soft: #3A2320;
+  --red: #FF6B5E;
+  --focus: #E0A26C;
+  --card-top-a: #22252A;
+  --card-top-b: #1D2025;
+  --card-bottom-a: #1D2025;
+  --card-bottom-b: #191B20;
+  --digit: #ECEDEF;
+  --split: rgba(0, 0, 0, .55);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(224, 162, 108, .35);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 18px 40px rgba(0, 0, 0, .45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 20px 44px rgba(0, 0, 0, .45);
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+html[data-theme="dark-hc"] {
+  --bg: #000000;
+  --bg-accent: #000000;
+  --panel: #0C0C0C;
+  --panel-2: #161616;
+  --panel-3: #202020;
+  --ink: #FFFFFF;
+  --ink-soft: #FFFFFF;
+  --muted: #D6D6D6;
+  --line: #4A4A4A;
+  --line-2: #7A7A7A;
+  --accent-soft: #33280D;
+  --danger: #FF8A80;
+  --danger-soft: #3A0F0F;
+  --red: #FF6B5E;
+  --focus: #FFD866;
+  --card-top-a: #101010;
+  --card-top-b: #0A0A0A;
+  --card-bottom-a: #0A0A0A;
+  --card-bottom-b: #050505;
+  --digit: #FFFFFF;
+  --split: rgba(0, 0, 0, .9);
+  --split-hi: rgba(255, 255, 255, .18);
+  --ring: #FFFFFF;
+  --card-shadow: 0 0 0 2px #6A6A6A;
+  --shadow-sm: 0 0 0 1px #6A6A6A;
+  --shadow: 0 0 0 2px #6A6A6A;
+  --radius: 8px;
+  --radius-sm: 6px;
+}
+
+/* Flat drops every shadow and gradient; borders do the work instead. */
+html[data-theme="flat"] {
+  --bg: #F1F1F1;
+  --bg-accent: #F1F1F1;
+  --panel: #FFFFFF;
+  --panel-2: #F7F7F7;
+  --panel-3: #EDEDED;
+  --ink: #1A1A1A;
+  --ink-soft: #3F3F3F;
+  --muted: #6E6E6E;
+  --line: #D7D7D7;
+  --line-2: #C2C2C2;
+  --accent-soft: #F0E7DC;
+  --danger: #A5271A;
+  --danger-soft: #FBE7E4;
+  --red: #D93025;
+  --focus: #333333;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #FFFFFF;
+  --card-bottom-a: #FFFFFF;
+  --card-bottom-b: #FBFBFB;
+  --digit: #1A1A1A;
+  --split: rgba(0, 0, 0, .18);
+  --split-hi: rgba(255, 255, 255, .9);
+  --ring: #B9B9B9;
+  --card-shadow: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --radius: 7px;
+  --radius-sm: 6px;
+}
+
+/* High contrast needs a heavier focus ring and clearer separators. */
+html[data-theme="light-hc"] #chrome,
+html[data-theme="dark-hc"] #chrome {
+  border-bottom-width: 2px;
+}
+
+html[data-theme="light-hc"] .btn,
+html[data-theme="dark-hc"] .btn {
+  border-width: 2px;
+}
+
+html[data-theme="light-hc"] :focus-visible,
+html[data-theme="dark-hc"] :focus-visible,
+html[data-theme="flat"] :focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+html[data-theme="flat"] #chrome,
+html[data-theme="flat"] .card,
+html[data-theme="flat"] .widget,
+html[data-theme="flat"] .modal,
+html[data-theme="flat"] .toast {
+  backdrop-filter: none;
+}
+
+/* ------------------------------------------------------------------ motion */
+
+html[data-motion="extra"] {
+  --speed: 1.35;
+}
+
+html[data-motion="normal"] {
+  --speed: 1;
+}
+
+html[data-motion="fast"] {
+  --speed: .6;
+}
+
+/* Snappy is the accessibility switch: nothing moves. */
+html[data-motion="snappy"] *,
+html[data-motion="snappy"] *::before,
+html[data-motion="snappy"] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0s !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0s !important;
+}
+
+html[data-motion="snappy"] .view.stagger > * {
+  animation: none !important;
+}
+
+html[data-motion="fast"] .view.stagger > * {
+  animation-duration: .22s;
+}
+
+html[data-motion="extra"] .view.stagger > * {
+  animation-duration: .7s;
+}
+
+/* ------------------------------------------------------------------- touch */
+
+html[data-touch="on"] {
+  --hit: 46px;
+}
+
+html[data-touch="on"] .tab {
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+html[data-touch="on"] .icon-btn {
+  width: 46px;
+  height: 46px;
+  font-size: 18px;
+}
+
+html[data-touch="on"] .btn {
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+
+html[data-touch="on"] .btn.small {
+  min-height: 38px;
+  font-size: 14px;
+}
+
+html[data-touch="on"] .seg {
+  padding: 5px;
+}
+
+html[data-touch="on"] .seg-btn {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+html[data-touch="on"] .setting-row {
+  padding: 18px 4px;
+}
+
+html[data-touch="on"] .settings-nav button {
+  min-height: 46px;
+  font-size: 15px;
+}
+
+html[data-touch="on"] input[type="text"],
+html[data-touch="on"] input[type="number"],
+html[data-touch="on"] input[type="time"],
+html[data-touch="on"] textarea,
+html[data-touch="on"] select {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+html[data-touch="on"] .toast {
+  padding: 16px 20px;
+  font-size: 15px;
+}
+
+/* The theme decides the backdrop; the accent wash was too warm for the neutral
+   and high-contrast looks. Zoom is applied to the webview from Rust, so no rule
+   here has to compensate for it. */
+body {
+  background: var(--bg-accent);
+}
+
+/* ------------------------------------------------------------------ chrome */
+
+#chrome {
+  height: 60px;
+  gap: 18px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-size: 18px;
+  letter-spacing: -.01em;
+}
+
+#tabs {
+  background: var(--panel-2);
+  border-color: var(--line);
+  padding: 4px;
+  gap: 2px;
+}
+
+.tab {
+  min-height: 34px;
+  padding: 0 15px;
+  border-radius: 999px;
+  transition: background calc(.18s * var(--speed, 1)) ease,
+    color calc(.18s * var(--speed, 1)) ease;
+}
+
+.tab.active {
+  background: var(--panel);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--line);
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--panel);
+  transition: background calc(.16s * var(--speed, 1)) ease,
+    border-color calc(.16s * var(--speed, 1)) ease,
+    transform calc(.16s * var(--speed, 1)) ease;
+}
+
+.icon-btn:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+
+.icon-btn:active {
+  transform: scale(.96);
+}
+
+/* ------------------------------------------------------- buttons and inputs */
+
+.btn {
+  border-radius: 11px;
+  border-color: var(--line);
+  background: var(--panel);
+  font-weight: 600;
+  transition: background calc(.16s * var(--speed, 1)) ease,
+    border-color calc(.16s * var(--speed, 1)) ease,
+    transform calc(.14s * var(--speed, 1)) ease;
+}
+
+.btn:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+.btn.danger {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
+  color: var(--danger);
+}
+
+.seg {
+  border-radius: 12px;
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+.seg-btn {
+  border-radius: 9px;
+  font-weight: 600;
+  transition: background calc(.16s * var(--speed, 1)) ease,
+    color calc(.16s * var(--speed, 1)) ease;
+}
+
+.seg-btn.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--line);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="time"],
+textarea,
+select {
+  border-radius: 10px;
+  border-color: var(--line);
+  background: var(--panel);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="time"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* -------------------------------------------------------------- view heads */
+
+.view-head h1 {
+  font-size: 30px;
+  letter-spacing: -.02em;
+  font-weight: 600;
+}
+
+.view-head .sub {
+  color: var(--muted);
+}
+
+.view-head .sub:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------- switch control */
+
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 27px;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--panel-3);
+  cursor: pointer;
+  transition: background calc(.16s * var(--speed, 1)) ease,
+    border-color calc(.16s * var(--speed, 1)) ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+  transition: transform calc(.18s * var(--speed, 1)) cubic-bezier(.3, .9, .3, 1);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch[aria-checked="true"]::after {
+  transform: translateX(19px);
+  background: var(--accent-ink);
+}
+
+html[data-touch="on"] .switch {
+  width: 54px;
+  height: 32px;
+}
+
+html[data-touch="on"] .switch::after {
+  width: 26px;
+  height: 26px;
+}
+
+html[data-touch="on"] .switch[aria-checked="true"]::after {
+  transform: translateX(22px);
+}
+
+/* --------------------------------------------------------------- settings */
+
+.modal.modal-settings {
+  width: min(880px, 94vw);
+  max-width: min(880px, 94vw);
+  max-height: min(660px, 90vh);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 178px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+}
+
+.settings-nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+
+.settings-nav button:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.settings-nav button.active {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.settings-nav svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .8;
+}
+
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-pane h3 {
+  margin: 16px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings-pane h3:first-child {
+  margin-top: 0;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.setting-row:last-child {
+  border-bottom: 0;
+}
+
+.setting-row.column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.setting-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.setting-text .sub {
+  margin-top: 3px;
+}
+
+.setting-text .sub:empty {
+  display: none;
+}
+
+.setting-detail {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* theme picker */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 12px;
+  margin: 4px 0 10px;
+}
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.theme-card:hover {
+  border-color: var(--line-2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-card[aria-checked="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 22px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.theme-preview {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 9px;
+  border: 1px solid var(--tp-line);
+  background: var(--tp-bg);
+}
+
+.tp-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.tp-bar i {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--tp-line);
+}
+
+.tp-head {
+  height: 8px;
+  width: 46%;
+  border-radius: 3px;
+  background: var(--tp-line);
+}
+
+.tp-body {
+  display: flex;
+  gap: 6px;
+}
+
+.tp-card {
+  flex: 1;
+  height: 36px;
+  border-radius: 5px;
+  border: 1px solid var(--tp-line);
+  background: var(--tp-panel);
+  padding: 5px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.tp-card i {
+  display: block;
+  width: 60%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--tp-accent);
+}
+
+.tp-side {
+  width: 26px;
+  height: 36px;
+  border-radius: 5px;
+  border: 1px solid var(--tp-line);
+  background: var(--tp-panel);
+}
+
+.tp-chip {
+  width: 34px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--tp-accent-2);
+}
+
+.theme-card[data-theme-preview="light"] .theme-preview {
+  --tp-bg: #F4F3EF;
+  --tp-panel: #FFFFFF;
+  --tp-line: #DCDAD3;
+  --tp-accent: #B4622D;
+  --tp-accent-2: #E5D3BE;
+}
+
+.theme-card[data-theme-preview="light-hc"] .theme-preview {
+  --tp-bg: #FFFFFF;
+  --tp-panel: #FFFFFF;
+  --tp-line: #000000;
+  --tp-accent: #A24A00;
+  --tp-accent-2: #000000;
+}
+
+.theme-card[data-theme-preview="dark"] .theme-preview {
+  --tp-bg: #16181C;
+  --tp-panel: #24272E;
+  --tp-line: #33383F;
+  --tp-accent: #D08A4F;
+  --tp-accent-2: #3A4150;
+}
+
+.theme-card[data-theme-preview="dark-hc"] .theme-preview {
+  --tp-bg: #000000;
+  --tp-panel: #101010;
+  --tp-line: #6A6A6A;
+  --tp-accent: #FFB86B;
+  --tp-accent-2: #FFFFFF;
+}
+
+.theme-card[data-theme-preview="flat"] .theme-preview {
+  --tp-bg: #F1F1F1;
+  --tp-panel: #FFFFFF;
+  --tp-line: #C9C9C9;
+  --tp-accent: #B4622D;
+  --tp-accent-2: #DDD;
+}
+
+.theme-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.theme-dot {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-2);
+  background: transparent;
+}
+
+.theme-card[aria-checked="true"] .theme-dot {
+  border-color: var(--accent);
+  background: radial-gradient(circle at center, var(--accent) 0 46%, transparent 48%);
+}
+
+.theme-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------- timer view */
+
+#timer-tools {
+  gap: 10px;
+}
+
+#timer-tools .icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+#dots .dot {
+  width: 8px;
+  height: 8px;
+  transition: width calc(.2s * var(--speed, 1)) ease,
+    background calc(.2s * var(--speed, 1)) ease;
+}
+
+#dots .dot.active {
+  width: 22px;
+  border-radius: 999px;
+}
+
+/* ------------------------------------------------------------ set timer dialog */
+
+.timer-set {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timer-total {
+  margin: 0;
+  text-align: center;
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.timer-total.empty-total {
+  color: var(--muted);
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.time-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.time-field > span {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.time-field .time-input {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  -moz-appearance: textfield;
+}
+
+.time-field .time-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.time-field .time-input::-webkit-outer-spin-button,
+.time-field .time-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.time-field .time-unit {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.timer-set .preset-grid,
+.timer-set .chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.chip-btn:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.chip-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* --------------------------------------------------------------- dashboard */
+
+.widget,
+.task-card,
+.tt-grid {
+  border-radius: var(--radius);
+}
+
+/* The flip card rounds by its own width, and its halves do the same, so a fixed
+   radius here would leave a visible seam in the corner. */
+.card {
+  --r: calc(var(--w) * 0.09);
+  border-radius: var(--r);
+  background-clip: padding-box;
+}
+
+.head-actions {
+  gap: 8px;
+}
+
+.focus-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+.focus-chips .chip-btn {
+  min-width: 58px;
+}
+
+/* ------------------------------------------------------------------- toast */
+
+.toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  max-width: min(520px, 90vw);
+  padding: 13px 18px 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 80;
+  animation: toast-in calc(.24s * var(--speed, 1)) ease;
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+.toast-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toast-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.toast-progress i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: right center;
+  background: var(--accent);
+  animation-name: toast-countdown;
+  animation-duration: var(--toast-ms, 3200ms);
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.toast:hover .toast-progress i {
+  animation-play-state: paused;
+}
+
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+html[data-motion="snappy"] .toast {
+  animation: none;
+}
+
+/* Snappy turns animations off, but the toast bar is a timer, not decoration. */
+html[data-motion="snappy"] .toast-progress i {
+  animation: toast-countdown linear forwards !important;
+  animation-duration: var(--toast-ms, 3200ms) !important;
+}
+
+/* ------------------------------------------------------------------ setup */
+
+.setup-overlay .modal.setup {
+  width: min(680px, 92vw);
+  max-width: min(680px, 92vw);
+}
+
+.setup-step .setup-kicker {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.setup-step .setup-title {
+  margin-bottom: 6px;
+  font-size: 25px;
+  letter-spacing: -.02em;
+}
+
+.setup-control {
+  margin-top: 18px;
+}
+
+.setup-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------- small */
+
+@media (max-width: 720px) {
+  .settings {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    flex-direction: row;
+    position: static;
+    overflow-x: auto;
+  }
+}
+
+/* ------------------------------------------------------------ accent wash */
+
+/* The older builds painted three soft pools of the accent behind everything.
+   It is opt-in now, and it reads the accent palette, so it follows whatever
+   theme and accent colour are in use, including the high-contrast ones. */
+html[data-wash="on"] body {
+  background:
+    radial-gradient(120% 110% at 6% -12%, var(--wash-a) 0%, transparent 56%),
+    radial-gradient(110% 100% at 98% -4%, var(--wash-b) 0%, transparent 52%),
+    radial-gradient(140% 120% at 50% 118%, var(--wash-c) 0%, transparent 62%),
+    var(--wash-base);
+  background-attachment: fixed;
+}
+
+/* --------------------------------------------------------------- one radius */
+
+/* One radius for every control. On square controls a pill resolves to a circle,
+   which is what the icon buttons and switches already look like, so the header,
+   the filters, the dialogs and the settings rows all share one corner. Surfaces
+   use the theme radius, so cards, the timetable, the toast and the theme
+   previews line up too. */
+:root {
+  --r-control: var(--r-pill);
+}
+
+button:not(.theme-card):not(.tt-time),
+.btn,
+.check,
+.field.inline,
+.seg,
+.seg-btn,
+.chip-btn,
+.tab,
+.settings-nav button,
+input[type="text"],
+input[type="number"],
+input[type="time"],
+input[type="date"],
+input[type="search"],
+select {
+  border-radius: var(--r-control) !important;
+}
+
+.widget,
+.task-card,
+.tt-grid,
+.tt-cell,
+.tt-head,
+.tt-corner,
+.suggestion,
+.data-block,
+.toast {
+  border-radius: var(--radius) !important;
+}
+
+/* Theme previews sit inside a card, so they take the smaller step. */
+.theme-card {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* The period label is as tall as a lesson cell, so a pill there is a giant
+   blob. It matches the cells beside it instead. */
+.tt-time {
+  border-radius: var(--radius) !important;
+}
+
+/* Checkboxes stay square-ish on purpose: a fully round box reads as a radio. */
+input[type="checkbox"] {
+  border-radius: 6px !important;
+}

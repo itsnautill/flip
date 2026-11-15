@@ -56,6 +56,9 @@ pub fn spawn(app: AppHandle) {
                 if let Err(e) = app.emit("snapshot", &snapshot) {
                     eprintln!("flip: could not emit snapshot: {e}");
                 }
+                if let Some(presence) = app.try_state::<crate::discord::Presence>() {
+                    presence.update(crate::discord::Wanted::from_snapshot(&snapshot));
+                }
                 last = Some(snapshot);
             }
 

@@ -4,11 +4,29 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-/// The accent the app ships with: a warm rust that suits the beige palette.
+/// The accent the app ships with: a warm rust that suits the light theme.
 pub const DEFAULT_ACCENT: &str = "#B4622D";
 
 /// Dashboard widgets, in the order a fresh install shows them.
 pub const DASH_WIDGETS: [&str; 6] = ["next", "today", "due", "tasks", "focus", "stats"];
+
+/// The looks the app ships with. `light` and `dark` are the defaults; the
+/// high-contrast pair and `flat` are for people who want less decoration.
+pub const THEMES: [&str; 5] = ["light", "light-hc", "dark", "dark-hc", "flat"];
+
+/// "snappy" removes animation entirely for people who find it distracting.
+pub const MOTIONS: [&str; 4] = ["extra", "normal", "fast", "snappy"];
+
+/// Interface zoom, in percent. The window buttons step by ten.
+pub const MIN_ZOOM: u32 = 80;
+pub const MAX_ZOOM: u32 = 160;
+pub const ZOOM_STEP: i32 = 10;
+
+/// Rounds to a ten and keeps it inside the allowed range.
+pub fn normalise_zoom(value: i32) -> u32 {
+    let stepped = ((value as f64 / ZOOM_STEP as f64).round() as i32) * ZOOM_STEP;
+    stepped.clamp(MIN_ZOOM as i32, MAX_ZOOM as i32) as u32
+}
 
 /// How long a focus session runs by default: 25 minutes.
 pub const DEFAULT_FOCUS_SECS: u32 = 25 * 60;
@@ -57,7 +75,7 @@ impl Dashboard {
 pub struct Settings {
     pub use_12h: bool,
     pub timer_preset_secs: u32,
-    /// "beige" (default) or "dark".
+    /// One of `THEMES`; "light" unless the user picked another.
     pub theme: String,
     /// "en" (default) or "vi".
     pub language: String,
@@ -65,8 +83,16 @@ pub struct Settings {
     pub sound: bool,
     /// False until the first-run setup has been finished or skipped.
     pub onboarded: bool,
-    /// "extra", "normal" or "fast" - how lively the interface feels.
+    /// One of `MOTIONS`: how lively the interface feels.
     pub motion: String,
+    /// Interface zoom in percent; 100 is normal.
+    pub zoom: u32,
+    /// The soft accent gradient behind the app, on by default.
+    pub wash: bool,
+    /// Discord Rich Presence: on unless the user turns it off.
+    pub discord: bool,
+    /// Bigger buttons, rows and spacing, for touch screens and shaky hands.
+    pub touch: bool,
     /// Opt-in: send one anonymous ping a day. Off until the user turns it on.
     pub telemetry: bool,
     /// Random id made on this machine when telemetry is switched on. Not tied
@@ -84,11 +110,15 @@ impl Default for Settings {
         Self {
             use_12h: false,
             timer_preset_secs: 300,
-            theme: "beige".into(),
+            theme: "light".into(),
             language: "en".into(),
             sound: true,
             onboarded: false,
             motion: "normal".into(),
+            zoom: 100,
+            wash: true,
+            discord: true,
+            touch: false,
             telemetry: false,
             install_id: String::new(),
             accent: DEFAULT_ACCENT.into(),
@@ -96,6 +126,28 @@ impl Default for Settings {
             dashboard: Dashboard::default(),
         }
     }
+}
+
+/// Older builds stored "beige" and "dark"; both still load.
+pub fn normalise_theme(value: &str) -> String {
+    match value.trim() {
+        "dark" => "dark",
+        "light-hc" => "light-hc",
+        "dark-hc" => "dark-hc",
+        "flat" => "flat",
+        _ => "light",
+    }
+    .to_string()
+}
+
+pub fn normalise_motion(value: &str) -> String {
+    match value.trim() {
+        "extra" => "extra",
+        "fast" => "fast",
+        "snappy" => "snappy",
+        _ => "normal",
+    }
+    .to_string()
 }
 
 /// Accepts `#rgb` or `#rrggbb`, upper-cased; anything else falls back to rust.
@@ -153,9 +205,9 @@ pub fn normalise_install_id(value: &str) -> String {
 /// Every value a stored or restored settings object can get wrong, repaired in
 /// one place so loading, restoring and importing all agree.
 pub fn normalise(mut settings: Settings) -> Settings {
-    if settings.theme != "dark" {
-        settings.theme = "beige".into();
-    }
+    settings.theme = normalise_theme(&settings.theme);
+    settings.motion = normalise_motion(&settings.motion);
+    settings.zoom = settings.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
     if settings.language != "vi" {
         settings.language = "en".into();
     }
@@ -227,6 +279,18 @@ mod tests {
     }
 
     #[test]
+    fn themes_and_motions_are_known_values_only() {
+        assert_eq!(normalise_theme("beige"), "light");
+        assert_eq!(normalise_theme("dark-hc"), "dark-hc");
+        assert_eq!(normalise_theme("neon"), "light");
+        assert_eq!(normalise_motion("snappy"), "snappy");
+        assert_eq!(normalise_motion("wobble"), "normal");
+        assert_eq!(normalise_zoom(105), 110);
+        assert_eq!(normalise_zoom(10), 80);
+        assert_eq!(normalise_zoom(400), 160);
+    }
+
+    #[test]
     fn normalise_clamps_focus_and_repairs_theme() {
         let settings = normalise(Settings {
             theme: "neon".into(),
@@ -234,7 +298,8 @@ mod tests {
             focus_secs: 7,
             ..Settings::default()
         });
-        assert_eq!(settings.theme, "beige");
+        assert_eq!(settings.theme, "light");
+        assert_eq!(settings.motion, "normal");
         assert_eq!(settings.accent, DEFAULT_ACCENT);
         assert_eq!(settings.focus_secs, 60);
     }

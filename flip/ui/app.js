@@ -10,7 +10,8 @@
   var clockGroup = document.getElementById("clock-group");
   var timerGroup = document.getElementById("timer-group");
   var dots = Array.prototype.slice.call(document.querySelectorAll("#dots .dot"));
-  var themeButton = document.getElementById("theme-btn");
+  var zoomOutButton = document.getElementById("zoom-out");
+  var zoomInButton = document.getElementById("zoom-in");
   var shortcutsButton = document.getElementById("shortcuts-btn");
   var settingsButton = document.getElementById("settings-btn");
   var fullscreenButton = document.getElementById("fullscreen-btn");
@@ -38,16 +39,13 @@
 
   /* ------------------------------------------------------------------- theme */
 
+  var THEMES = ["light", "light-hc", "dark", "dark-hc", "flat"];
+
   function applyTheme(theme) {
-    var wanted = theme === "dark" ? "dark" : "beige";
+    var wanted = THEMES.indexOf(theme) >= 0 ? theme : "light";
     if (document.documentElement.getAttribute("data-theme") !== wanted) {
       document.documentElement.setAttribute("data-theme", wanted);
     }
-    if (!themeButton) return;
-    themeButton.textContent = wanted === "dark" ? "☀" : "☾";
-    var label = wanted === "dark" ? "Switch to the beige theme" : "Switch to the dark theme";
-    themeButton.setAttribute("aria-label", label);
-    themeButton.title = label;
   }
 
   if (fullscreenButton) {
@@ -56,13 +54,44 @@
     });
   }
 
-  if (themeButton) {
-    themeButton.addEventListener("click", function () {
-      invoke("toggle_theme")
-        .then(render)
-        .catch(function (err) {
-          console.error("flip: toggle_theme failed", err);
-        });
+  /* Zoom steps by ten percent and is remembered by Rust, so it also comes back
+     after a restart. The buttons respond straight away, including on a fast
+     double click, so hold the value locally until a snapshot lands. */
+  var zoomPending = 0;
+
+  function paintZoom(zoom) {
+    if (zoomOutButton) {
+      zoomOutButton.disabled = zoom <= 80;
+      zoomOutButton.title = "Zoom out (" + zoom + "%)";
+    }
+    if (zoomInButton) {
+      zoomInButton.disabled = zoom >= 160;
+      zoomInButton.title = "Zoom in (" + zoom + "%)";
+    }
+  }
+
+  function changeZoom(delta) {
+    var current = zoomPending || Number(lastSnapshot && lastSnapshot.zoom) || 100;
+    var next = Math.max(80, Math.min(160, current + delta));
+    if (next === current) return;
+    zoomPending = next;
+    paintZoom(next);
+    invoke("set_zoom", { percent: next })
+      .then(render)
+      .catch(function (err) {
+        zoomPending = 0;
+        console.error("flip: set_zoom failed", err);
+      });
+  }
+
+  if (zoomOutButton) {
+    zoomOutButton.addEventListener("click", function () {
+      changeZoom(-10);
+    });
+  }
+  if (zoomInButton) {
+    zoomInButton.addEventListener("click", function () {
+      changeZoom(10);
     });
   }
 
@@ -147,7 +176,9 @@
       picks whichever ink stays legible on top of it. */
   function accentPalette(hex) {
     var base = hexToHsl(hex) || hexToHsl("#B4622D");
-    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    var theme = document.documentElement.getAttribute("data-theme") || "light";
+    var dark = theme.indexOf("dark") === 0;
+    var hc = theme.indexOf("-hc") > 0;
     var hue = base[0];
     // Near-greys stay grey instead of being tinted behind the user's back.
     var grey = base[1] < 0.08;
@@ -172,10 +203,12 @@
          as blurred artwork, without blurring anything at run time. The wash
          keeps more of the colour's own saturation than the accent itself so
          it reads as colour instead of pale grey. */
-      washA: hslToHex(hue, washSat, dark ? 0.19 : 0.82),
-      washB: hslToHex(hue + 20, washSat * 0.82, dark ? 0.15 : 0.88),
-      washC: hslToHex(hue - 22, washSat * 0.75, dark ? 0.21 : 0.9),
-      base: dark ? hslToHex(hue, washSat * 0.55, 0.08) : hslToHex(hue, washSat * 0.5, 0.95),
+      washA: hslToHex(hue, hc ? washSat * 0.5 : washSat, dark ? (hc ? 0.1 : 0.19) : hc ? 0.95 : 0.82),
+      washB: hslToHex(hue + 20, hc ? washSat * 0.4 : washSat * 0.82, dark ? (hc ? 0.08 : 0.15) : hc ? 0.96 : 0.88),
+      washC: hslToHex(hue - 22, hc ? washSat * 0.35 : washSat * 0.75, dark ? (hc ? 0.11 : 0.21) : hc ? 0.97 : 0.9),
+      base: dark
+        ? hslToHex(hue, washSat * (hc ? 0.2 : 0.55), hc ? 0.03 : 0.08)
+        : hslToHex(hue, washSat * (hc ? 0.2 : 0.5), hc ? 0.985 : 0.95),
     };
   }
 
@@ -365,91 +398,182 @@
 
   var pendingAccent = null;
 
+  var THEME_CHOICES = [
+    ["light", "Light", "Soft off-white with warm accents."],
+    ["light-hc", "Light High Contrast", "Black text on white, stronger borders."],
+    ["dark", "Dark", "Grey panels rather than pure black."],
+    ["dark-hc", "Dark High Contrast", "White on black with brighter accents."],
+    ["flat", "Flat", "Square corners, thin borders, no shadows."],
+  ];
+
+  function themePreview() {
+    var box = Board.el("div", "theme-preview");
+    var bar = Board.el("div", "tp-bar");
+    for (var i = 0; i < 3; i++) bar.appendChild(Board.el("i"));
+    box.appendChild(bar);
+    box.appendChild(Board.el("div", "tp-head"));
+    var row = Board.el("div", "tp-body");
+    var card = Board.el("div", "tp-card");
+    card.appendChild(Board.el("i"));
+    row.appendChild(card);
+    row.appendChild(Board.el("div", "tp-side"));
+    box.appendChild(row);
+    return box;
+  }
+
+  function switchControl(label, checked, onChange) {
+    var button = Board.el("button", "switch");
+    button.type = "button";
+    button.setAttribute("role", "switch");
+    button.setAttribute("aria-checked", String(checked));
+    button.setAttribute("aria-label", label);
+    button.addEventListener("click", function () {
+      var next = button.getAttribute("aria-checked") !== "true";
+      button.setAttribute("aria-checked", String(next));
+      onChange(next);
+    });
+    return button;
+  }
+
+  function settingRow(title, control, sub) {
+    var row = Board.el("div", "setting-row");
+    var text = Board.el("div", "setting-text");
+    text.appendChild(Board.el("div", "setting-title", title));
+    if (sub) text.appendChild(Board.el("div", "sub", sub));
+    row.appendChild(text);
+    if (control) row.appendChild(control);
+    return row;
+  }
+
+  function segControl(label, options, current, onPick) {
+    var seg = Board.el("div", "seg");
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", label);
+    var buttons = options.map(function (option) {
+      var on = option[0] === current;
+      var button = Board.el("button", "seg-btn" + (on ? " active" : ""), option[1]);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(on));
+      button.addEventListener("click", function () {
+        if (option[0] === current) return;
+        current = option[0];
+        buttons.forEach(function (node) {
+          node.classList.toggle("active", node === button);
+          node.setAttribute("aria-pressed", String(node === button));
+        });
+        onPick(option[0]);
+      });
+      seg.appendChild(button);
+      return button;
+    });
+    return seg;
+  }
+
   function openSettings() {
     var snap = lastSnapshot || {};
     var current = String(snap.accent || "#B4622D").toUpperCase();
     var isTwelve = Boolean(snap.clock && snap.clock.is12h);
+    var currentLang = String(snap.language || "en");
+    var theme = String(snap.theme || "light");
+    var motion = String(snap.motion || "normal");
+
     var body = Board.el("div", "settings");
+    var nav = Board.el("nav", "settings-nav");
+    nav.setAttribute("role", "tablist");
+    nav.setAttribute("aria-label", "Settings sections");
 
-    var tabs = Board.el("div", "seg settings-tabs");
-    tabs.setAttribute("role", "tablist");
-    var generalTab = Board.el("button", "seg-btn active", "General");
-    generalTab.type = "button";
-    generalTab.setAttribute("role", "tab");
-    generalTab.setAttribute("aria-selected", "true");
-    var dataTab = Board.el("button", "seg-btn", "Data");
-    dataTab.type = "button";
-    dataTab.setAttribute("role", "tab");
-    dataTab.setAttribute("aria-selected", "false");
-    tabs.appendChild(generalTab);
-    tabs.appendChild(dataTab);
-
+    var appearancePane = Board.el("div", "settings-pane");
     var generalPane = Board.el("div", "settings-pane");
     var dataPane = Board.el("div", "settings-pane");
+    generalPane.hidden = true;
     dataPane.hidden = true;
 
+    var navButtons = [];
+    [
+      ["appearance", "Appearance"],
+      ["general", "General"],
+      ["data", "Data"],
+    ].forEach(function (entry) {
+      var button = Board.el("button", entry[0] === "appearance" ? "active" : "", entry[1]);
+      button.type = "button";
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-selected", String(entry[0] === "appearance"));
+      button.addEventListener("click", function () {
+        showPane(entry[0]);
+      });
+      nav.appendChild(button);
+      navButtons.push({ name: entry[0], button: button });
+    });
+
     function showPane(which) {
-      var isData = which === "data";
-      generalPane.hidden = isData;
-      dataPane.hidden = !isData;
-      generalTab.classList.toggle("active", !isData);
-      dataTab.classList.toggle("active", isData);
-      generalTab.setAttribute("aria-selected", String(!isData));
-      dataTab.setAttribute("aria-selected", String(isData));
-      /* A shorter pane should not inherit the other one's scroll offset. The
-         dialog scrolls on the .settings element, not on .modal itself. */
+      appearancePane.hidden = which !== "appearance";
+      generalPane.hidden = which !== "general";
+      dataPane.hidden = which !== "data";
+      navButtons.forEach(function (entry) {
+        var on = entry.name === which;
+        entry.button.classList.toggle("active", on);
+        entry.button.setAttribute("aria-selected", String(on));
+      });
       body.scrollTop = 0;
       var panel = document.querySelector("#modal-root .modal");
       if (panel) panel.scrollTop = 0;
     }
 
-    generalTab.addEventListener("click", function () {
-      showPane("general");
-    });
-    dataTab.addEventListener("click", function () {
-      showPane("data");
-    });
+    /* ---- appearance ---- */
 
-    var clockRow = Board.el("div", "setting-row");
-    var clockText = Board.el("div", "setting-text");
-    clockText.appendChild(Board.el("div", "setting-title", "Clock"));
-    clockRow.appendChild(clockText);
+    appearancePane.appendChild(Board.el("h3", "", "Theme"));
 
-    var clockSeg = Board.el("div", "seg");
-    clockSeg.setAttribute("role", "group");
-    clockSeg.setAttribute("aria-label", "Clock format");
-    var clockButtons = [[false, "24-hour"], [true, "12-hour"]].map(function (option) {
-      var button = Board.el(
-        "button",
-        "seg-btn" + (option[0] === isTwelve ? " active" : ""),
-        option[1]
-      );
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(option[0] === isTwelve));
-      button.addEventListener("click", function () {
-        clockButtons.forEach(function (node) {
-          node.classList.toggle("active", node === button);
-          node.setAttribute("aria-pressed", String(node === button));
-        });
-        invoke("set_hour_format", { use12h: option[0] })
+    var grid = Board.el("div", "theme-grid");
+    grid.setAttribute("role", "radiogroup");
+    grid.setAttribute("aria-label", "Theme");
+    var cards = [];
+    THEME_CHOICES.forEach(function (choice) {
+      var card = Board.el("button", "theme-card");
+      card.type = "button";
+      card.setAttribute("role", "radio");
+      card.setAttribute("data-theme-preview", choice[0]);
+      card.setAttribute("aria-checked", String(choice[0] === theme));
+      card.appendChild(themePreview());
+      var name = Board.el("span", "theme-name");
+      name.appendChild(Board.el("span", "theme-dot"));
+      name.appendChild(Board.el("span", "", choice[1]));
+      card.appendChild(name);
+      card.appendChild(Board.el("span", "theme-note", choice[2]));
+      card.addEventListener("click", function () {
+        if (choice[0] === theme) return;
+        theme = choice[0];
+        paintThemes();
+        invoke("set_theme", { theme: choice[0] })
           .then(render)
           .catch(function (err) {
-            console.error("flip: set_hour_format failed", err);
+            console.error("flip: set_theme failed", err);
           });
       });
-      clockSeg.appendChild(button);
-      return button;
+      grid.appendChild(card);
+      cards.push({ name: choice[0], card: card });
     });
-    clockRow.appendChild(clockSeg);
+
+    function paintThemes() {
+      cards.forEach(function (entry) {
+        entry.card.setAttribute("aria-checked", String(entry.name === theme));
+      });
+    }
+    appearancePane.appendChild(grid);
+
+    appearancePane.appendChild(Board.el("h3", "", "Accent"));
 
     var accentRow = Board.el("div", "setting-row column");
-    var accentText = Board.el("div", "setting-text");
-    accentText.appendChild(Board.el("div", "setting-title", "Accent"));
-    accentRow.appendChild(accentText);
-
     var swatches = Board.el("div", "accent-swatches");
     swatches.setAttribute("role", "group");
     swatches.setAttribute("aria-label", "Accent colour");
+
+    var customWrap = Board.el("label", "accent-custom");
+    customWrap.title = "Pick any colour";
+    var custom = document.createElement("input");
+    custom.type = "color";
+    custom.value = /^#[0-9a-f]{6}$/i.test(current) ? current.toLowerCase() : "#b4622d";
+    custom.setAttribute("aria-label", "Custom accent colour");
+
     ACCENT_PRESETS.forEach(function (preset) {
       var button = Board.el("button", "accent-swatch");
       button.type = "button";
@@ -467,12 +591,6 @@
       swatches.appendChild(button);
     });
 
-    var customWrap = Board.el("label", "accent-custom");
-    customWrap.title = "Pick any colour";
-    var custom = document.createElement("input");
-    custom.type = "color";
-    custom.value = /^#[0-9a-f]{6}$/i.test(current) ? current.toLowerCase() : "#b4622d";
-    custom.setAttribute("aria-label", "Custom accent colour");
     custom.addEventListener("input", function () {
       pendingAccent = custom.value;
       applyAccent(custom.value);
@@ -483,92 +601,155 @@
     customWrap.appendChild(custom);
     swatches.appendChild(customWrap);
     accentRow.appendChild(swatches);
+    appearancePane.appendChild(accentRow);
 
-    clockSeg.addEventListener("keydown", function (event) {
-      var delta =
-        event.key === "ArrowRight" || event.key === "ArrowDown"
-          ? 1
-          : event.key === "ArrowLeft" || event.key === "ArrowUp"
-            ? -1
-            : 0;
-      if (!delta) return;
-      var at = clockButtons.indexOf(document.activeElement);
-      if (at < 0) return;
-      event.preventDefault();
-      var next = clockButtons[(at + delta + clockButtons.length) % clockButtons.length];
-      next.focus();
-      next.click();
-    });
+    appearancePane.appendChild(
+      settingRow(
+        "Gradient background",
+        switchControl("Gradient background", snap.wash === true, function (on) {
+          document.documentElement.setAttribute("data-wash", on ? "on" : "off");
+          invoke("set_wash", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_wash failed", err);
+            });
+        }),
+        "Paints the older accent wash behind the app. Off gives the plain theme backdrop."
+      )
+    );
 
-    var langRow = Board.el("div", "setting-row");
-    var langText = Board.el("div", "setting-text");
-    langText.appendChild(Board.el("div", "setting-title", "Language"));
-    langRow.appendChild(langText);
+    /* ---- general ---- */
 
-    var langSeg = Board.el("div", "seg");
-    langSeg.setAttribute("role", "group");
-    langSeg.setAttribute("aria-label", "Language");
-    var currentLang = String(snap.language || "en");
-    [["en", "English"], ["vi", "Tiếng Việt"]].forEach(function (option) {
-      var button = Board.el(
-        "button",
-        "seg-btn" + (option[0] === currentLang ? " active" : ""),
-        option[1]
-      );
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(option[0] === currentLang));
-      button.addEventListener("click", function () {
-        if (option[0] === currentLang) return;
-        invoke("set_language", { language: option[0] }).then(function () {
-          location.reload();
-        });
-      });
-      langSeg.appendChild(button);
-    });
-    langRow.appendChild(langSeg);
+    generalPane.appendChild(Board.el("h3", "", "Clock and sound"));
 
-    var soundRow = Board.el("div", "setting-row");
-    var soundText = Board.el("div", "setting-text");
-    soundText.appendChild(Board.el("div", "setting-title", "Sound effects"));
-    soundRow.appendChild(soundText);
+    generalPane.appendChild(
+      settingRow(
+        "Clock",
+        segControl(
+          "Clock format",
+          [[false, "24-hour"], [true, "12-hour"]],
+          isTwelve,
+          function (value) {
+            invoke("set_hour_format", { use12h: value })
+              .then(render)
+              .catch(function (err) {
+                console.error("flip: set_hour_format failed", err);
+              });
+          }
+        )
+      )
+    );
 
-    var soundSeg = Board.el("div", "seg");
-    soundSeg.setAttribute("role", "group");
-    soundSeg.setAttribute("aria-label", "Sound effects");
-    var soundNow = snap.sound !== false;
-    var soundButtons = [[true, "On"], [false, "Off"]].map(function (option) {
-      var button = Board.el(
-        "button",
-        "seg-btn" + (option[0] === soundNow ? " active" : ""),
-        option[1]
-      );
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(option[0] === soundNow));
-      button.addEventListener("click", function () {
-        soundButtons.forEach(function (node) {
-          node.classList.toggle("active", node === button);
-          node.setAttribute("aria-pressed", String(node === button));
-        });
-        invoke("set_sound", { enabled: option[0] })
-          .then(render)
-          .catch(function (err) {
-            console.error("flip: set_sound failed", err);
-          });
-      });
-      soundSeg.appendChild(button);
-      return button;
-    });
-    soundRow.appendChild(soundSeg);
+    generalPane.appendChild(
+      settingRow(
+        "Sound effects",
+        switchControl("Sound effects", snap.sound !== false, function (on) {
+          invoke("set_sound", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_sound failed", err);
+            });
+        })
+      )
+    );
 
-    generalPane.appendChild(langRow);
-    generalPane.appendChild(soundRow);
+    generalPane.appendChild(
+      settingRow(
+        "Touch mode",
+        switchControl("Touch mode", snap.touch === true, function (on) {
+          document.documentElement.setAttribute("data-touch", on ? "on" : "off");
+          invoke("set_touch", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_touch failed", err);
+            });
+        }),
+        "Bigger buttons, rows and spacing for touch screens."
+      )
+    );
+
+    generalPane.appendChild(Board.el("h3", "", "Language and motion"));
+
+    generalPane.appendChild(
+      settingRow(
+        "Language",
+        segControl(
+          "Language",
+          [["en", "English"], ["vi", "Tiếng Việt"]],
+          currentLang,
+          function (value) {
+            if (value === currentLang) return;
+            invoke("set_language", { language: value }).then(function () {
+              location.reload();
+            });
+          }
+        )
+      )
+    );
+
+    generalPane.appendChild(
+      settingRow(
+        "Animations",
+        segControl(
+          "Animations",
+          [
+            ["extra", "Extra"],
+            ["normal", "Normal"],
+            ["fast", "Fast"],
+            ["snappy", "Snappy"],
+          ],
+          motion,
+          function (value) {
+            invoke("set_motion", { motion: value })
+              .then(render)
+              .catch(function (err) {
+                console.error("flip: set_motion failed", err);
+              });
+          }
+        )
+      )
+    );
+
+    /* ---- what this build sends, and what it never sends ---- */
+
+    generalPane.appendChild(Board.el("h3", "", "Privacy"));
+
+    generalPane.appendChild(
+      settingRow(
+        "Discord Rich Presence",
+        switchControl("Discord Rich Presence", snap.discord !== false, function (on) {
+          invoke("set_discord", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_discord failed", err);
+            });
+        }),
+        "Shows Flip is open, and whether a timer is running. Never your tasks, subjects or study time."
+      )
+    );
 
     var telemetryRow = Board.el("div", "setting-row column");
-    var telemetryText = Board.el("div", "setting-text");
-    telemetryText.appendChild(Board.el("div", "setting-title", "Share anonymous usage"));
-    telemetryText.appendChild(
+    var telemetryHead = Board.el("div", "setting-row");
+    var telemetryLabel = Board.el("div", "setting-text");
+    telemetryLabel.appendChild(Board.el("div", "setting-title", "Share anonymous usage"));
+    telemetryLabel.appendChild(
       Board.el("div", "sub", "Off unless you turn it on. One ping a day, and nothing personal.")
     );
+    telemetryHead.appendChild(telemetryLabel);
+    telemetryHead.appendChild(
+      switchControl("Share anonymous usage", snap.telemetry === true, function (on) {
+        invoke("set_telemetry", { enabled: on })
+          .then(function (next) {
+            render(next);
+            if (on && window.FlipTelemetry) window.FlipTelemetry.pingNow();
+          })
+          .catch(function (err) {
+            console.error("flip: set_telemetry failed", err);
+          });
+      })
+    );
+    telemetryRow.appendChild(telemetryHead);
+
     var telemetryDetail = Board.el("div", "setting-detail");
     telemetryDetail.appendChild(
       Board.el("div", "", "Sends: a random install id made on this computer, the app version, your interface language, and the date.")
@@ -577,45 +758,14 @@
       Board.el("div", "", "Never sends: tasks, subjects, timetable, notes, timers, settings, file names, your name, or anything that identifies your PC.")
     );
     telemetryDetail.appendChild(
-      Board.el("div", "", "Your IP address is not stored, and nothing is linked to an account. Leave it off and Flip sends nothing at all.")
+      Board.el("div", "", "Your IP address is not stored, and nothing is linked to an account.")
     );
-    telemetryText.appendChild(telemetryDetail);
-    telemetryText.title =
-      "Anonymous and optional. On, Flip sends one HTTPS request per day with: a random 32-character install id (made locally, tied to nothing), the app version, the interface language (en or vi), and the date. " +
-      "Never sent: your tasks, subjects, timetable, notes, timer history, settings, file names, account details, hardware ids or location. The server does not store IP addresses. Turning this off deletes nothing and stops all requests immediately.";
-    telemetryRow.appendChild(telemetryText);
-
-    var telemetrySeg = Board.el("div", "seg");
-    telemetrySeg.setAttribute("role", "group");
-    telemetrySeg.setAttribute("aria-label", "Share anonymous usage");
-    var telemetryNow = snap.telemetry === true;
-    var telemetryButtons = [[true, "On"], [false, "Off"]].map(function (option) {
-      var button = Board.el(
-        "button",
-        "seg-btn" + (option[0] === telemetryNow ? " active" : ""),
-        option[1]
-      );
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(option[0] === telemetryNow));
-      button.addEventListener("click", function () {
-        telemetryButtons.forEach(function (node) {
-          node.classList.toggle("active", node === button);
-          node.setAttribute("aria-pressed", String(node === button));
-        });
-        invoke("set_telemetry", { enabled: option[0] })
-          .then(function (next) {
-            render(next);
-            if (option[0] && window.FlipTelemetry) window.FlipTelemetry.pingNow();
-          })
-          .catch(function (err) {
-            console.error("flip: set_telemetry failed", err);
-          });
-      });
-      telemetrySeg.appendChild(button);
-      return button;
-    });
-    telemetryRow.appendChild(telemetrySeg);
+    telemetryRow.appendChild(telemetryDetail);
     generalPane.appendChild(telemetryRow);
+
+    /* ---- app-level actions ---- */
+
+    generalPane.appendChild(Board.el("h3", "", "This copy"));
 
     var updateBox = Board.el("div", "setting-row column");
     var updateText = Board.el("div", "setting-text");
@@ -627,7 +777,6 @@
     var setupRow = Board.el("div", "setting-row");
     var setupText = Board.el("div", "setting-text");
     setupText.appendChild(Board.el("div", "setting-title", "Setup"));
-    setupText.appendChild(Board.el("div", "sub", "Walk through the basics again"));
     setupRow.appendChild(setupText);
     var setupButton = Board.el("button", "btn small", "Run setup");
     setupButton.type = "button";
@@ -638,51 +787,12 @@
     setupRow.appendChild(setupButton);
     generalPane.appendChild(setupRow);
 
-    var motionRow = Board.el("div", "setting-row");
-    var motionText = Board.el("div", "setting-text");
-    motionText.appendChild(Board.el("div", "setting-title", "Animations"));
-    motionText.appendChild(Board.el("div", "sub", "Extra is livelier, Fast is quieter"));
-    motionRow.appendChild(motionText);
-
-    var motionSeg = Board.el("div", "seg");
-    motionSeg.setAttribute("role", "group");
-    motionSeg.setAttribute("aria-label", "Animations");
-    var motionNow = String(snap.motion || "normal");
-    var motionButtons = [["extra", "Extra"], ["normal", "Normal"], ["fast", "Fast"]].map(function (option) {
-      var button = Board.el(
-        "button",
-        "seg-btn" + (option[0] === motionNow ? " active" : ""),
-        option[1]
-      );
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(option[0] === motionNow));
-      button.addEventListener("click", function () {
-        motionButtons.forEach(function (node) {
-          node.classList.toggle("active", node === button);
-          node.setAttribute("aria-pressed", String(node === button));
-        });
-        invoke("set_motion", { motion: option[0] })
-          .then(render)
-          .catch(function (err) {
-            console.error("flip: set_motion failed", err);
-          });
-      });
-      motionSeg.appendChild(button);
-      return button;
-    });
-    motionRow.appendChild(motionSeg);
-    generalPane.appendChild(motionRow);
-    generalPane.appendChild(clockRow);
-    generalPane.appendChild(accentRow);
-
-    body.appendChild(tabs);
-    body.appendChild(generalPane);
-    body.appendChild(dataPane);
+    /* ---- data ---- */
 
     if (window.FlipData) {
       dataPane.appendChild(window.FlipData.section());
     } else {
-      dataPane.appendChild(Board.el("p", "dash-hint", "Backups are unavailable in this build."));
+      dataPane.appendChild(Board.el("p", "sub", "Backups are unavailable in this build."));
     }
 
     function commitAccent() {
@@ -696,6 +806,11 @@
         });
     }
 
+    body.appendChild(nav);
+    body.appendChild(appearancePane);
+    body.appendChild(generalPane);
+    body.appendChild(dataPane);
+
     Board.modal({
       title: "Settings",
       body: body,
@@ -705,14 +820,14 @@
       onClose: commitAccent,
     });
 
-    /* Start on the current format rather than the colour swatch, and without
-       scrolling the dialog down to it. */
+    var panel = document.querySelector("#modal-root .modal");
+    if (panel) panel.classList.add("modal-settings");
+    body.scrollTop = 0;
     setTimeout(function () {
-      var active = clockButtons[isTwelve ? 1 : 0];
-      if (active) active.focus({ preventScroll: true });
+      if (navButtons[0]) navButtons[0].button.focus({ preventScroll: true });
       body.scrollTop = 0;
-      var panel = document.querySelector("#modal-root .modal");
-      if (panel) panel.scrollTop = 0;
+      var fresh = document.querySelector("#modal-root .modal");
+      if (fresh) fresh.scrollTop = 0;
     }, 0);
   }
 
@@ -739,9 +854,9 @@
 
   /* ------------------------------------------------------------------ render */
 
-  /* How lively the interface is: extra, normal or fast. */
+  /* How lively the interface is: extra, normal, fast or snappy (none). */
   function applyMotion(mode) {
-    var wanted = mode === "extra" || mode === "fast" ? mode : "normal";
+    var wanted = ["extra", "fast", "snappy"].indexOf(mode) >= 0 ? mode : "normal";
     if (document.documentElement.getAttribute("data-motion") !== wanted) {
       document.documentElement.setAttribute("data-motion", wanted);
     }
@@ -751,6 +866,11 @@
     if (!snap) return;
     soundOn = snap.sound !== false;
     applyMotion(snap.motion);
+    document.documentElement.setAttribute("data-touch", snap.touch === true ? "on" : "off");
+    document.documentElement.setAttribute("data-wash", snap.wash === true ? "on" : "off");
+
+    zoomPending = 0;
+    paintZoom(Number(snap.zoom) || 100);
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     lastSnapshot = snap;
     applyTheme(snap.theme);
@@ -1086,7 +1206,7 @@
     try {
       var first = await invoke("get_snapshot");
       render(first);
-      if (!first.onboarded && window.FlipSetup) window.FlipSetup.open();
+      if (!first.onboarded && window.FlipSetup) window.FlipSetup.resume();
     } catch (err) {
       console.error("flip: get_snapshot failed", err);
     }

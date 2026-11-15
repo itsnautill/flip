@@ -2,6 +2,7 @@ pub mod backup;
 pub mod board;
 pub mod clock;
 pub mod commands;
+pub mod discord;
 pub mod settings;
 pub mod state;
 pub mod ticker;
@@ -160,6 +161,7 @@ pub fn run() {
             let settings_path = data_dir.join("settings.json");
             let board_path = data_dir.join("board.json");
             let settings = settings::load(&settings_path);
+            let saved_zoom = settings.zoom;
             let board = board::load(&board_path);
             let timer = timer::Timer::new(settings.timer_preset_secs);
             let core = Core::new(
@@ -171,8 +173,16 @@ pub fn run() {
                 board_path,
             );
 
+            /* The saved zoom has to reach the window, not just the settings file. */
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(e) = window.set_zoom(saved_zoom as f64 / 100.0) {
+                    eprintln!("flip: could not restore zoom: {e}");
+                }
+            }
+
             let shared: SharedCore = Arc::new(Mutex::new(core));
             app.manage(shared);
+            app.manage(discord::spawn());
 
             ticker::spawn(app.handle().clone());
             Ok(())
@@ -210,6 +220,11 @@ pub fn run() {
             commands::restore_backup,
             commands::export_data,
             commands::open_folder,
+            commands::set_theme,
+            commands::set_touch,
+            commands::set_zoom,
+            commands::set_wash,
+            commands::set_discord,
             update::download_update,
             update::install_update
         ])

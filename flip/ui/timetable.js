@@ -43,14 +43,15 @@
       Board.action({ kind: "addPeriod" });
     });
 
-    importButton.addEventListener("click", function (event) {
-      if (event.shiftKey) {
-        saveTemplate();
-        return;
-      }
+    importButton.addEventListener("click", function () {
       fileInput.value = "";
       fileInput.click();
     });
+
+    var templateButton = document.getElementById("tt-template");
+    if (templateButton) {
+      templateButton.addEventListener("click", saveTemplate);
+    }
 
     fileInput.addEventListener("change", function () {
       var file = fileInput.files && fileInput.files[0];

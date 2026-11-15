@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine - no account, no s
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Tiếng%20Việt-2ea44f)
-![Version](https://img.shields.io/badge/version-1.0.2-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
 > **VirusTotal says 2/71.** Arctic Wolf and SecureAge flag the installer; the other 69 engines, including Microsoft, Kaspersky, ESET, Bitdefender and Symantec, report clean. The two are heuristic verdicts on an unsigned, freshly built installer, not a detection of anything inside Flip. The section below explains the Windows warning and how to check your download.
 
@@ -22,13 +22,13 @@ The first run shows **"Windows protected your PC"** with *Publisher: Unknown pub
 **To check your download is the one built here:**
 
 ```powershell
-Get-FileHash .\Flip_1.0.2_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Flip_1.1.0_x64-setup.exe -Algorithm SHA256
 ```
 
-For 1.0.2 that prints:
+For 1.1.0 that prints:
 
 ```
-8dc884f0eb640f4d1693140b2cedc7c0f1ffa119a4f3928eaf5b8e97a312a61b
+e40ff37a63f43234413de6fe7ebf27f5796f778dd7ad1aefbc3246753ccfcb68
 ```
 
 **To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
@@ -62,7 +62,7 @@ A split-flap clock that pauses to flip each digit, and a countdown timer that st
 
 Set a timer and Flip tracks the whole session: elapsed time, how long you actually focused versus paused, and which subject you were working on. When it finishes you get a chime and a card asking what you got done.
 
-Both views have 12- and 24-hour formats, and the window can go fullscreen for a distraction-free desk display.
+Both views have 12- and 24-hour formats, the window can go fullscreen for a distraction-free desk display, and the header buttons zoom the whole interface between 80% and 160%.
 
 ### Timetable
 
@@ -89,11 +89,11 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 | Section | What lives there |
 | --- | --- |
-| General | Language, clock format, animations, sound effects, setup, updates |
-| Appearance | Light and dark, eight accent colours |
+| General | Language, clock format, animations, touch mode, Discord presence, sound effects, setup, updates |
+| Appearance | Five themes, eight accent colours, gradient background |
 | Data | Backups, restore, export |
 
-**Animations** has three modes - *Extra*, *Normal* and *Fast* - so the interface can feel lively or stay nearly still. `prefers-reduced-motion` always wins.
+**Animations** has four modes - *Extra*, *Normal*, *Fast* and *Snappy* - so the interface can feel lively, stay nearly still or drop movement altogether. `prefers-reduced-motion` always wins.
 
 **Language** switches the whole interface between English and Vietnamese, including dates, durations and plural forms (`14 Thg 11`, `1g 30p`).
 
@@ -101,7 +101,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_1.0.2_x64-setup.exe` from [Releases](../../releases/latest)
+1. Download `Flip_1.1.0_x64-setup.exe` from [Releases](../../releases/latest)
 2. Run it - it installs per user, no administrator prompt
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed - see [Windows will warn you](#windows-will-warn-you---that-is-expected) for why, how to check the file, and how to get rid of the notice
 
@@ -161,7 +161,19 @@ Both files are plain JSON you can read and edit. Flip writes them through Rust, 
 
 **Export** produces CSV of your tasks and timetable, the settings as JSON, or a complete backup you can move to another machine.
 
-There is no cloud, no account and no network traffic except the update check when you ask for it.
+There is no cloud and no account. The only network traffic is the update check when you ask for it.
+
+### Discord presence
+
+**On by default, one switch turns it off** in **Settings → General → Discord Rich Presence**. Flip talks to the Discord app on your own machine over its local socket, so nothing goes over the internet, and the card says only:
+
+- the mode it is in: `Clock`, `Timer`, `Focus session`
+- whether a countdown is running, with an elapsed-time counter while it is
+- one button: **Download Flip** → <https://projectflip.site.je>
+
+It never shows task titles, subject names, study totals, notes or file names, because none of them are ever put into the payload. With Discord closed, nothing is sent at all; the connection is retried quietly in the background.
+
+Discord only accepts presence from a registered application, so the client id lives in [`flip/src-tauri/src/discord.rs`](flip/src-tauri/src/discord.rs) as `CLIENT_ID`. Create an application at <https://discord.com/developers/applications> (a name is enough, no bot), paste its Application ID there and rebuild. Left empty, Flip never opens the socket.
 
 ### Optional usage sharing
 
@@ -200,7 +212,7 @@ Downloads are only accepted over HTTPS from GitHub's release hosts, and the file
 1. Bump the version in `flip/src-tauri/Cargo.toml`, `flip/src-tauri/tauri.conf.json`, `flip/update/latest.json` and this README (badge, installer name, SHA-256).
 2. Build: `cd flip && cargo tauri build`.
 3. Commit, tag, push: `git add -A && git commit -m "Release 1.0.2" && git tag v1.0.2 && git push && git push --tags`.
-4. GitHub: **Releases -> Draft a new release**, pick the tag, attach `flip/src-tauri/target/release/bundle/nsis/Flip_1.0.2_x64-setup.exe`.
+4. GitHub: **Releases -> Draft a new release**, pick the tag, attach `flip/src-tauri/target/release/bundle/nsis/Flip_1.1.0_x64-setup.exe`.
 
 The manifest lives in the repository, so it needs no upload. See [`flip/update/README.md`](flip/update/README.md) for the internals.
 

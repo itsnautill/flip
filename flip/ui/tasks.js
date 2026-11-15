@@ -793,7 +793,7 @@
 
   function renderSuggestions(view) {
     Board.clear(suggEl);
-    view.suggestions.forEach(function (suggestion) {
+    (view.suggestions || []).forEach(function (suggestion) {
       var card = Board.el("div", "suggestion");
 
       var head = Board.el("div", "suggestion-head");

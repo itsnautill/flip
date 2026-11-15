@@ -195,12 +195,7 @@ pub fn set_telemetry(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
 #[tauri::command]
 pub fn set_motion(core: State<'_, SharedCore>, motion: String) -> Snapshot {
     let mut c = lock(core.inner());
-    let motion = match motion.as_str() {
-        "extra" => "extra",
-        "fast" => "fast",
-        _ => "normal",
-    }
-    .to_string();
+    let motion = settings::normalise_motion(&motion);
     if c.settings.motion != motion {
         c.settings.motion = motion;
         let updated = c.settings.clone();
@@ -279,11 +274,67 @@ pub fn save_template(app: AppHandle, bytes: Vec<u8>) -> Result<String, String> {
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Writes one settings change, normalises it, saves it and answers with a
+/// fresh snapshot. Nothing is saved when the value was already correct.
+fn change<F>(core: &State<'_, SharedCore>, apply: F) -> Snapshot
+where
+    F: FnOnce(&mut settings::Settings),
+{
+    let mut c = lock(core.inner());
+    let before = c.settings.clone();
+    apply(&mut c.settings);
+    if c.settings == before {
+        return c.snapshot(Instant::now());
+    }
+    c.settings = settings::normalise(c.settings.clone());
+    let updated = c.settings.clone();
+    let snapshot = c.snapshot(Instant::now());
+    let path = c.settings_path.clone();
+    drop(c);
+    settings::save(&path, &updated);
+    snapshot
+}
+
+#[tauri::command]
+pub fn set_theme(core: State<'_, SharedCore>, theme: String) -> Snapshot {
+    change(&core, |s| s.theme = theme)
+}
+
+#[tauri::command]
+pub fn set_touch(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    change(&core, |s| s.touch = enabled)
+}
+
+#[tauri::command]
+pub fn set_wash(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    change(&core, |s| s.wash = enabled)
+}
+
+#[tauri::command]
+pub fn set_discord(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    change(&core, |s| s.discord = enabled)
+}
+
+/// Steps the interface zoom and tells the window about it straight away.
+#[tauri::command]
+pub fn set_zoom(app: AppHandle, core: State<'_, SharedCore>, percent: i32) -> Snapshot {
+    let wanted = settings::normalise_zoom(percent);
+    let snapshot = change(&core, |s| s.zoom = wanted);
+    if let Some(window) = app.get_webview_window("main") {
+        if let Err(e) = window.set_zoom(snapshot.zoom as f64 / 100.0) {
+            eprintln!("flip: could not set zoom: {e}");
+        }
+    }
+    snapshot
+}
+
+/// The header button flips between the plain light and dark looks, whichever
+/// pair the user is currently in.
 #[tauri::command]
 pub fn toggle_theme(core: State<'_, SharedCore>) -> Snapshot {
     let mut c = lock(core.inner());
-    c.settings.theme = if c.settings.theme == "dark" {
-        "beige".into()
+    c.settings.theme = if c.settings.theme.starts_with("dark") {
+        "light".into()
     } else {
         "dark".into()
     };

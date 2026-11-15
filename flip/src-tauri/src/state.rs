@@ -32,8 +32,16 @@ pub struct Snapshot {
     pub sound: bool,
     /// False only before the first-run setup has been dealt with.
     pub onboarded: bool,
-    /// "extra", "normal" or "fast".
+    /// One of the animation modes; "snappy" means none.
     pub motion: String,
+    /// Bigger targets and spacing for touch screens.
+    pub touch: bool,
+    /// Interface zoom in percent; the window applies it.
+    pub zoom: u32,
+    /// Whether the accent wash gradient is painted behind the app.
+    pub wash: bool,
+    /// Whether Flip shares a small presence card with Discord.
+    pub discord: bool,
     /// Whether the anonymous daily ping is on.
     pub telemetry: bool,
     /// Random per-install id; empty until telemetry is switched on.
@@ -99,6 +107,10 @@ impl Core {
             sound: self.settings.sound,
             onboarded: self.settings.onboarded,
             motion: self.settings.motion.clone(),
+            touch: self.settings.touch,
+            zoom: self.settings.zoom,
+            wash: self.settings.wash,
+            discord: self.settings.discord,
             telemetry: self.settings.telemetry,
             install_id: self.settings.install_id.clone(),
             accent: self.settings.accent.clone(),

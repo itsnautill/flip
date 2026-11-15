@@ -157,11 +157,24 @@
 
   /* ------------------------------------------------------------------- toast */
 
+  var toastLeft = 0;
+  var toastStartedAt = 0;
+
   function hideToast() {
     var node = $("toast");
     if (!node) return;
+    clearTimeout(toastTimer);
     node.hidden = true;
+    node.onmouseenter = null;
+    node.onmouseleave = null;
     clear(node);
+  }
+
+  function armHide(ms) {
+    clearTimeout(toastTimer);
+    toastStartedAt = window.performance.now();
+    toastLeft = ms;
+    toastTimer = setTimeout(hideToast, ms);
   }
 
   function toast(message, options) {
@@ -179,9 +192,26 @@
       });
       node.appendChild(button);
     }
+
+    var bar = el("div", "toast-progress");
+    var fill = el("i");
+    bar.appendChild(fill);
+    node.appendChild(bar);
+
+    var duration = opts.duration || (opts.actionLabel ? 6500 : 3200);
+    fill.style.setProperty("--toast-ms", duration + "ms");
+
     node.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(hideToast, opts.actionLabel ? 6500 : 3600);
+    armHide(duration);
+    /* Hovering pauses both the bar and the timer, so a long message can be
+       read without it disappearing. */
+    node.onmouseenter = function () {
+      clearTimeout(toastTimer);
+      toastLeft = Math.max(0, toastLeft - (window.performance.now() - toastStartedAt));
+    };
+    node.onmouseleave = function () {
+      armHide(toastLeft);
+    };
   }
 
   /* ------------------------------------------------------------------ modals */
