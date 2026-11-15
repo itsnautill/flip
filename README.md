@@ -307,5 +307,5 @@ The frontend has no test runner by design; it is verified by building and using 
 ## Credits
 
 Made by [@itsnautill](https://github.com/itsnautill). Built on [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) and [Chrono](https://github.com/chronotope/chrono).
-
+Free code signing provided by SignPath.io, certificate by SignPath Foundation.
 Sound effects are synthesised at runtime with the Web Audio API - there are no audio files in the repository.
