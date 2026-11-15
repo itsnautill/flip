@@ -112,7 +112,7 @@ Get-FileHash .\Flip_1.1.0_x64-setup.exe -Algorithm SHA256
 Với bản 1.1.0, kết quả phải là:
 
 ```
-e40ff37a63f43234413de6fe7ebf27f5796f778dd7ad1aefbc3246753ccfcb68
+27552e25295b888e44f9fa9a448bb8aafc2570dec554602f260335955c74b4dc
 ```
 
 **Để tắt cảnh báo trên máy của riêng bạn:** nhấp chuột phải vào tệp `.exe`, mở **Properties**, tick **Unblock**, rồi nhấn **OK**.
