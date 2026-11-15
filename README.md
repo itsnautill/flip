@@ -12,6 +12,8 @@ Built with Rust and Tauri 2. Everything stays on your machine: no account, no sy
 
 English | [Tiếng Việt](README_VI.md)
 
+> **VirusTotal says 2/71.** Arctic Wolf and SecureAge flag the installer; the other 69 engines, including Microsoft, Kaspersky, ESET, Bitdefender and Symantec, report clean. The two are heuristic verdicts on an unsigned, freshly built installer, not a detection of anything inside Flip. [The section below](#about-the-windows-warning) explains the Windows warning and how to check your download.
+
 <!--
 Add screenshots here once you have them, for example:
 
@@ -96,8 +98,6 @@ Uninstalling from **Settings → Apps** leaves your data untouched.
 ---
 
 ## About the Windows warning
-
-> **VirusTotal says 2/71.** Arctic Wolf and SecureAge flag the installer; the other 69 engines, including Microsoft, Kaspersky, ESET, Bitdefender and Symantec, report clean. Both are heuristic verdicts on an unsigned, freshly built installer, not a detection of anything inside Flip.
 
 The first run shows **"Windows protected your PC"** with *Publisher: Unknown publisher*. That means SmartScreen has no record of the file, not that it found something bad. The installer is not code-signed, so it starts with zero reputation.
 
@@ -319,6 +319,8 @@ The frontend has no test runner by design; it is verified by building and using 
 ## Credits
 
 Made by [@itsnautill](https://github.com/itsnautill). Built on [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) and [Chrono](https://github.com/chronotope/chrono).
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation.
 
 Sound effects are synthesised at runtime with the Web Audio API, so there are no audio files in the repository.
 
