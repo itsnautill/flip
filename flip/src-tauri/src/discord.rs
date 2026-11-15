@@ -22,7 +22,7 @@ use crate::timer::TimerState;
 /// The Discord application that owns this presence. Create one at
 /// <https://discord.com/developers/applications> (any name, no bot needed) and
 /// paste its Application ID here.
-pub const CLIENT_ID: &str = "";
+pub const CLIENT_ID: &str = "1571410239218131084";
 
 /// The download page, offered as the one button on the presence card.
 pub const DOWNLOAD_URL: &str = "https://projectflip.site.je";
