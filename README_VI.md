@@ -12,6 +12,8 @@ Xây dựng bằng Rust và Tauri 2. Mọi thứ nằm trên máy của bạn: k
 
 [English](README.md) | Tiếng Việt
 
+> **VirusTotal báo 2/71.** Arctic Wolf và SecureAge gắn cờ bộ cài đặt; 69 engine còn lại, bao gồm Microsoft, Kaspersky, ESET, Bitdefender và Symantec, đều báo sạch. Hai kết quả này là đánh giá theo heuristic đối với một bộ cài đặt chưa ký số và mới build, không phải phát hiện thứ gì đó bên trong Flip. [Phần bên dưới](#về-cảnh-báo-của-windows) giải thích cảnh báo của Windows và cách kiểm tra bản tải về của bạn.
+
 <!--
 Thêm ảnh chụp màn hình vào đây khi đã có, ví dụ:
 
@@ -96,8 +98,6 @@ Gỡ cài đặt từ **Settings → Apps** sẽ không động đến dữ li�
 ---
 
 ## Về cảnh báo của Windows
-
-> **VirusTotal báo 2/71.** Arctic Wolf và SecureAge gắn cờ bộ cài đặt; 69 engine còn lại, bao gồm Microsoft, Kaspersky, ESET, Bitdefender và Symantec, đều báo sạch. Cả hai đều là đánh giá theo heuristic đối với một bộ cài đặt chưa ký số và mới build, không phải phát hiện thứ gì đó bên trong Flip.
 
 Lần chạy đầu tiên sẽ hiện **"Windows protected your PC"** với dòng *Publisher: Unknown publisher*. Điều đó có nghĩa là SmartScreen chưa có thông tin gì về tệp này, chứ không phải nó phát hiện điều gì xấu. Bộ cài đặt chưa được ký số nên bắt đầu với độ tín nhiệm bằng không.
 
@@ -319,6 +319,8 @@ Phần giao diện cố ý không có trình chạy kiểm thử; nó được x
 ## Ghi công
 
 Tạo bởi [@itsnautill](https://github.com/itsnautill). Xây dựng trên [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) và [Chrono](https://github.com/chronotope/chrono).
+
+Ký số miễn phí do SignPath.io cung cấp, chứng chỉ bởi SignPath Foundation.
 
 Hiệu ứng âm thanh được tổng hợp trực tiếp bằng Web Audio API khi chạy, nên không có tệp âm thanh nào trong kho mã nguồn.
 
