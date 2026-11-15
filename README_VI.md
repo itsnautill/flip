@@ -112,7 +112,7 @@ Get-FileHash .\Flip_1.1.0_x64-setup.exe -Algorithm SHA256
 Với bản 1.1.0, kết quả phải là:
 
 ```
-27552e25295b888e44f9fa9a448bb8aafc2570dec554602f260335955c74b4dc
+e40ff37a63f43234413de6fe7ebf27f5796f778dd7ad1aefbc3246753ccfcb68
 ```
 
 **Để tắt cảnh báo trên máy của riêng bạn:** nhấp chuột phải vào tệp `.exe`, mở **Properties**, tick **Unblock**, rồi nhấn **OK**.
@@ -319,8 +319,6 @@ Phần giao diện cố ý không có trình chạy kiểm thử; nó được x
 ## Ghi công
 
 Tạo bởi [@itsnautill](https://github.com/itsnautill). Xây dựng trên [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) và [Chrono](https://github.com/chronotope/chrono).
-
-Ký số miễn phí do SignPath.io cung cấp, chứng chỉ bởi SignPath Foundation.
 
 Hiệu ứng âm thanh được tổng hợp trực tiếp bằng Web Audio API khi chạy, nên không có tệp âm thanh nào trong kho mã nguồn.
 
