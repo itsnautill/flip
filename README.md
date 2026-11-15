@@ -112,7 +112,7 @@ Get-FileHash .\Flip_1.1.0_x64-setup.exe -Algorithm SHA256
 For 1.1.0 it should print:
 
 ```
-e40ff37a63f43234413de6fe7ebf27f5796f778dd7ad1aefbc3246753ccfcb68
+27552e25295b888e44f9fa9a448bb8aafc2570dec554602f260335955c74b4dc
 ```
 
 **To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
