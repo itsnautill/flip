@@ -112,7 +112,7 @@ Get-FileHash .\Flip_1.1.0_x64-setup.exe -Algorithm SHA256
 For 1.1.0 it should print:
 
 ```
-27552e25295b888e44f9fa9a448bb8aafc2570dec554602f260335955c74b4dc
+e40ff37a63f43234413de6fe7ebf27f5796f778dd7ad1aefbc3246753ccfcb68
 ```
 
 **To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
@@ -319,8 +319,6 @@ The frontend has no test runner by design; it is verified by building and using 
 ## Credits
 
 Made by [@itsnautill](https://github.com/itsnautill). Built on [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org) and [Chrono](https://github.com/chronotope/chrono).
-
-Free code signing provided by SignPath.io, certificate by SignPath Foundation.
 
 Sound effects are synthesised at runtime with the Web Audio API, so there are no audio files in the repository.
 
