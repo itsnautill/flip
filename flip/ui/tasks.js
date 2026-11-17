@@ -336,7 +336,7 @@
       var subject = Board.subject(task.subjectId);
       if (subject) {
         var chip = Board.el("span", "chip");
-        chip.style.setProperty("--chip-c", subject.color);
+        chip.style.setProperty("--chip-c", window.FlipColor ? window.FlipColor.subjectColorFromHue(subject.hue).border : "var(--muted)");
         chip.appendChild(Board.el("i", ""));
         chip.appendChild(
           Board.el("span", "", subject.name + (subject.inTimetable ? "" : " (no class)"))
@@ -421,13 +421,19 @@
     focus.type = "button";
     focus.addEventListener("click", function () {
       Board.closeModal();
-      invoke("start_focus", { secs: 25 * 60, taskId: task.id })
+      var chosen = Number(
+        (window.Flip && window.Flip.snapshot() && window.Flip.snapshot().focusSecs) || 25 * 60
+      );
+      invoke("start_focus", { secs: chosen, taskId: task.id })
         .then(function (snap) {
           if (window.Flip) {
             window.Flip.apply(snap);
             window.Flip.go("timer");
           }
-          Board.toast("Focus session started · 25 minutes");
+          Board.toast(
+            "Focus session started · " +
+              window.I18n.count(Math.max(1, Math.round(chosen / 60)), "minute", "minutes")
+          );
         })
         .catch(function (err) {
           Board.toast(String((err && err.message) || err));
@@ -798,7 +804,7 @@
 
       var head = Board.el("div", "suggestion-head");
       var swatch = Board.el("span", "suggestion-swatch");
-      swatch.style.background = suggestion.subjectColor;
+      swatch.style.background = window.FlipColor ? window.FlipColor.subjectColorFromHue(suggestion.subjectHue).border : "var(--muted)";
       head.appendChild(swatch);
       var text = Board.el("div", "");
       text.appendChild(Board.el("div", "suggestion-title", suggestion.title));

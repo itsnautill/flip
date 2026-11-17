@@ -45,6 +45,9 @@
     var wanted = THEMES.indexOf(theme) >= 0 ? theme : "light";
     if (document.documentElement.getAttribute("data-theme") !== wanted) {
       document.documentElement.setAttribute("data-theme", wanted);
+      /* Subject colours and the accent are derived per theme, so anything
+         already painted asks for a fresh coat. */
+      window.dispatchEvent(new CustomEvent("flip-theme"));
     }
   }
 
@@ -52,6 +55,58 @@
     fullscreenButton.addEventListener("click", function () {
       send("toggle_fullscreen");
     });
+  }
+
+  /* A phone has no window to expand, so the same slot holds an orientation
+     switch instead. The flip clock needs width, so a portrait phone is asked
+     to turn rather than shown a squeezed clock. */
+  var ANDROID = /android/i.test(navigator.userAgent || "");
+  var orientButton = document.getElementById("orient-btn");
+  var rotateNote = document.getElementById("rotate-note");
+  var rotateGo = document.getElementById("rotate-go");
+  var portraitQuery = window.matchMedia("(orientation: portrait)");
+
+  function isPortrait() {
+    return Boolean(portraitQuery.matches);
+  }
+
+  function paintOrientation() {
+    if (!ANDROID) return;
+    var portrait = isPortrait();
+    document.documentElement.classList.toggle("android-portrait", portrait);
+    if (rotateNote) rotateNote.hidden = !portrait;
+    if (orientButton) {
+      var label = portrait ? "Switch to landscape" : "Switch to portrait";
+      orientButton.setAttribute("aria-label", label);
+      orientButton.title = label;
+      orientButton.setAttribute("aria-pressed", String(!portrait));
+    }
+  }
+
+  function askOrientation(landscape) {
+    invoke("set_orientation", { landscape: Boolean(landscape) }).catch(function (err) {
+      console.error("flip: set_orientation failed", err);
+    });
+  }
+
+  if (ANDROID) {
+    document.documentElement.classList.add("is-android");
+    if (fullscreenButton) fullscreenButton.hidden = true;
+    if (orientButton) {
+      orientButton.hidden = false;
+      orientButton.addEventListener("click", function () {
+        askOrientation(isPortrait());
+      });
+    }
+    if (rotateGo) {
+      rotateGo.addEventListener("click", function () {
+        askOrientation(true);
+      });
+    }
+    if (portraitQuery.addEventListener) {
+      portraitQuery.addEventListener("change", paintOrientation);
+    }
+    paintOrientation();
   }
 
   /* Zoom steps by ten percent and is remembered by Rust, so it also comes back
@@ -97,145 +152,16 @@
 
   /* ------------------------------------------------------------------ accent */
 
-  /* Presets share the timetable palette, so the app stays one family. The
-     user can still pick any colour; only its weight is ours to choose. */
-  var ACCENT_PRESETS = [
-    "#B4622D", "#C9974A", "#6F8F5B", "#4F7F8C", "#7A6BA8", "#B25C6B", "#55708C", "#8A7A65",
-  ];
-
-  function clamp(value, low, high) {
-    return Math.min(high, Math.max(low, value));
-  }
-
-  function parseHex(hex) {
-    var text = String(hex || "").trim().replace(/^#/, "");
-    if (text.length === 3) {
-      text = text[0] + text[0] + text[1] + text[1] + text[2] + text[2];
+  /* Flip stores one hue. Every weight, the ink that sits on it and the wash
+     come from the shared colour helper, so the app and the timetable agree. */
+  function applyAccent(hue) {
+    if (!window.FlipColor) return;
+    window.FlipColor.applyAccent(hue);
+    try {
+      window.localStorage.setItem("flip.accentHue", String(Math.round(Number(hue))));
+    } catch (_) {
+      /* storage can be refused; the snapshot still paints the accent */
     }
-    if (!/^[0-9a-f]{6}$/i.test(text)) return null;
-    return [
-      parseInt(text.slice(0, 2), 16) / 255,
-      parseInt(text.slice(2, 4), 16) / 255,
-      parseInt(text.slice(4, 6), 16) / 255,
-    ];
-  }
-
-  function hexToHsl(hex) {
-    var rgb = parseHex(hex);
-    if (!rgb) return null;
-    var max = Math.max(rgb[0], rgb[1], rgb[2]);
-    var min = Math.min(rgb[0], rgb[1], rgb[2]);
-    var light = (max + min) / 2;
-    var hue = 0;
-    var saturation = 0;
-    if (max !== min) {
-      var span = max - min;
-      saturation = light > 0.5 ? span / (2 - max - min) : span / (max + min);
-      if (max === rgb[0]) hue = (rgb[1] - rgb[2]) / span + (rgb[1] < rgb[2] ? 6 : 0);
-      else if (max === rgb[1]) hue = (rgb[2] - rgb[0]) / span + 2;
-      else hue = (rgb[0] - rgb[1]) / span + 4;
-      hue *= 60;
-    }
-    return [hue, saturation, light];
-  }
-
-  function hslToHex(hue, saturation, light) {
-    var turn = ((((hue % 360) + 360) % 360) / 360) * 12;
-    var amount = saturation * Math.min(light, 1 - light);
-    function channel(offset) {
-      var k = (offset + turn) % 12;
-      var value = light - amount * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-      return Math.round(clamp(value, 0, 1) * 255)
-        .toString(16)
-        .padStart(2, "0");
-    }
-    return "#" + channel(0) + channel(8) + channel(4);
-  }
-
-  function luminance(hex) {
-    var rgb = parseHex(hex);
-    if (!rgb) return 0.5;
-    var channels = rgb.map(function (value) {
-      return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-  }
-
-  function contrast(a, b) {
-    var one = luminance(a);
-    var two = luminance(b);
-    return (Math.max(one, two) + 0.05) / (Math.min(one, two) + 0.05);
-  }
-
-  /** Whichever ink (near-black or cream) reads best on top of the accent. */
-  function accentInk(accent) {
-    return contrast(accent, "#1B140E") >= contrast(accent, "#FFF9F1") ? "#1B140E" : "#FFF9F1";
-  }
-
-  /** Keeps the picked hue, sets a weight that reads on the current theme and
-      picks whichever ink stays legible on top of it. */
-  function accentPalette(hex) {
-    var base = hexToHsl(hex) || hexToHsl("#B4622D");
-    var theme = document.documentElement.getAttribute("data-theme") || "light";
-    var dark = theme.indexOf("dark") === 0;
-    var hc = theme.indexOf("-hc") > 0;
-    var hue = base[0];
-    // Near-greys stay grey instead of being tinted behind the user's back.
-    var grey = base[1] < 0.08;
-    var saturation = grey ? 0 : clamp(base[1], 0.22, 0.7);
-    var washSat = grey ? 0 : clamp(base[1] * 1.1, 0.34, 0.8);
-    var light = dark ? clamp(base[2], 0.56, 0.72) : clamp(base[2], 0.32, 0.48);
-    var accent = hslToHex(hue, saturation, light);
-    var ink = accentInk(accent);
-    // Walk the weight away from the background until the text clears AA.
-    for (var step = 0; step < 12 && contrast(accent, ink) < 4.6; step++) {
-      light = clamp(light + (dark ? 0.02 : -0.02), dark ? 0.5 : 0.2, dark ? 0.84 : 0.54);
-      accent = hslToHex(hue, saturation, light);
-      ink = accentInk(accent);
-    }
-    return {
-      accent: accent,
-      ink: ink,
-      soft: dark ? hslToHex(hue, saturation * 0.55, 0.2) : hslToHex(hue, saturation * 0.6, 0.93),
-      focus: dark ? hslToHex(hue, saturation, 0.72) : hslToHex(hue, saturation, 0.3),
-      text: accentText(hue, saturation, light, dark),
-      /* Three soft pools of the chosen hue plus a tinted base: the same trick
-         as blurred artwork, without blurring anything at run time. The wash
-         keeps more of the colour's own saturation than the accent itself so
-         it reads as colour instead of pale grey. */
-      washA: hslToHex(hue, hc ? washSat * 0.5 : washSat, dark ? (hc ? 0.1 : 0.19) : hc ? 0.95 : 0.82),
-      washB: hslToHex(hue + 20, hc ? washSat * 0.4 : washSat * 0.82, dark ? (hc ? 0.08 : 0.15) : hc ? 0.96 : 0.88),
-      washC: hslToHex(hue - 22, hc ? washSat * 0.35 : washSat * 0.75, dark ? (hc ? 0.11 : 0.21) : hc ? 0.97 : 0.9),
-      base: dark
-        ? hslToHex(hue, washSat * (hc ? 0.2 : 0.55), hc ? 0.03 : 0.08)
-        : hslToHex(hue, washSat * (hc ? 0.2 : 0.5), hc ? 0.985 : 0.95),
-    };
-  }
-
-  /** A second, quieter weight of the same hue for accent-coloured labels. */
-  function accentText(hue, saturation, light, dark) {
-    var panel = dark ? "#221F1A" : "#FFFDF7";
-    var weight = light;
-    for (var step = 0; step < 16; step++) {
-      var candidate = hslToHex(hue, saturation, weight);
-      if (contrast(candidate, panel) >= 4.6) return candidate;
-      weight = clamp(weight + (dark ? 0.03 : -0.03), 0.12, 0.92);
-    }
-    return dark ? "#F3EBDD" : "#2E2820";
-  }
-
-  function applyAccent(hex) {
-    var palette = accentPalette(hex);
-    var style = document.documentElement.style;
-    style.setProperty("--accent", palette.accent);
-    style.setProperty("--accent-ink", palette.ink);
-    style.setProperty("--accent-soft", palette.soft);
-    style.setProperty("--accent-text", palette.text);
-    style.setProperty("--focus", palette.focus);
-    style.setProperty("--wash-a", palette.washA);
-    style.setProperty("--wash-b", palette.washB);
-    style.setProperty("--wash-c", palette.washC);
-    style.setProperty("--wash-base", palette.base);
   }
 
   /* --------------------------------------------------------------- shortcuts */
@@ -514,9 +440,9 @@
         entry.button.classList.toggle("active", on);
         entry.button.setAttribute("aria-selected", String(on));
       });
-      body.scrollTop = 0;
-      var panel = document.querySelector("#modal-root .modal");
-      if (panel) panel.scrollTop = 0;
+      /* Only the pane scrolls, so this is the one and only scroll reset. */
+      var pane = { appearance: appearancePane, general: generalPane, data: dataPane }[which];
+      if (pane) pane.scrollTop = 0;
     }
 
     /* ---- appearance ---- */
@@ -563,44 +489,61 @@
     appearancePane.appendChild(Board.el("h3", "", "Accent"));
 
     var accentRow = Board.el("div", "setting-row column");
-    var swatches = Board.el("div", "accent-swatches");
-    swatches.setAttribute("role", "group");
-    swatches.setAttribute("aria-label", "Accent colour");
+    var presetRow = Board.el("div", "accent-presets");
+    presetRow.setAttribute("role", "group");
+    presetRow.setAttribute("aria-label", "Accent colour");
+    var accentHue = window.FlipColor ? Number(snap.accentHue) || 51 : 51;
+    var presetButtons = [];
 
-    var customWrap = Board.el("label", "accent-custom");
-    customWrap.title = "Pick any colour";
-    var custom = document.createElement("input");
-    custom.type = "color";
-    custom.value = /^#[0-9a-f]{6}$/i.test(current) ? current.toLowerCase() : "#b4622d";
-    custom.setAttribute("aria-label", "Custom accent colour");
+    function markPresets(hue) {
+      presetButtons.forEach(function (entry) {
+        entry.button.setAttribute("aria-pressed", String(Math.round(hue) === entry.hue));
+      });
+    }
 
-    ACCENT_PRESETS.forEach(function (preset) {
-      var button = Board.el("button", "accent-swatch");
-      button.type = "button";
-      button.style.setProperty("--sw", preset);
-      button.setAttribute("aria-label", "Accent " + preset);
-      button.setAttribute("aria-pressed", String(preset === current));
-      button.addEventListener("click", function () {
-        Array.prototype.forEach.call(swatches.children, function (node) {
-          node.setAttribute("aria-pressed", String(node === button));
+    if (window.FlipColor) {
+      window.FlipColor.presets.forEach(function (preset) {
+        var swatch = window.FlipColor.subjectColorFromHue(preset.hue);
+        var button = Board.el("button", "accent-swatch");
+        button.type = "button";
+        button.style.setProperty("--sw", swatch.border);
+        button.setAttribute("aria-label", preset.name);
+        button.title = preset.name;
+        button.setAttribute("aria-pressed", String(Math.round(accentHue) === preset.hue));
+        button.addEventListener("click", function () {
+          accentHue = preset.hue;
+          markPresets(accentHue);
+          slider.set(accentHue);
+          pendingAccent = null;
+          applyAccent(accentHue);
+          commitAccent(accentHue);
         });
-        pendingAccent = preset;
-        applyAccent(preset);
-        custom.value = preset.toLowerCase();
+        presetRow.appendChild(button);
+        presetButtons.push({ button: button, hue: preset.hue });
       });
-      swatches.appendChild(button);
-    });
+    }
+    accentRow.appendChild(presetRow);
 
-    custom.addEventListener("input", function () {
-      pendingAccent = custom.value;
-      applyAccent(custom.value);
-      Array.prototype.forEach.call(swatches.children, function (node) {
-        if (node !== customWrap) node.setAttribute("aria-pressed", "false");
-      });
-    });
-    customWrap.appendChild(custom);
-    swatches.appendChild(customWrap);
-    accentRow.appendChild(swatches);
+    var slider = window.FlipColor
+      ? window.FlipColor.hueSlider({
+          value: accentHue,
+          label: "Custom accent hue",
+          accent: true,
+          onChange: function (hue) {
+            accentHue = hue;
+            markPresets(hue);
+            /* Live paint without touching the disk until the drag settles. */
+            pendingAccent = hue;
+            applyAccent(hue);
+          },
+          onCommit: function (hue) {
+            accentHue = hue;
+            markPresets(hue);
+            commitAccent(hue);
+          },
+        })
+      : null;
+    if (slider) accentRow.appendChild(slider.element);
     appearancePane.appendChild(accentRow);
 
     appearancePane.appendChild(
@@ -795,14 +738,14 @@
       dataPane.appendChild(Board.el("p", "sub", "Backups are unavailable in this build."));
     }
 
-    function commitAccent() {
-      if (!pendingAccent) return;
-      var hex = pendingAccent;
+    function commitAccent(hue) {
+      var value = typeof hue === "number" ? hue : accentHue;
+      if (pendingAccent === null && typeof hue !== "number") return;
       pendingAccent = null;
-      invoke("set_accent", { accent: hex })
+      invoke("set_accent_hue", { hue: value })
         .then(render)
         .catch(function (err) {
-          console.error("flip: set_accent failed", err);
+          console.error("flip: set_accent_hue failed", err);
         });
     }
 
@@ -816,18 +759,20 @@
       body: body,
       saveLabel: "Done",
       hideCancel: true,
-      onSave: commitAccent,
-      onClose: commitAccent,
+      className: "modal-settings",
+      onSave: function () {
+        commitAccent();
+      },
+      onClose: function () {
+        if (pendingAccent !== null) commitAccent(pendingAccent);
+      },
     });
 
-    var panel = document.querySelector("#modal-root .modal");
-    if (panel) panel.classList.add("modal-settings");
-    body.scrollTop = 0;
+    /* The dialog is built at the top; focusing the first tab must not move it. */
+    appearancePane.scrollTop = 0;
     setTimeout(function () {
       if (navButtons[0]) navButtons[0].button.focus({ preventScroll: true });
-      body.scrollTop = 0;
-      var fresh = document.querySelector("#modal-root .modal");
-      if (fresh) fresh.scrollTop = 0;
+      appearancePane.scrollTop = 0;
     }, 0);
   }
 
@@ -875,7 +820,7 @@
     lastSnapshot = snap;
     applyTheme(snap.theme);
     /* A preview inside the settings dialog wins until it is committed. */
-    if (!pendingAccent) applyAccent(snap.accent);
+    if (pendingAccent === null) applyAccent(snap.accentHue);
 
     var isClock = snap.mode === "clock";
     clockGroup.classList.toggle("active", isClock);
@@ -921,9 +866,18 @@
 
   /* -------------------------------------------------------------------- tabs */
 
-  function setView(name) {
+  function setView(name, fromHistory) {
     if (name === currentView) return;
     currentView = name;
+    /* One entry per section, so Android's back button and the browser's back
+       both walk through the app instead of leaving it. */
+    if (!fromHistory) {
+      try {
+        window.history.pushState({ flipView: name }, "");
+      } catch (_) {
+        /* no history is still a working app */
+      }
+    }
     document.body.dataset.view = name;
     if (window.Dashboard) {
       if (name === "dashboard") window.Dashboard.show();
@@ -965,6 +919,34 @@
     tab.addEventListener("click", function () {
       setView(tab.dataset.view);
     });
+  });
+
+  window.addEventListener("popstate", function (event) {
+    /* An open dialog owns its own history entry and closes itself. */
+    if (window.Board && window.Board.isModalOpen()) return;
+    var state = event.state || {};
+    if (state.flipView) setView(state.flipView, true);
+    else if (currentView !== "dashboard") setView("dashboard", true);
+  });
+
+  /* On a phone the on-screen keyboard covers the bottom of the window; bring
+     the field being typed into back into view once the keyboard has settled. */
+  document.addEventListener("focusin", function (event) {
+    var node = event.target;
+    if (!node || !/^(INPUT|TEXTAREA)$/i.test(String(node.tagName || ""))) return;
+    if (String(node.type || "").toLowerCase() === "range") return;
+    setTimeout(function () {
+      var rect = node.getBoundingClientRect();
+      var viewport = window.innerHeight || document.documentElement.clientHeight;
+      /* A keyboard opening on a phone covers the bottom third; a field that is
+         already fully in view must not move the page at all. */
+      if (rect.top >= 8 && rect.bottom <= viewport - 8) return;
+      try {
+        node.scrollIntoView({ block: "nearest" });
+      } catch (_) {
+        /* older webviews ignore the options object */
+      }
+    }, 260);
   });
 
   /* ---- audio ------------------------------------------------------------ */
@@ -1231,7 +1213,10 @@
       });
       await listen("focus-finished", function (event) {
         var secs = Number(event && event.payload ? event.payload : 0);
-        window.Board.toast("Focus session saved · " + Math.max(1, Math.round(secs / 60)) + " minutes");
+        window.Board.toast(
+          "Focus session saved · " +
+            window.I18n.count(Math.max(1, Math.round(secs / 60)), "minute", "minutes")
+        );
       });
     } catch (err) {
       console.error("flip: could not subscribe to events", err);
@@ -1261,6 +1246,7 @@
   };
 
   document.body.dataset.view = currentView;
+  paintOrientation();
 
   /* The board sections register their renderers first, then load their data. */
   window.Dashboard.init();

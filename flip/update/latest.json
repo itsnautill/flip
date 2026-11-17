@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
-  "notes": "A full visual pass, plus Discord presence: five themes, four animation modes, touch mode, window zoom, the gradient background on by default, and a small presence card you can switch off.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.1.0/Flip_1.1.0_x64-setup.exe"
+  "version": "1.2.0",
+  "notes": "Build a timetable from scratch instead of drawing it by hand: paste a grid, import an .xlsx, or add days and periods, then lock it. Plus undo and redo, dashboard widgets you can reorder, custom accent hues, and a bundled font so the design looks the same on every machine.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.2.0/Flip_1.2.0_x64-setup.exe"
 }

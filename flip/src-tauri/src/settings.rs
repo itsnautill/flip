@@ -4,8 +4,15 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-/// The accent the app ships with: a warm rust that suits the light theme.
-pub const DEFAULT_ACCENT: &str = "#B4622D";
+use crate::board::{hue_from_hex, normalise_hue};
+
+/// The hue the app ships with: the warm rust Flip has always used.
+pub const DEFAULT_ACCENT_HUE: f64 = 51.0;
+
+/// Bumped when the settings shape changes. Version 3 stores the accent as a
+/// hue only; files that still carry an API key are read but never written back
+/// with one.
+pub const SETTINGS_VERSION: u32 = 3;
 
 /// Dashboard widgets, in the order a fresh install shows them.
 pub const DASH_WIDGETS: [&str; 6] = ["next", "today", "due", "tasks", "focus", "stats"];
@@ -70,9 +77,12 @@ impl Dashboard {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
+    /// Shape of this file. Older files are converted on load.
+    #[serde(default)]
+    pub version: u32,
     pub use_12h: bool,
     pub timer_preset_secs: u32,
     /// One of `THEMES`; "light" unless the user picked another.
@@ -98,7 +108,13 @@ pub struct Settings {
     /// Random id made on this machine when telemetry is switched on. Not tied
     /// to an account, an email, or any hardware.
     pub install_id: String,
-    /// Any colour the user picked, `#RRGGBB`. The UI adapts its weight per theme.
+    /// 0-360. Only the hue is stored; the UI derives every weight and the ink
+    /// that sits on top of it.
+    #[serde(default)]
+    pub accent_hue: Option<f64>,
+    /// Files written before 1.1.2 stored the accent as `#RRGGBB`. Read once,
+    /// then forgotten.
+    #[serde(default, skip_serializing)]
     pub accent: String,
     /// Length of a focus session, in seconds.
     pub focus_secs: u32,
@@ -108,6 +124,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            version: SETTINGS_VERSION,
             use_12h: false,
             timer_preset_secs: 300,
             theme: "light".into(),
@@ -121,7 +138,8 @@ impl Default for Settings {
             touch: false,
             telemetry: false,
             install_id: String::new(),
-            accent: DEFAULT_ACCENT.into(),
+            accent_hue: Some(DEFAULT_ACCENT_HUE),
+            accent: String::new(),
             focus_secs: DEFAULT_FOCUS_SECS,
             dashboard: Dashboard::default(),
         }
@@ -150,18 +168,13 @@ pub fn normalise_motion(value: &str) -> String {
     .to_string()
 }
 
-/// Accepts `#rgb` or `#rrggbb`, upper-cased; anything else falls back to rust.
-pub fn normalise_accent(value: &str) -> String {
-    let hex = value.trim().trim_start_matches('#');
-    let expanded: String = match hex.len() {
-        3 => hex.chars().flat_map(|c| [c, c]).collect(),
-        6 => hex.to_string(),
-        _ => return DEFAULT_ACCENT.into(),
-    };
-    if !expanded.chars().all(|c| c.is_ascii_hexdigit()) {
-        return DEFAULT_ACCENT.into();
+/// Keeps a hue inside the colour wheel; anything else falls back to rust.
+pub fn normalise_accent_hue(value: f64) -> f64 {
+    if value.is_finite() {
+        normalise_hue(value)
+    } else {
+        DEFAULT_ACCENT_HUE
     }
-    format!("#{}", expanded.to_ascii_uppercase())
 }
 
 /// A random id for this install, made without pulling in a random-number crate.
@@ -211,7 +224,14 @@ pub fn normalise(mut settings: Settings) -> Settings {
     if settings.language != "vi" {
         settings.language = "en".into();
     }
-    settings.accent = normalise_accent(&settings.accent);
+    settings.version = SETTINGS_VERSION;
+    /* A file from before 1.1.2 has a hex accent and no hue. Turn it into the
+    nearest hue; a brand-new file already has one. */
+    let hue = settings
+        .accent_hue
+        .unwrap_or_else(|| hue_from_hex(&settings.accent).unwrap_or(DEFAULT_ACCENT_HUE));
+    settings.accent_hue = Some(normalise_accent_hue(hue));
+    settings.accent.clear();
     settings.install_id = normalise_install_id(&settings.install_id);
     if settings.timer_preset_secs > crate::timer::MAX_SECS {
         settings.timer_preset_secs = crate::timer::MAX_SECS;
@@ -243,11 +263,7 @@ pub fn save(path: &Path, settings: &Settings) {
         }
     }
     match serde_json::to_string_pretty(settings) {
-        Ok(json) => {
-            if let Err(e) = std::fs::write(path, json) {
-                eprintln!("flip: could not write settings: {e}");
-            }
-        }
+        Ok(json) => crate::write_atomic(path, json.as_bytes(), "settings"),
         Err(e) => eprintln!("flip: could not encode settings: {e}"),
     }
 }
@@ -257,11 +273,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn accent_accepts_short_and_long_hex() {
-        assert_eq!(normalise_accent("#abc"), "#AABBCC");
-        assert_eq!(normalise_accent("b4622d"), "#B4622D");
-        assert_eq!(normalise_accent("#zzz"), DEFAULT_ACCENT);
-        assert_eq!(normalise_accent(""), DEFAULT_ACCENT);
+    fn accent_hues_stay_on_the_wheel() {
+        assert_eq!(normalise_accent_hue(370.0), 10.0);
+        assert_eq!(normalise_accent_hue(-30.0), 330.0);
+        assert_eq!(normalise_accent_hue(f64::NAN), DEFAULT_ACCENT_HUE);
+    }
+
+    #[test]
+    fn a_saved_hex_accent_becomes_a_hue() {
+        let settings = normalise(Settings {
+            accent: "#4F7F8C".into(),
+            accent_hue: None,
+            ..Settings::default()
+        });
+        let hue = settings.accent_hue.expect("hue");
+        assert!((hue - 217.0).abs() < 6.0, "hue was {hue}");
+        assert!(settings.accent.is_empty());
+        assert_eq!(settings.version, SETTINGS_VERSION);
+    }
+
+    /// Files from 1.1.2 and later carry an API key for the retired timetable
+    /// parser. Reading must ignore it, and the next save must not write it
+    /// back, so an old key cannot linger on disk.
+    #[test]
+    fn an_old_api_key_is_read_past_and_dropped_on_save() {
+        let old = r#"{
+            "version": 2,
+            "language": "vi",
+            "accentHue": 148,
+            "aiKey": "legacy-placeholder-key",
+            "aiModel": "gpt-4o-mini",
+            "aiBaseUrl": "https://api.openai.com/v1"
+        }"#;
+        let settings: Settings = serde_json::from_str(old).expect("old settings still load");
+        assert_eq!(settings.language, "vi");
+
+        let normalised = normalise(settings);
+        let saved = serde_json::to_string_pretty(&normalised).expect("settings save");
+        assert!(!saved.contains("aiKey"), "saved settings kept aiKey");
+        assert!(
+            !saved.contains("legacy-placeholder-key"),
+            "saved settings kept the key"
+        );
+        assert!(!saved.contains("aiModel"), "saved settings kept aiModel");
+        assert_eq!(normalised.version, SETTINGS_VERSION);
     }
 
     #[test]
@@ -295,12 +350,13 @@ mod tests {
         let settings = normalise(Settings {
             theme: "neon".into(),
             accent: "nope".into(),
+            accent_hue: None,
             focus_secs: 7,
             ..Settings::default()
         });
         assert_eq!(settings.theme, "light");
         assert_eq!(settings.motion, "normal");
-        assert_eq!(settings.accent, DEFAULT_ACCENT);
+        assert_eq!(settings.accent_hue, Some(DEFAULT_ACCENT_HUE));
         assert_eq!(settings.focus_secs, 60);
     }
 }

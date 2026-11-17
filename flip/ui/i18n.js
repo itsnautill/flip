@@ -24,6 +24,12 @@
     "Switch to the dark theme": "Chuyển sang giao diện tối",
     "Switch to the beige theme": "Chuyển sang giao diện sáng",
     "Set timer duration": "Đặt thời lượng hẹn giờ",
+    "Switch to landscape": "Chuyển sang chế độ ngang",
+    "Switch to portrait": "Chuyển sang chế độ dọc",
+    "The clock needs landscape": "Đồng hồ cần chế độ ngang",
+    "Turn the phone sideways to see the flip clock.":
+      "Xoay ngang điện thoại để xem đồng hồ lật.",
+    "Turn to landscape": "Xoay ngang",
     "Set timer (S)": "Đặt hẹn giờ (S)",
     "Reset timer": "Đặt lại hẹn giờ",
     "Reset timer (R)": "Đặt lại hẹn giờ (R)",
@@ -92,10 +98,7 @@
     "Add row": "Thêm hàng",
     "Reset": "Đặt lại",
     "Import an .xlsx timetable - hold Shift to save a template": "Nhập thời khóa biểu .xlsx - giữ Shift để lưu mẫu",
-    "Reset timetable?": "Đặt lại thời khóa biểu?",
     "This clears every subject, all period times and the weekend setting. Your tasks are kept.": "Thao tác này xoá mọi môn, mọi khung giờ và thiết lập cuối tuần. Công việc của bạn vẫn được giữ.",
-    "Reset timetable": "Đặt lại thời khóa biểu",
-    "Timetable reset": "Đã đặt lại thời khóa biểu",
     "Now": "Bây giờ",
     "Next": "Tiếp",
     "Has pending tasks": "Có việc chưa xong",
@@ -111,15 +114,10 @@
     "Cell cleared": "Đã xoá ô",
     "Clear cell": "Xoá ô",
     "Label": "Tên hàng",
-    "Starts": "Bắt đầu",
-    "Ends": "Kết thúc",
-    "Break row (no subjects)": "Hàng nghỉ (không có môn)",
     "Edit row": "Sửa hàng",
     "Remove row": "Xoá hàng",
     "That time was not saved - check the message at the bottom.": "Chưa lưu được giờ - xem thông báo ở dưới.",
     "No subjects yet - click a slot to add one.": "Chưa có môn nào - bấm vào một ô để thêm.",
-    "Pick an .xlsx file.": "Hãy chọn tệp .xlsx.",
-    "Timetable imported": "Đã nhập thời khóa biểu",
     "The template could not be built.": "Không tạo được tệp mẫu.",
     "Template saved to Downloads": "Đã lưu mẫu vào thư mục Downloads",
     "That sheet has no lessons in it.": "Trang tính đó không có tiết học nào.",
@@ -318,6 +316,143 @@
     "Flip keeps settings.json and board.json here. Nothing leaves your computer. :)": "Flip lưu settings.json và board.json ở đây. Không có gì rời khỏi máy của bạn. :)",
     "Show data folder": "Mở thư mục dữ liệu",
 
+    /* ---- empty timetable and the quick setup ---- */
+    "Cancel": "Hủy",
+    "Build your timetable": "Dựng thời khóa biểu",
+    "One small form, then the whole week is ready. No subjects are added for you.":
+      "Một biểu mẫu nhỏ là cả tuần xong. Không môn nào được điền sẵn.",
+    "Days": "Các ngày",
+    "Mon–Fri": "Thứ 2 – Thứ 6",
+    "Mon–Sat": "Thứ 2 – Thứ 7",
+    "Mon–Sun": "Thứ 2 – Chủ nhật",
+    "Custom": "Tự chọn",
+    "First period starts at": "Tiết đầu bắt đầu lúc",
+    "Period length (minutes)": "Độ dài mỗi tiết (phút)",
+    "Break between periods (minutes)": "Nghỉ giữa các tiết (phút)",
+    "Number of periods": "Số tiết",
+    "A longer break in the day": "Có giờ nghỉ dài trong ngày",
+    "After period": "Sau tiết",
+    "Long break (minutes)": "Nghỉ dài (phút)",
+    "Create grid": "Tạo lưới",
+    "I'll do it myself": "Tôi tự làm",
+    "Grid ready - tap a cell to add a subject": "Lưới đã xong - chạm vào ô để thêm môn",
+    "Pick at least one day.": "Hãy chọn ít nhất một ngày.",
+    "day": "ngày",
+    "days": "ngày",
+    "period": "tiết",
+    "periods": "tiết",
+    "subject": "môn",
+    "subjects": "môn",
+    "Paint": "Tô màu",
+    "Subjects": "Môn học",
+    "Nothing to undo.": "Không có gì để hoàn tác.",
+    "Nothing to redo.": "Không có gì để làm lại.",
+
+    /* ---- adding and editing subjects ---- */
+    "Also add to": "Thêm vào ngày",
+    "Same period, every day": "Cùng tiết, mọi ngày",
+    "More (room, colour)": "Thêm (phòng, màu)",
+    "Copy placed": "Đã dán bản sao",
+    "Tap a cell to place a copy": "Chạm vào ô để đặt bản sao",
+    "Duplicate": "Nhân bản",
+    "Clear": "Xoá",
+    "Delete subject everywhere": "Xoá môn ở mọi nơi",
+    "More for": "Thêm cho",
+    "Undo (Ctrl+Z)": "Hoàn tác (Ctrl+Z)",
+    "Redo (Ctrl+Y)": "Làm lại (Ctrl+Y)",
+    "Redo": "Làm lại",
+
+    /* ---- rows and days ---- */
+    "Add days": "Thêm ngày",
+    "Pick the days this timetable runs on. You can change them later.":
+      "Chọn những ngày có tiết. Có thể đổi lại sau.",
+    "Days of the week": "Các ngày trong tuần",
+    "Already on the timetable": "Đã có trong thời khóa biểu",
+    "Every day is already on the timetable.": "Mọi ngày đều đã có trong thời khóa biểu.",
+    "Add a day": "Thêm một ngày",
+    "Add a time slot": "Thêm một tiết",
+    "+ Add row": "+ Thêm tiết",
+    "Starts": "Bắt đầu",
+    "Ends": "Kết thúc",
+    "Break row (no subjects)": "Hàng nghỉ (không có môn)",
+    "Move the rows after this one too": "Dời cả các tiết phía sau",
+    "Lock timetable": "Khoá thời khoá biểu",
+    "Unlock timetable": "Mở khoá thời khoá biểu",
+    "Unlock the timetable to change the days": "Mở khoá thời khoá biểu để đổi ngày",
+    "Timetable is locked": "Thời khoá biểu đang khoá",
+    "Unlock": "Mở khoá",
+    "Rename day": "Đổi tên ngày",
+    "Move left": "Dời sang trái",
+    "Move right": "Dời sang phải",
+    "Remove day": "Xoá ngày",
+    "Day name": "Tên ngày",
+    "Save name": "Lưu tên",
+    "The weekday stays the same; only the heading changes.":
+      "Ngày trong tuần giữ nguyên, chỉ đổi tiêu đề cột.",
+    "That name was not saved - check the message at the bottom.":
+      "Chưa lưu được tên - xem thông báo ở dưới.",
+    "Move up": "Lên trên",
+    "Move down": "Xuống dưới",
+    "Row removed": "Đã xoá tiết",
+    "Reset timetable": "Đặt lại thời khóa biểu",
+    "Reset timetable?": "Đặt lại thời khóa biểu?",
+    "This clears every day, every row and every subject. Your tasks are kept.":
+      "Thao tác này xoá mọi ngày, mọi hàng và mọi môn. Công việc của bạn vẫn được giữ.",
+    "Timetable reset": "Đã đặt lại thời khóa biểu",
+
+    /* ---- import ---- */
+    "Import a timetable": "Nhập thời khóa biểu",
+    "Excel file (.xlsx)": "Tệp Excel (.xlsx)",
+    "Paste from a spreadsheet": "Dán từ bảng tính",
+    "Paste a timetable": "Dán thời khóa biểu",
+    "Pasted timetable": "Thời khóa biểu đã dán",
+    "Copy cells from Excel, Google Sheets or a web table and paste them here. The first row should be days and the first column times, or use Day, Start, End, Subject columns.":
+      "Sao chép các ô từ Excel, Google Sheets hoặc bảng trên web rồi dán vào đây. Hàng đầu là các ngày, cột đầu là giờ; hoặc dùng các cột Day, Start, End, Subject.",
+    "Read table": "Đọc bảng",
+    "Paste a table first.": "Hãy dán bảng trước.",
+    "Use this timetable?": "Dùng thời khóa biểu này?",
+    "Merge into the current timetable": "Gộp vào thời khóa biểu hiện tại",
+    "Replace timetable": "Thay thời khóa biểu",
+    "Add to timetable": "Thêm vào thời khóa biểu",
+    "Timetable imported": "Đã nhập thời khóa biểu",
+    "Timetable merged": "Đã gộp thời khóa biểu",
+    "Nothing has changed yet.": "Chưa có gì thay đổi.",
+    "Pick an .xlsx file.": "Hãy chọn tệp .xlsx.",
+    "Pick a cell to place a copy": "Chạm vào ô để đặt bản sao",
+
+    /* ---- exports ---- */
+    "Timetable to Excel (.xlsx)": "Xuất thời khóa biểu ra Excel (.xlsx)",
+    "Timetable as CSV (for other apps)": "Thời khóa biểu dạng CSV (cho ứng dụng khác)",
+    "CSV separator": "Dấu phân cách CSV",
+    "Comma": "Dấu phẩy",
+    "Semicolon": "Dấu chấm phẩy",
+    "Excel with Vietnamese regional settings usually wants Semicolon; most other apps want Comma. The .xlsx export never has this problem.":
+      "Excel cài vùng Việt Nam thường cần dấu chấm phẩy; phần lớn ứng dụng khác cần dấu phẩy. Xuất .xlsx thì không gặp vấn đề này.",
+    "The spreadsheet could not be built.": "Chưa tạo được bảng tính.",
+    "The timetable is not loaded yet.": "Thời khóa biểu chưa tải xong.",
+    "Add a lesson first - there is nothing to export yet.":
+      "Hãy thêm một tiết trước - chưa có gì để xuất.",
+
+    "Custom accent hue": "Sắc màu nhấn tuỳ chọn",
+    "Hue": "Sắc màu",
+    "Red": "Đỏ",
+    "Orange": "Cam",
+    "Yellow": "Vàng",
+    "Green": "Lục",
+    "Blue": "Lam",
+    "Purple": "Tím",
+    "Pink": "Hồng",
+    "Your IP address is not stored, and nothing is linked to an account.":
+      "Địa chỉ IP không được lưu và không liên kết với tài khoản nào.",
+    "Widget hidden - Reset layout brings it back": "Đã ẩn tiện ích - Đặt lại bố cục sẽ hiện lại",
+    "Dashboard reset to its default layout": "Đã đặt lại bố cục mặc định của Tổng quan",
+    "Drag widgets to reorder, or use the arrows": "Kéo tiện ích để đổi thứ tự, hoặc dùng nút mũi tên",
+    "Saved": "Đã lưu",
+    "Parse": "Phân tích",
+    "Edit": "Sửa",
+    "Version": "Phiên bản",
+    "Weekly timetable": "Thời khóa biểu tuần",
+
     /* ---- timer + shortcuts ---- */
     "Set timer": "Đặt hẹn giờ",
     "Hours": "Giờ",
@@ -414,7 +549,13 @@
     [/^Scheduled for (.*)$/, "Đã xếp vào $1"],
     [/^Saved (.*) to Downloads$/, "Đã lưu $1 vào thư mục Downloads"],
     [/^Delete backup from (.*)$/, "Xoá bản sao lưu lúc $1"],
-    [/^Room (.*)$/, "Phòng $1"]
+    [/^Room (.*)$/, "Phòng $1"],
+    [/^(\d+) of 3 done$/, "Đã xong $1/3"],
+    [/^(\d+) days · (\d+) rows · (\d+) subjects$/, "$1 ngày · $2 hàng · $3 môn"],
+    [/^Day options for (.*)$/, "Tuỳ chọn cho $1"],
+    [/^Days: (.*)$/, "Ngày: $1"],
+    [/^Rows: (.*)$/, "Hàng: $1"],
+    [/^Subjects: (.*)$/, "Môn: $1"]
   ];
 
   /* Parts of a composed sentence (dashboard subtitle, week ranges). */
@@ -423,8 +564,7 @@
     ["classes today", "tiết hôm nay"],
     ["class today", "tiết hôm nay"],
     ["tasks for today", "việc cần làm hôm nay"],
-    ["task for today", "việc cần làm hôm nay"],
-    [" to ", " đến "]
+    ["task for today", "việc cần làm hôm nay"]
   ];
 
   /* Day and month names turn up inside composed sentences. */
@@ -562,12 +702,19 @@
       });
   }
 
+  /** "3 days" / "3 ngày", using the table for the noun. */
+  function count(value, one, many) {
+    var number = Number(value) || 0;
+    return number + " " + translate(number === 1 ? one : many);
+  }
+
   window.I18n = {
     get language() {
       return LANG;
     },
     setLanguage: setLanguage,
     t: translate,
+    count: count,
     apply: apply,
   };
 

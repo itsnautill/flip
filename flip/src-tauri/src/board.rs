@@ -13,21 +13,39 @@ pub const MAX_NAME: usize = 40;
 pub const MAX_TITLE: usize = 200;
 /// Longest task note we accept.
 pub const MAX_NOTES: usize = 500;
-/// Colour swatches offered in the UI.
-pub const COLORS: [&str; 8] = [
-    "#B4622D", "#C9974A", "#6F8F5B", "#4F7F8C", "#7A6BA8", "#B25C6B", "#8A7A65", "#55708C",
-];
 
-const DAY_KEYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/// Bumped when stored boards need converting. Version 2 stores a hue per
+/// subject instead of a hex colour and allows a truly empty timetable.
+pub const BOARD_VERSION: u32 = 2;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// The hue a first subject gets: the warm rust Flip ships with.
+/// Hues are OKLCH angles, where that rust sits at about 51 degrees.
+pub const DEFAULT_HUE: f64 = 51.0;
+
+/// The only day keys Flip stores, Monday first.
+pub const DAY_KEYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/// The gap used between periods until a quick setup says otherwise.
+pub const DEFAULT_BREAK: u32 = 5;
+pub const MAX_BREAK: u32 = 120;
+/// A day column heading is short; anything longer is cut, not rejected.
+pub const MAX_DAY_LABEL: usize = 24;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subject {
     pub id: String,
     pub name: String,
-    pub color: String,
+    /// 0 to 360. Only the hue is stored; the fill, border and ink are derived
+    /// from it for the current theme when the timetable is drawn.
+    #[serde(default, deserialize_with = "de_hue")]
+    pub hue: f64,
     #[serde(default)]
     pub room: String,
+    /// Files written before 1.1.1 stored a hex colour here. It is read once,
+    /// converted to a hue, and never written again.
+    #[serde(default, rename = "color", skip_serializing)]
+    pub(crate) legacy_color: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,14 +129,31 @@ pub struct Board {
     /// Finished focus sessions, oldest first.
     pub sessions: Vec<Session>,
     pub week_start: String,
+    /// True once the user built or skipped the quick setup, so the card does
+    /// not greet them on every launch. Emptying the timetable brings it back.
+    #[serde(default, alias = "guideDismissed")]
+    pub setup_dismissed: bool,
+    /// The break the quick-setup card was given, in minutes. "Add row" starts
+    /// the next slot at the previous end plus this gap, so a new row rarely
+    /// needs a typed time.
+    pub break_minutes: u32,
+    /// Day key -> the user's own name for that column. Missing means the usual
+    /// "Mon", "Tue", ...
+    pub day_labels: BTreeMap<String, String>,
+    /// True while the timetable is read-only: every editing control (paint,
+    /// add, rename, delete, import) stays hidden until it is unlocked.
+    pub locked: bool,
 }
 
 impl Default for Board {
     fn default() -> Self {
         Self {
-            version: 1,
-            days: ordered_days(false),
-            periods: default_periods(),
+            version: BOARD_VERSION,
+            /* A new timetable is genuinely empty: no days, no rows, no
+            subjects. The user builds it, and the empty-state card shows
+            them how. */
+            days: Vec::new(),
+            periods: Vec::new(),
             cells: BTreeMap::new(),
             subjects: Vec::new(),
             tasks: Vec::new(),
@@ -126,45 +161,18 @@ impl Default for Board {
             never: Vec::new(),
             sessions: Vec::new(),
             week_start: "Mon".into(),
+            setup_dismissed: false,
+            break_minutes: DEFAULT_BREAK,
+            day_labels: BTreeMap::new(),
+            locked: false,
         }
     }
 }
 
-/// Eight class periods with a recess and a lunch row between them.
-fn default_periods() -> Vec<Period> {
-    let row = |id: &str, label: &str, start: &str, end: &str, is_break: bool| Period {
-        id: id.into(),
-        label: label.into(),
-        start: start.into(),
-        end: end.into(),
-        is_break,
-    };
-    vec![
-        row("p1", "Period 1", "07:30", "08:15", false),
-        row("p2", "Period 2", "08:20", "09:05", false),
-        row("p3", "Period 3", "09:10", "09:55", false),
-        row("p4", "Recess", "10:00", "10:20", true),
-        row("p5", "Period 4", "10:25", "11:10", false),
-        row("p6", "Period 5", "11:15", "12:00", false),
-        row("p7", "Lunch", "12:05", "12:45", true),
-        row("p8", "Period 6", "12:50", "13:35", false),
-        row("p9", "Period 7", "13:40", "14:25", false),
-        row("p10", "Period 8", "14:30", "15:15", false),
-    ]
-}
-
-fn ordered_days(show_weekend: bool) -> Vec<String> {
-    let mut days: Vec<String> = DAY_KEYS[..5].iter().map(|d| (*d).to_string()).collect();
-    if show_weekend {
-        days.push("Sat".into());
-        days.push("Sun".into());
-    }
-    days
-}
-
 /* ------------------------------------------------------------------ loading */
 
-/// A missing, unreadable or corrupt file falls back to a fresh board.
+/// A missing, unreadable or corrupt file falls back to a fresh board. A file
+/// that will not parse is copied aside first, so nothing is ever thrown away.
 pub fn load(path: &Path) -> Board {
     match std::fs::read_to_string(path) {
         Ok(raw) => match serde_json::from_str::<Board>(&raw) {
@@ -174,10 +182,28 @@ pub fn load(path: &Path) -> Board {
             }
             Err(e) => {
                 eprintln!("flip: ignoring unreadable timetable: {e}");
+                keep_corrupt_copy(path);
                 Board::default()
             }
         },
         Err(_) => Board::default(),
+    }
+}
+
+/// Copies a file Flip could not read next to itself, with a timestamp, so a
+/// corrupt or hand-edited board can be recovered instead of silently lost.
+pub fn keep_corrupt_copy(path: &Path) {
+    if !path.exists() {
+        return;
+    }
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "board.json".into());
+    let copy = path.with_file_name(format!("{name}.unreadable-{stamp}"));
+    if let Err(e) = std::fs::copy(path, &copy) {
+        eprintln!("flip: could not keep a copy of the unreadable file: {e}");
     }
 }
 
@@ -189,27 +215,30 @@ pub fn save(path: &Path, board: &Board) {
         }
     }
     match serde_json::to_string_pretty(board) {
-        Ok(json) => {
-            if let Err(e) = std::fs::write(path, json) {
-                eprintln!("flip: could not write timetable: {e}");
-            }
-        }
+        Ok(json) => crate::write_atomic(path, json.as_bytes(), "timetable"),
         Err(e) => eprintln!("flip: could not encode timetable: {e}"),
     }
 }
 
 impl Board {
-    /// Drops anything a hand-edited file could get wrong.
+    /// Drops anything a hand-edited file could get wrong. An empty timetable is
+    /// a valid one, so nothing is invented here.
     pub(crate) fn sanitize(&mut self) {
-        if self.days.is_empty() {
-            self.days = ordered_days(false);
+        self.version = BOARD_VERSION;
+        let mut days: Vec<String> = Vec::new();
+        for day in &self.days {
+            if DAY_KEYS.contains(&day.as_str()) && !days.contains(day) {
+                days.push(day.clone());
+            }
         }
-        self.days.retain(|d| DAY_KEYS.contains(&d.as_str()));
-        if self.days.is_empty() {
-            self.days = ordered_days(false);
-        }
-        if self.periods.is_empty() {
-            self.periods = default_periods();
+        /* The stored order is the column order: the user may have moved a day. */
+        self.days = days;
+        self.break_minutes = self.break_minutes.min(MAX_BREAK);
+        let present: HashSet<&str> = self.days.iter().map(String::as_str).collect();
+        self.day_labels
+            .retain(|key, label| present.contains(key.as_str()) && !label.trim().is_empty());
+        for label in self.day_labels.values_mut() {
+            *label = clamp(label.trim(), MAX_DAY_LABEL);
         }
         self.periods.truncate(24);
         for p in &mut self.periods {
@@ -227,6 +256,40 @@ impl Board {
         if self.week_start != "Sun" {
             self.week_start = "Mon".into();
         }
+        /* Same name, same class: earlier builds could leave two records with
+        one name (renaming a single cell of a shared subject made a copy).
+        Keep the oldest, point every cell and task at it, drop the rest. */
+        let mut seen_names: BTreeMap<String, String> = BTreeMap::new();
+        let mut merged: BTreeMap<String, String> = BTreeMap::new();
+        let mut kept: Vec<Subject> = Vec::new();
+        for subject in std::mem::take(&mut self.subjects) {
+            let key = subject.name.trim().to_lowercase();
+            if let Some(kept_id) = seen_names.get(&key).cloned() {
+                merged.insert(subject.id.clone(), kept_id.clone());
+                if let Some(existing) = kept.iter_mut().find(|s| s.id == kept_id) {
+                    if existing.room.trim().is_empty() && !subject.room.trim().is_empty() {
+                        existing.room = subject.room.clone();
+                    }
+                }
+            } else {
+                seen_names.insert(key, subject.id.clone());
+                kept.push(subject);
+            }
+        }
+        self.subjects = kept;
+        if !merged.is_empty() {
+            for id in self.cells.values_mut() {
+                if let Some(target) = merged.get(id) {
+                    *id = target.clone();
+                }
+            }
+            for task in &mut self.tasks {
+                if let Some(target) = task.subject_id.as_ref().and_then(|id| merged.get(id)) {
+                    task.subject_id = Some(target.clone());
+                }
+            }
+        }
+
         // Cells may only point at subjects and periods that still exist.
         let subject_ids: HashSet<String> = self.subjects.iter().map(|s| s.id.clone()).collect();
         let period_ids: HashSet<String> = self.periods.iter().map(|p| p.id.clone()).collect();
@@ -252,6 +315,17 @@ impl Board {
         self.snoozed.retain(|id, _| task_ids.contains(id));
         self.never.retain(|id| task_ids.contains(id));
         self.subjects.retain(|s| !s.name.trim().is_empty());
+        /* Version 1 stored a hex colour; turn it into the nearest hue so the
+        subject keeps the colour its owner chose. */
+        for subject in &mut self.subjects {
+            if !subject.legacy_color.is_empty() {
+                if let Some(hue) = hue_from_hex(&subject.legacy_color) {
+                    subject.hue = hue;
+                }
+                subject.legacy_color.clear();
+            }
+            subject.hue = normalise_hue(subject.hue);
+        }
         // Sessions only need a real date and a sane length; links may dangle
         // because a session is history, not a reference.
         self.sessions
@@ -343,8 +417,8 @@ impl Board {
     }
 }
 
-/// One lesson row read from an imported spreadsheet.
-#[derive(Debug, Clone, Deserialize)]
+/// One lesson row read from an imported spreadsheet or the AI parser.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportRow {
     /// "Mon" to "Sun".
@@ -357,6 +431,15 @@ pub struct ImportRow {
     pub room: String,
 }
 
+/// One cell address, as the grid passes it back for brush painting.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CellRef {
+    pub day: String,
+    #[serde(rename = "periodId")]
+    pub period_id: String,
+}
+
 /* ------------------------------------------------------------------ actions */
 
 #[derive(Debug, Clone, Deserialize)]
@@ -367,12 +450,103 @@ pub enum BoardAction {
         #[serde(rename = "periodId")]
         period_id: String,
         name: String,
+        /// 0-360. Missing means "keep this subject's hue, or pick a new one".
         #[serde(default)]
-        color: String,
+        hue: Option<f64>,
         #[serde(default)]
         room: String,
         #[serde(default, rename = "applyAll")]
         apply_all: bool,
+    },
+    AddDay {
+        day: String,
+    },
+    RemoveDay {
+        day: String,
+    },
+    /// Gives a day column its own heading. An empty label restores "Mon".
+    RenameDay {
+        day: String,
+        #[serde(default)]
+        label: String,
+    },
+    /// Moves a day column left (-1) or right (+1).
+    MoveDay {
+        day: String,
+        offset: i32,
+    },
+    /// The gap "Add row" leaves after the previous slot, in minutes.
+    SetBreak {
+        #[serde(rename = "minutes")]
+        minutes: u32,
+    },
+    /// Locks the grid read-only, or opens it for editing again.
+    SetLocked {
+        locked: bool,
+    },
+    /// Closes (or reopens) the empty-timetable guide.
+    SetGuide {
+        #[serde(rename = "dismissed")]
+        dismissed: bool,
+    },
+    /// Places one subject on the day it was typed into, plus any extra days
+    /// the user ticked in the same popover.
+    SaveCellMany {
+        day: String,
+        #[serde(rename = "periodId")]
+        period_id: String,
+        name: String,
+        #[serde(default)]
+        hue: Option<f64>,
+        #[serde(default)]
+        room: String,
+        #[serde(default)]
+        also: Vec<String>,
+    },
+    /// Fills a whole grid from the quick-setup card: days and time slots only.
+    CreateGrid {
+        days: Vec<String>,
+        start: String,
+        #[serde(rename = "periodMins")]
+        period_mins: u32,
+        #[serde(rename = "breakMins")]
+        break_mins: u32,
+        count: u32,
+        #[serde(default, rename = "longAfter")]
+        long_after: Option<u32>,
+        #[serde(default, rename = "longMins")]
+        long_mins: u32,
+    },
+    /// Closes or reopens the quick-setup card.
+    SetSetup {
+        dismissed: bool,
+    },
+    /// Drag and drop: the two cells swap when the target is already taken, so
+    /// nothing is ever silently overwritten.
+    MoveCell {
+        #[serde(rename = "fromDay")]
+        from_day: String,
+        #[serde(rename = "fromPeriod")]
+        from_period: String,
+        #[serde(rename = "toDay")]
+        to_day: String,
+        #[serde(rename = "toPeriod")]
+        to_period: String,
+    },
+    /// Brush mode: paints one subject into the listed cells.
+    PaintCells {
+        #[serde(rename = "subjectId")]
+        subject_id: String,
+        cells: Vec<CellRef>,
+    },
+    /// Removes a subject and every cell that used it.
+    RemoveSubject {
+        id: String,
+    },
+    /// Moves a row up (-1) or down (+1) in the list.
+    MovePeriod {
+        id: String,
+        offset: i32,
     },
     ClearCell {
         day: String,
@@ -386,6 +560,10 @@ pub enum BoardAction {
         end: String,
         #[serde(default, rename = "isBreak")]
         is_break: bool,
+        /// When the times move, shift every later row by the same amount so the
+        /// day stays in one piece.
+        #[serde(default, rename = "shiftLater")]
+        shift_later: bool,
     },
     AddPeriod,
     RemovePeriod {
@@ -398,9 +576,12 @@ pub enum BoardAction {
         start: String,
     },
     ResetTimetable,
-    /// Replaces the whole timetable with lessons read from a spreadsheet.
+    /// Adds lessons read from a spreadsheet or the AI parser. `merge` keeps the
+    /// rows and subjects already on the timetable instead of starting fresh.
     ImportTimetable {
         rows: Vec<ImportRow>,
+        #[serde(default)]
+        merge: bool,
     },
     AddTask {
         title: String,
@@ -462,10 +643,64 @@ impl Board {
                 day,
                 period_id,
                 name,
-                color,
+                hue,
                 room,
                 apply_all,
-            } => self.save_cell(&day, &period_id, &name, &color, &room, apply_all),
+            } => self.save_cell(&day, &period_id, &name, hue, &room, apply_all),
+            BoardAction::SaveCellMany {
+                day,
+                period_id,
+                name,
+                hue,
+                room,
+                also,
+            } => self.save_cell_many(&day, &period_id, &name, hue, &room, &also),
+            BoardAction::CreateGrid {
+                days,
+                start,
+                period_mins,
+                break_mins,
+                count,
+                long_after,
+                long_mins,
+            } => self.create_grid(
+                &days,
+                &start,
+                period_mins,
+                break_mins,
+                count,
+                long_after,
+                long_mins,
+            ),
+            BoardAction::SetSetup { dismissed } => {
+                self.setup_dismissed = dismissed;
+                Ok(())
+            }
+            BoardAction::MoveCell {
+                from_day,
+                from_period,
+                to_day,
+                to_period,
+            } => self.move_cell(&from_day, &from_period, &to_day, &to_period),
+            BoardAction::PaintCells { subject_id, cells } => self.paint_cells(&subject_id, &cells),
+            BoardAction::RemoveSubject { id } => self.remove_subject(&id),
+            BoardAction::MovePeriod { id, offset } => self.move_period(&id, offset),
+            BoardAction::AddDay { day } => self.add_day(&day),
+            BoardAction::RemoveDay { day } => self.remove_day(&day),
+            BoardAction::RenameDay { day, label } => self.rename_day(&day, &label),
+            BoardAction::MoveDay { day, offset } => self.move_day(&day, offset),
+            BoardAction::SetBreak { minutes } => {
+                self.break_minutes = minutes.min(MAX_BREAK);
+                Ok(())
+            }
+            BoardAction::SetLocked { locked } => {
+                self.locked = locked;
+                Ok(())
+            }
+            BoardAction::SetGuide { dismissed } => {
+                self.setup_dismissed = dismissed;
+                Ok(())
+            }
             BoardAction::ClearCell { day, period_id } => {
                 self.clear_cell(&day, &period_id);
                 Ok(())
@@ -476,23 +711,34 @@ impl Board {
                 start,
                 end,
                 is_break,
-            } => self.update_period(&id, &label, &start, &end, is_break),
+                shift_later,
+            } => self.update_period(&id, &label, &start, &end, is_break, shift_later),
             BoardAction::AddPeriod => self.add_period(),
             BoardAction::RemovePeriod { id } => self.remove_period(&id),
             BoardAction::SetWeekend { show } => {
-                self.days = ordered_days(show);
+                self.days.retain(|d| d != "Sat" && d != "Sun");
+                if show {
+                    /* Appended, so a column order the user arranged stays put. */
+                    self.days.push("Sat".into());
+                    self.days.push("Sun".into());
+                }
+                self.day_labels.retain(|key, _| self.days.contains(key));
                 Ok(())
             }
             BoardAction::SetWeekStart { start } => {
                 self.week_start = if start == "Sun" { "Sun" } else { "Mon" }.into();
                 Ok(())
             }
-            BoardAction::ImportTimetable { rows } => self.import_timetable(rows),
+            BoardAction::ImportTimetable { rows, merge } => self.import_timetable(rows, merge),
             BoardAction::ResetTimetable => {
-                self.days = ordered_days(false);
-                self.periods = default_periods();
+                /* Reset means a blank timetable, not the old default rows:
+                the user starts again from the guide. */
+                self.days.clear();
+                self.day_labels.clear();
+                self.periods.clear();
                 self.cells.clear();
                 self.week_start = "Mon".into();
+                self.setup_dismissed = false;
                 // Subjects that tasks still point at stay, so their chips keep a name.
                 let linked: HashSet<String> = self
                     .tasks
@@ -595,7 +841,7 @@ impl Board {
         day: &str,
         period_id: &str,
         name: &str,
-        color: &str,
+        hue: Option<f64>,
         room: &str,
         apply_all: bool,
     ) -> Result<(), String> {
@@ -620,9 +866,15 @@ impl Board {
         if room.chars().count() > MAX_NAME {
             return Err(format!("Room names are limited to {MAX_NAME} characters."));
         }
-        let color = normalise_color(color);
         let key = cell_key(day, period_id);
         let current = self.cells.get(&key).cloned();
+        let current_hue = current
+            .as_ref()
+            .and_then(|id| self.subjects.iter().find(|s| &s.id == id).map(|s| s.hue));
+        let hue = match hue {
+            Some(value) => normalise_hue(value),
+            None => current_hue.unwrap_or_else(|| self.next_hue()),
+        };
 
         if apply_all {
             let old_name = current.as_ref().and_then(|old_id| {
@@ -649,18 +901,39 @@ impl Board {
                     .find(|s| s.id == id)
                     .is_some_and(|s| s.name != name);
                 if shared && !apply_all && renamed {
-                    // Editing one cell should not rename the same subject elsewhere.
-                    let new_id = next_id("s", self.subjects.iter().map(|s| s.id.as_str()));
-                    self.subjects.push(Subject {
-                        id: new_id.clone(),
-                        name: name.into(),
-                        color,
-                        room: room.into(),
-                    });
+                    // Editing one cell should not rename the same subject
+                    // elsewhere - but if that name already belongs to another
+                    // subject, use it instead of making a duplicate.
+                    let existing = self
+                        .subjects
+                        .iter_mut()
+                        .find(|s| s.id != id && s.name.eq_ignore_ascii_case(name))
+                        .map(|subject| {
+                            subject.hue = hue;
+                            subject.legacy_color.clear();
+                            if !room.is_empty() {
+                                subject.room = room.into();
+                            }
+                            subject.id.clone()
+                        });
+                    let new_id = match existing {
+                        Some(id) => id,
+                        None => {
+                            let fresh = next_id("s", self.subjects.iter().map(|s| s.id.as_str()));
+                            self.subjects.push(Subject {
+                                id: fresh.clone(),
+                                name: name.into(),
+                                hue,
+                                room: room.into(),
+                                legacy_color: String::new(),
+                            });
+                            fresh
+                        }
+                    };
                     self.cells.insert(key, new_id);
                 } else if let Some(subject) = self.subjects.iter_mut().find(|s| s.id == id) {
                     subject.name = name.into();
-                    subject.color = color;
+                    subject.hue = hue;
                     subject.room = room.into();
                 }
             }
@@ -668,18 +941,21 @@ impl Board {
                 // Reuse a subject with the same name so the dot and tooltip are shared.
                 if let Some(existing) = self
                     .subjects
-                    .iter()
+                    .iter_mut()
                     .find(|s| s.name.eq_ignore_ascii_case(name))
                 {
                     let id = existing.id.clone();
+                    existing.hue = hue;
+                    existing.legacy_color.clear();
                     self.cells.insert(key, id);
                 } else {
                     let new_id = next_id("s", self.subjects.iter().map(|s| s.id.as_str()));
                     self.subjects.push(Subject {
                         id: new_id.clone(),
                         name: name.into(),
-                        color,
+                        hue,
                         room: room.into(),
+                        legacy_color: String::new(),
                     });
                     self.cells.insert(key, new_id);
                 }
@@ -688,9 +964,96 @@ impl Board {
         Ok(())
     }
 
+    /// A hue for a new subject: the golden angle away from what is already
+    /// there, so two subjects never come out the same colour.
+    fn next_hue(&self) -> f64 {
+        if self.subjects.is_empty() {
+            return DEFAULT_HUE;
+        }
+        let taken: Vec<f64> = self.subjects.iter().map(|s| s.hue).collect();
+        let start = taken[taken.len() - 1];
+        let mut best = normalise_hue(start + 137.5);
+        let mut best_gap = 0.0;
+        for step in 1..=24 {
+            let candidate = normalise_hue(start + 137.5 * f64::from(step));
+            let gap = taken
+                .iter()
+                .map(|hue| hue_distance(candidate, *hue))
+                .fold(360.0, f64::min);
+            if gap > best_gap {
+                best = candidate;
+                best_gap = gap;
+            }
+            if gap >= 48.0 {
+                break;
+            }
+        }
+        best
+    }
+
+    fn add_day(&mut self, day: &str) -> Result<(), String> {
+        let trimmed = day.trim();
+        let Some(key) = DAY_KEYS.iter().find(|d| d.eq_ignore_ascii_case(trimmed)) else {
+            return Err("Days must be Mon to Sun.".into());
+        };
+        if self.days.iter().any(|d| d == key) {
+            return Err(format!("{key} is already on the timetable."));
+        }
+        if self.days.len() >= 7 {
+            return Err("Every day is already on the timetable.".into());
+        }
+        /* Inserted at its weekday place, so a column order the user moved by
+        hand keeps working instead of snapping back to Mon..Sun. */
+        let rank = DAY_KEYS.iter().position(|k| k == key).unwrap_or(0);
+        let at = self
+            .days
+            .iter()
+            .position(|d| DAY_KEYS.iter().position(|k| k == d).unwrap_or(0) > rank)
+            .unwrap_or(self.days.len());
+        self.days.insert(at, (*key).to_string());
+        self.setup_dismissed = false;
+        Ok(())
+    }
+
+    fn rename_day(&mut self, day: &str, label: &str) -> Result<(), String> {
+        if !self.days.iter().any(|d| d == day) {
+            return Err("That day is not on the timetable.".into());
+        }
+        let clean = clamp(label, MAX_DAY_LABEL);
+        if clean.is_empty() {
+            self.day_labels.remove(day);
+        } else {
+            self.day_labels.insert(day.to_string(), clean);
+        }
+        Ok(())
+    }
+
+    fn move_day(&mut self, day: &str, offset: i32) -> Result<(), String> {
+        let Some(at) = self.days.iter().position(|d| d == day) else {
+            return Err("That day is not on the timetable.".into());
+        };
+        let to = at as i32 + offset;
+        /* The ends simply do not move: no error, nothing to explain. */
+        if to >= 0 && (to as usize) < self.days.len() {
+            self.days.swap(at, to as usize);
+        }
+        Ok(())
+    }
+
+    fn remove_day(&mut self, day: &str) -> Result<(), String> {
+        if !self.days.iter().any(|d| d == day) {
+            return Err("That day is not on the timetable.".into());
+        }
+        self.days.retain(|d| d != day);
+        self.day_labels.remove(day);
+        let prefix = format!("{day}-");
+        self.cells.retain(|key, _| !key.starts_with(&prefix));
+        Ok(())
+    }
+
     /// Replaces the timetable with spreadsheet rows. Everything is validated
     /// first so a bad file can never leave half a timetable behind.
-    fn import_timetable(&mut self, rows: Vec<ImportRow>) -> Result<(), String> {
+    fn import_timetable(&mut self, rows: Vec<ImportRow>, merge: bool) -> Result<(), String> {
         if rows.is_empty() {
             return Err("That sheet has no lessons to import.".into());
         }
@@ -739,19 +1102,50 @@ impl Board {
             return Err("A timetable can have at most 24 rows.".into());
         }
 
-        self.days = ordered_days(lessons.iter().any(|row| row.0 == "Sat" || row.0 == "Sun"));
-        self.periods = slots
-            .iter()
-            .enumerate()
-            .map(|(index, (start, end))| Period {
-                id: format!("p{}", index + 1),
-                label: format!("Period {}", index + 1),
-                start: fmt_hhmm(*start),
-                end: fmt_hhmm(*end),
-                is_break: false,
-            })
-            .collect();
-        self.cells.clear();
+        if !merge {
+            self.days.clear();
+            self.cells.clear();
+            self.periods = slots
+                .iter()
+                .enumerate()
+                .map(|(index, (start, end))| Period {
+                    id: format!("p{}", index + 1),
+                    label: format!("Period {}", index + 1),
+                    start: fmt_hhmm(*start),
+                    end: fmt_hhmm(*end),
+                    is_break: false,
+                })
+                .collect();
+        } else {
+            for (start, end) in &slots {
+                let known = self.periods.iter().any(|p| {
+                    parse_hhmm(&p.start) == Some(*start) && parse_hhmm(&p.end) == Some(*end)
+                });
+                if known {
+                    continue;
+                }
+                if self.periods.len() >= 24 {
+                    return Err("A timetable can have at most 24 rows.".into());
+                }
+                let count = self.periods.iter().filter(|p| !p.is_break).count() + 1;
+                self.periods.push(Period {
+                    id: next_id("p", self.periods.iter().map(|p| p.id.as_str())),
+                    label: format!("Period {count}"),
+                    start: fmt_hhmm(*start),
+                    end: fmt_hhmm(*end),
+                    is_break: false,
+                });
+            }
+        }
+
+        // A column only exists for a day that really has a lesson. New days
+        // join in the order the sheet listed them, so a column order the user
+        // arranged by hand is not reshuffled by an import.
+        for day in lessons.iter().map(|row| row.0.clone()) {
+            if !self.days.contains(&day) {
+                self.days.push(day);
+            }
+        }
 
         // Subjects keep their identity by name, so their tasks stay attached.
         let linked: HashSet<String> = self
@@ -759,13 +1153,14 @@ impl Board {
             .iter()
             .filter_map(|t| t.subject_id.clone())
             .collect();
-        self.subjects.retain(|s| linked.contains(&s.id));
+        if !merge {
+            self.subjects.retain(|s| linked.contains(&s.id));
+        }
         let mut by_name: HashMap<String, String> = self
             .subjects
             .iter()
             .map(|s| (s.name.to_lowercase(), s.id.clone()))
             .collect();
-        let mut created = 0usize;
 
         for (day, start, end, subject, room) in &lessons {
             let key = subject.to_lowercase();
@@ -773,13 +1168,14 @@ impl Board {
                 Some(id) => id.clone(),
                 None => {
                     let id = next_id("s", self.subjects.iter().map(|s| s.id.as_str()));
+                    let hue = self.next_hue();
                     self.subjects.push(Subject {
                         id: id.clone(),
                         name: subject.clone(),
-                        color: COLORS[created % COLORS.len()].to_string(),
+                        hue,
                         room: room.clone(),
+                        legacy_color: String::new(),
                     });
-                    created += 1;
                     by_name.insert(key, id.clone());
                     id
                 }
@@ -791,18 +1187,219 @@ impl Board {
                     }
                 }
             }
-            if let Some(index) = slots
+            if let Some(period) = self
+                .periods
                 .iter()
-                .position(|slot| slot.0 == *start && slot.1 == *end)
+                .find(|p| parse_hhmm(&p.start) == Some(*start) && parse_hhmm(&p.end) == Some(*end))
             {
-                self.cells
-                    .insert(cell_key(day, &format!("p{}", index + 1)), id);
+                let period_id = period.id.clone();
+                self.cells.insert(cell_key(day, &period_id), id);
             }
         }
 
         let used: HashSet<String> = self.cells.values().cloned().collect();
         self.subjects
             .retain(|s| used.contains(&s.id) || linked.contains(&s.id));
+        Ok(())
+    }
+
+    /// Places a subject on one cell, and on every extra day the popover was
+    /// given, so a subject taught five times a week costs one tap each.
+    fn save_cell_many(
+        &mut self,
+        day: &str,
+        period_id: &str,
+        name: &str,
+        hue: Option<f64>,
+        room: &str,
+        also: &[String],
+    ) -> Result<(), String> {
+        self.save_cell(day, period_id, name, hue, room, false)?;
+        let Some(subject_id) = self.cells.get(&cell_key(day, period_id)).cloned() else {
+            return Ok(());
+        };
+        for extra in also {
+            if extra == day || !self.days.iter().any(|d| d == extra) {
+                continue;
+            }
+            let usable = self
+                .periods
+                .iter()
+                .find(|p| p.id == period_id)
+                .is_some_and(|p| !p.is_break);
+            if !usable {
+                continue;
+            }
+            self.cells
+                .insert(cell_key(extra, period_id), subject_id.clone());
+        }
+        Ok(())
+    }
+
+    /// Builds days and time slots from one small form. No subjects are added.
+    #[allow(clippy::too_many_arguments)]
+    fn create_grid(
+        &mut self,
+        days: &[String],
+        start: &str,
+        period_mins: u32,
+        break_mins: u32,
+        count: u32,
+        long_after: Option<u32>,
+        long_mins: u32,
+    ) -> Result<(), String> {
+        let mut picked: Vec<String> = Vec::new();
+        for day in days {
+            if !DAY_KEYS.contains(&day.as_str()) {
+                return Err("Days must be Mon to Sun.".into());
+            }
+            if !picked.contains(day) {
+                picked.push(day.clone());
+            }
+        }
+        if picked.is_empty() {
+            return Err("Pick at least one day.".into());
+        }
+        let start_min = parse_hhmm(start).ok_or("The first period must start like 07:30.")?;
+        if !(15..=180).contains(&period_mins) {
+            return Err("A period is between 15 and 180 minutes.".into());
+        }
+        if break_mins > 120 {
+            return Err("A break is at most 120 minutes.".into());
+        }
+        if !(1..=16).contains(&count) {
+            return Err("Create between 1 and 16 periods.".into());
+        }
+        if let Some(after) = long_after {
+            if after == 0 || after > count {
+                return Err("The long break must come after a period that exists.".into());
+            }
+            if long_mins > 180 {
+                return Err("A long break is at most 180 minutes.".into());
+            }
+        }
+
+        sort_days(&mut picked);
+        self.days = picked;
+        self.day_labels.clear();
+        self.break_minutes = break_mins;
+        self.periods.clear();
+        self.cells.clear();
+        /* Subjects that tasks still point at stay, so their chips keep a name. */
+        let linked: HashSet<String> = self
+            .tasks
+            .iter()
+            .filter_map(|t| t.subject_id.clone())
+            .collect();
+        self.subjects.retain(|s| linked.contains(&s.id));
+
+        let mut cursor = i64::from(start_min);
+        for index in 0..count {
+            let end = (cursor + i64::from(period_mins)).min(24 * 60 - 1);
+            self.periods.push(Period {
+                id: format!("p{}", index + 1),
+                label: format!("Period {}", index + 1),
+                start: fmt_hhmm(cursor as u32),
+                end: fmt_hhmm(end as u32),
+                is_break: false,
+            });
+            cursor = end + i64::from(break_mins);
+            if long_after == Some(index + 1) {
+                cursor += i64::from(long_mins);
+            }
+            if cursor >= 24 * 60 {
+                break;
+            }
+        }
+        self.setup_dismissed = true;
+        Ok(())
+    }
+
+    /// Moves a lesson, swapping when the destination already holds one, so a
+    /// drop never deletes anything.
+    fn move_cell(
+        &mut self,
+        from_day: &str,
+        from_period: &str,
+        to_day: &str,
+        to_period: &str,
+    ) -> Result<(), String> {
+        if from_day == to_day && from_period == to_period {
+            return Ok(());
+        }
+        for (day, period) in [(from_day, from_period), (to_day, to_period)] {
+            if !self.days.iter().any(|d| d == day) {
+                return Err("That day is not on the timetable.".into());
+            }
+            match self.periods.iter().find(|p| p.id == period) {
+                Some(row) if !row.is_break => {}
+                Some(_) => return Err("That row is a break - pick a class period.".into()),
+                None => return Err("That period no longer exists.".into()),
+            }
+        }
+        let from_key = cell_key(from_day, from_period);
+        let to_key = cell_key(to_day, to_period);
+        let Some(moving) = self.cells.remove(&from_key) else {
+            return Ok(());
+        };
+        if let Some(displaced) = self.cells.insert(to_key, moving) {
+            self.cells.insert(from_key, displaced);
+        }
+        Ok(())
+    }
+
+    /// Brush mode: paints one existing subject into the given cells.
+    fn paint_cells(&mut self, subject_id: &str, cells: &[CellRef]) -> Result<(), String> {
+        if !self.subjects.iter().any(|s| s.id == subject_id) {
+            return Err("That subject no longer exists.".into());
+        }
+        if cells.len() > 200 {
+            return Err("Paint fewer cells at once.".into());
+        }
+        for cell in cells {
+            if !self.days.iter().any(|d| d == &cell.day) {
+                continue;
+            }
+            let usable = self
+                .periods
+                .iter()
+                .find(|p| p.id == cell.period_id)
+                .is_some_and(|p| !p.is_break);
+            if !usable {
+                continue;
+            }
+            self.cells
+                .insert(cell_key(&cell.day, &cell.period_id), subject_id.to_string());
+        }
+        Ok(())
+    }
+
+    fn remove_subject(&mut self, id: &str) -> Result<(), String> {
+        if !self.subjects.iter().any(|s| s.id == id) {
+            return Err("That subject no longer exists.".into());
+        }
+        self.cells.retain(|_, subject| subject != id);
+        for task in &mut self.tasks {
+            if task.subject_id.as_deref() == Some(id) {
+                task.subject_id = None;
+            }
+        }
+        self.subjects.retain(|s| s.id != id);
+        Ok(())
+    }
+
+    fn move_period(&mut self, id: &str, offset: i32) -> Result<(), String> {
+        let index = self
+            .periods
+            .iter()
+            .position(|p| p.id == id)
+            .ok_or("That period no longer exists.")?;
+        let target = index as i64 + i64::from(offset);
+        if target < 0 || target >= self.periods.len() as i64 {
+            return Ok(());
+        }
+        let period = self.periods.remove(index);
+        self.periods.insert(target as usize, period);
         Ok(())
     }
 
@@ -826,23 +1423,54 @@ impl Board {
         start: &str,
         end: &str,
         is_break: bool,
+        shift_later: bool,
     ) -> Result<(), String> {
         let start_min = parse_hhmm(start).ok_or("Start time must look like 07:30.")?;
         let end_min = parse_hhmm(end).ok_or("End time must look like 08:15.")?;
         if end_min <= start_min {
             return Err("End time must be after the start time.".into());
         }
-        for other in &self.periods {
-            if other.id == id {
-                continue;
+        let previous_start = self
+            .periods
+            .iter()
+            .find(|p| p.id == id)
+            .and_then(|p| parse_hhmm(&p.start));
+
+        if shift_later {
+            /* Every later row moves by the same amount, so a changed first
+            period never lands on top of the second one. */
+            if let Some(old_start) = previous_start {
+                let delta = i64::from(start_min) - i64::from(old_start);
+                if delta != 0 {
+                    let index = match self.periods.iter().position(|p| p.id == id) {
+                        Some(index) => index,
+                        None => return Err("That period no longer exists.".into()),
+                    };
+                    for period in self.periods.iter_mut().skip(index + 1) {
+                        if let (Some(a), Some(b)) =
+                            (parse_hhmm(&period.start), parse_hhmm(&period.end))
+                        {
+                            let moved_start = (i64::from(a) + delta).clamp(0, 24 * 60 - 1);
+                            let moved_end = (i64::from(b) + delta).clamp(moved_start + 1, 24 * 60);
+                            period.start = fmt_hhmm(moved_start as u32);
+                            period.end = fmt_hhmm(moved_end as u32);
+                        }
+                    }
+                }
             }
-            let (other_start, other_end) = match (parse_hhmm(&other.start), parse_hhmm(&other.end))
-            {
-                (Some(a), Some(b)) => (a, b),
-                _ => continue,
-            };
-            if start_min < other_end && other_start < end_min {
-                return Err(format!("That overlaps {}.", other.label));
+        } else {
+            for other in &self.periods {
+                if other.id == id {
+                    continue;
+                }
+                let (other_start, other_end) =
+                    match (parse_hhmm(&other.start), parse_hhmm(&other.end)) {
+                        (Some(a), Some(b)) => (a, b),
+                        _ => continue,
+                    };
+                if start_min < other_end && other_start < end_min {
+                    return Err(format!("That overlaps {}.", other.label));
+                }
             }
         }
         let fallback = format!("Period {}", self.period_number(id));
@@ -874,11 +1502,12 @@ impl Board {
         if self.periods.len() >= 24 {
             return Err("That is already the maximum number of rows.".into());
         }
-        let start = self
-            .periods
-            .last()
-            .and_then(|p| parse_hhmm(&p.end))
-            .unwrap_or(480);
+        /* An empty timetable starts its first row at a normal morning hour; an
+        existing one continues after the gap the user chose in setup. */
+        let start = match self.periods.last() {
+            Some(last) => parse_hhmm(&last.end).map_or(7 * 60 + 30, |end| end + self.break_minutes),
+            None => 7 * 60 + 30,
+        };
         let start = start.min(23 * 60 + 14);
         let end = (start + 45).min(23 * 60 + 59);
         let count = self.periods.iter().filter(|p| !p.is_break).count() + 1;
@@ -894,8 +1523,10 @@ impl Board {
     }
 
     fn remove_period(&mut self, id: &str) -> Result<(), String> {
-        if self.periods.len() <= 1 {
-            return Err("Keep at least one row on the timetable.".into());
+        /* The last row may go too: an empty timetable is a valid one and the
+        guide takes over. */
+        if !self.periods.iter().any(|p| p.id == id) {
+            return Err("That period no longer exists.".into());
         }
         self.periods.retain(|p| p.id != id);
         self.cells
@@ -966,7 +1597,8 @@ impl Board {
 pub struct CellView {
     pub subject_id: String,
     pub name: String,
-    pub color: String,
+    /// The only colour data Flip stores; the UI derives the rest.
+    pub hue: f64,
     pub room: String,
     /// Tasks still open for this subject.
     pub pending: usize,
@@ -977,7 +1609,7 @@ pub struct CellView {
 pub struct SubjectView {
     pub id: String,
     pub name: String,
-    pub color: String,
+    pub hue: f64,
     pub room: String,
     pub pending: usize,
     /// True when the subject still has a place on the timetable.
@@ -1026,7 +1658,7 @@ pub struct Suggestion {
     pub kind: String,
     pub subject_id: String,
     pub subject_name: String,
-    pub subject_color: String,
+    pub subject_hue: f64,
     /// Day the tasks would be scheduled on, `YYYY-MM-DD`.
     pub date: String,
     pub title: String,
@@ -1051,7 +1683,10 @@ pub struct BoardView {
     pub suggestion_count: usize,
     pub show_weekend: bool,
     pub week_start: String,
-    pub colors: Vec<&'static str>,
+    /// True once the user built or skipped the quick setup.
+    pub setup_dismissed: bool,
+    /// Read-only grid: the UI hides every editing control while this is set.
+    pub locked: bool,
 }
 
 impl Board {
@@ -1072,7 +1707,7 @@ impl Board {
                     CellView {
                         subject_id: subject.id.clone(),
                         name: subject.name.clone(),
-                        color: subject.color.clone(),
+                        hue: subject.hue,
                         room: subject.room.clone(),
                         pending: pending.get(subject.id.as_str()).copied().unwrap_or(0),
                     },
@@ -1085,7 +1720,11 @@ impl Board {
             .iter()
             .map(|key| DayView {
                 key: key.clone(),
-                label: key.clone(),
+                label: self
+                    .day_labels
+                    .get(key)
+                    .cloned()
+                    .unwrap_or_else(|| key.clone()),
                 is_today: key == today_key,
             })
             .collect();
@@ -1096,7 +1735,7 @@ impl Board {
             .map(|s| SubjectView {
                 id: s.id.clone(),
                 name: s.name.clone(),
-                color: s.color.clone(),
+                hue: s.hue,
                 room: s.room.clone(),
                 pending: pending.get(s.id.as_str()).copied().unwrap_or(0),
                 in_timetable: self.cells.values().any(|v| v == &s.id),
@@ -1133,8 +1772,9 @@ impl Board {
             suggestion_count: suggestions.len(),
             suggestions,
             show_weekend: self.days.iter().any(|d| d == "Sat"),
+            locked: self.locked,
             week_start: self.week_start.clone(),
-            colors: COLORS.to_vec(),
+            setup_dismissed: self.setup_dismissed,
         }
     }
 
@@ -1256,7 +1896,7 @@ impl Board {
                 kind: kind.into(),
                 subject_id: subject.id.clone(),
                 subject_name: subject.name.clone(),
-                subject_color: subject.color.clone(),
+                subject_hue: subject.hue,
                 date: today_text.clone(),
                 title,
                 question: question.into(),
@@ -1309,13 +1949,97 @@ fn clamp(value: &str, max: usize) -> String {
     value.trim().chars().take(max).collect()
 }
 
-fn normalise_color(value: &str) -> String {
-    let value = value.trim().to_uppercase();
-    if COLORS.iter().any(|c| *c == value) {
-        value
-    } else {
-        COLORS[0].to_string()
+/// Keeps a hue inside 0-360, and repairs anything that is not a real number.
+pub fn normalise_hue(value: f64) -> f64 {
+    if !value.is_finite() {
+        return DEFAULT_HUE;
     }
+    ((value % 360.0) + 360.0) % 360.0
+}
+
+/// The shortest way round the colour wheel between two hues, 0-180.
+pub fn hue_distance(a: f64, b: f64) -> f64 {
+    let diff = (normalise_hue(a) - normalise_hue(b)).abs();
+    diff.min(360.0 - diff)
+}
+
+/// Reads the hue out of an old `#RRGGBB` colour, for files from before 1.1.1.
+///
+/// The angle is measured in OKLCH, the same space the interface derives its
+/// colours in: HSL hue 24 is a red there, while this rust is a warm orange at
+/// about 51 degrees.
+pub fn hue_from_hex(value: &str) -> Option<f64> {
+    let hex = value.trim().trim_start_matches('#');
+    let expanded: String = match hex.len() {
+        3 => hex.chars().flat_map(|c| [c, c]).collect(),
+        6 => hex.to_string(),
+        _ => return None,
+    };
+    if !expanded.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let channel = |start: usize| -> f64 {
+        f64::from(u8::from_str_radix(&expanded[start..start + 2], 16).unwrap_or(0)) / 255.0
+    };
+    let linear = |c: f64| {
+        if c <= 0.04045 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let (r, g, b) = (linear(channel(0)), linear(channel(2)), linear(channel(4)));
+    let l = (0.412_221_470_8 * r + 0.536_332_536_3 * g + 0.051_445_992_9 * b).cbrt();
+    let m = (0.211_903_498_2 * r + 0.680_699_545_1 * g + 0.107_396_956_6 * b).cbrt();
+    let s = (0.088_302_461_9 * r + 0.281_718_837_6 * g + 0.629_978_700_5 * b).cbrt();
+    let a = 1.977_998_495_1 * l - 2.428_592_205_0 * m + 0.450_593_709_9 * s;
+    let bb = 0.025_904_037_1 * l + 0.782_771_766_2 * m - 0.808_675_766_0 * s;
+    if a.abs() < 1e-6 && bb.abs() < 1e-6 {
+        // A grey has no hue; give it the warm one Flip starts with.
+        return Some(DEFAULT_HUE);
+    }
+    Some(normalise_hue(bb.atan2(a).to_degrees()))
+}
+
+/// Accepts a number, or a hex string left over from an older file.
+fn de_hue<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(match value {
+        serde_json::Value::Number(number) => normalise_hue(number.as_f64().unwrap_or(DEFAULT_HUE)),
+        serde_json::Value::String(text) => hue_from_hex(&text).unwrap_or(DEFAULT_HUE),
+        _ => DEFAULT_HUE,
+    })
+}
+
+/// Monday first, then Tuesday, and so on, whatever order days were added in.
+fn sort_days(days: &mut [String]) {
+    days.sort_by_key(|day| {
+        DAY_KEYS
+            .iter()
+            .position(|key| key == day)
+            .unwrap_or(DAY_KEYS.len())
+    });
+}
+
+/// Reads a wall-clock time from the shapes a person or a model may write:
+/// `07:30`, `7:30`, `7h30`, `7.30` and a bare hour.
+pub fn parse_clock_text(value: &str) -> Option<u32> {
+    let text = value.trim().to_lowercase().replace(' ', "");
+    if text.is_empty() {
+        return None;
+    }
+    let normalised = text.replace(['h', '.'], ":");
+    let (hours, minutes) = match normalised.split_once(':') {
+        Some((h, m)) => (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?),
+        None => (normalised.parse::<u32>().ok()?, 0),
+    };
+    if hours > 23 || minutes > 59 {
+        return None;
+    }
+    Some(hours * 60 + minutes)
 }
 
 fn parse_hhmm(value: &str) -> Option<u32> {
@@ -1384,15 +2108,29 @@ mod tests {
         NaiveDate::parse_from_str(text, "%Y-%m-%d").expect("test date")
     }
 
+    fn period(id: &str, label: &str, start: &str, end: &str, is_break: bool) -> Period {
+        Period {
+            id: id.into(),
+            label: label.into(),
+            start: start.into(),
+            end: end.into(),
+            is_break,
+        }
+    }
+
     fn board_with_class() -> Board {
-        let mut board = Board::default();
+        let mut board = Board {
+            days: vec!["Mon".into(), "Tue".into()],
+            periods: vec![period("p1", "Period 1", "07:30", "08:15", false)],
+            ..Board::default()
+        };
         board
             .apply(
                 BoardAction::SaveCell {
                     day: "Mon".into(),
                     period_id: "p1".into(),
                     name: "Math".into(),
-                    color: COLORS[0].into(),
+                    hue: Some(210.0),
                     room: "B12".into(),
                     apply_all: false,
                 },
@@ -1446,7 +2184,53 @@ mod tests {
     }
 
     fn import(board: &mut Board, rows: Vec<ImportRow>) -> Result<(), String> {
-        board.apply(BoardAction::ImportTimetable { rows }, "2026-11-09")
+        board.apply(
+            BoardAction::ImportTimetable { rows, merge: false },
+            "2026-11-09",
+        )
+    }
+
+    #[test]
+    fn a_fresh_board_is_completely_empty() {
+        let board = Board::default();
+        assert!(board.days.is_empty());
+        assert!(board.periods.is_empty());
+        assert!(board.cells.is_empty());
+        assert!(board.subjects.is_empty());
+        assert!(!board.setup_dismissed);
+        // And it still renders.
+        let view = board.view(date("2026-11-09"), 480);
+        assert!(view.days.is_empty());
+        assert!(view.periods.is_empty());
+        assert!(view.cells.is_empty());
+        assert!(view.current_period.is_none());
+    }
+
+    #[test]
+    fn an_empty_board_survives_a_round_trip() {
+        let path = std::env::temp_dir().join("flip-board-empty.json");
+        let board = Board::default();
+        save(&path, &board);
+        let reloaded = load(&path);
+        assert!(reloaded.days.is_empty());
+        assert!(reloaded.periods.is_empty());
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_saved_hex_colour_becomes_a_hue() {
+        let path = std::env::temp_dir().join("flip-board-legacy.json");
+        std::fs::write(
+            &path,
+            r##"{"version":1,"days":["Mon"],"periods":[{"id":"p1","label":"Period 1","start":"07:30","end":"08:15"}],"cells":{"Mon-p1":"s1"},"subjects":[{"id":"s1","name":"Math","color":"#4F7F8C"}]}"##,
+        )
+        .unwrap();
+        let board = load(&path);
+        let hue = board.subjects[0].hue;
+        assert!((hue - 217.0).abs() < 6.0, "hue was {hue}");
+        assert!(!board.cells.is_empty());
+        assert_eq!(board.version, BOARD_VERSION);
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
@@ -1482,7 +2266,7 @@ mod tests {
 
         assert!(import(&mut board, rows).is_err());
         assert!(board.cells.contains_key("Mon-p1"));
-        assert_eq!(board.periods.len(), default_periods().len());
+        assert_eq!(board.periods.len(), 1);
         assert_eq!(board.subjects.len(), 1);
     }
 
@@ -1507,7 +2291,7 @@ mod tests {
     }
 
     #[test]
-    fn import_shows_the_weekend_when_saturday_is_used() {
+    fn import_only_adds_the_days_that_are_used() {
         let mut board = Board::default();
         let rows = vec![ImportRow {
             day: "Sat".into(),
@@ -1518,8 +2302,386 @@ mod tests {
         }];
 
         import(&mut board, rows).expect("import");
-        assert_eq!(board.days.len(), 7);
-        assert_eq!(board.days[5], "Sat");
+        assert_eq!(board.days, vec!["Sat".to_string()]);
+    }
+
+    #[test]
+    fn merging_an_import_keeps_what_is_already_there() {
+        let mut board = board_with_class();
+        let rows = vec![ImportRow {
+            day: "Tue".into(),
+            start: "08:20".into(),
+            end: "09:05".into(),
+            subject: "Physics".into(),
+            room: String::new(),
+        }];
+        board
+            .apply(
+                BoardAction::ImportTimetable { rows, merge: true },
+                "2026-11-09",
+            )
+            .expect("merge");
+        assert_eq!(board.cells.len(), 2);
+        assert!(board.cells.contains_key("Mon-p1"));
+        assert_eq!(board.periods.len(), 2);
+        assert!(board.subjects.iter().any(|s| s.name == "Math"));
+        assert!(board.subjects.iter().any(|s| s.name == "Physics"));
+    }
+
+    #[test]
+    fn days_can_be_added_and_removed() {
+        let mut board = Board::default();
+        board
+            .apply(BoardAction::AddDay { day: "Wed".into() }, "2026-11-09")
+            .expect("add Wed");
+        board
+            .apply(BoardAction::AddDay { day: "Mon".into() }, "2026-11-09")
+            .expect("add Mon");
+        assert_eq!(board.days, vec!["Mon".to_string(), "Wed".to_string()]);
+        assert!(board
+            .apply(BoardAction::AddDay { day: "Wed".into() }, "2026-11-09")
+            .is_err());
+        board
+            .apply(BoardAction::RemoveDay { day: "Mon".into() }, "2026-11-09")
+            .expect("remove");
+        assert_eq!(board.days, vec!["Wed".to_string()]);
+    }
+
+    #[test]
+    fn two_subjects_with_one_name_become_one_on_load() {
+        let mut board = Board {
+            days: vec!["Mon".into()],
+            periods: vec![
+                period("p1", "Period 1", "07:30", "08:15", false),
+                period("p2", "Period 2", "08:20", "09:05", false),
+            ],
+            subjects: vec![
+                Subject {
+                    id: "a".into(),
+                    name: "Toán".into(),
+                    hue: 51.0,
+                    room: "B12".into(),
+                    legacy_color: String::new(),
+                },
+                Subject {
+                    id: "b".into(),
+                    name: " toan ".into(),
+                    hue: 200.0,
+                    room: "A04".into(),
+                    legacy_color: String::new(),
+                },
+            ],
+            tasks: vec![Task {
+                id: "t1".into(),
+                title: "Homework".into(),
+                subject_id: Some("b".into()),
+                date: None,
+                due: None,
+                time: String::new(),
+                notes: String::new(),
+                priority: None,
+                done: false,
+            }],
+            ..Board::default()
+        };
+        board.cells.insert("Mon-p1".into(), "a".into());
+        board.cells.insert("Mon-p2".into(), "b".into());
+
+        board.sanitize();
+
+        /* "Toán" and " toan " differ by a space, not by accent, so they stay
+        apart; the same name with different case is one subject. */
+        assert_eq!(board.subjects.len(), 2);
+
+        board.subjects[1].name = "toán".into();
+        board.sanitize();
+        assert_eq!(board.subjects.len(), 1, "one subject after the merge");
+        assert_eq!(board.subjects[0].id, "a");
+        assert_eq!(board.subjects[0].room, "B12", "first room kept");
+        assert!(board.cells.values().all(|id| id == "a"));
+        assert_eq!(board.tasks[0].subject_id.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn renaming_one_cell_reuses_a_subject_with_that_name() {
+        let mut board = Board {
+            days: vec!["Mon".into(), "Tue".into()],
+            periods: vec![
+                period("p1", "Period 1", "07:30", "08:15", false),
+                period("p2", "Period 2", "08:20", "09:05", false),
+            ],
+            ..Board::default()
+        };
+        board
+            .apply(
+                BoardAction::SaveCell {
+                    day: "Mon".into(),
+                    period_id: "p1".into(),
+                    name: "Math".into(),
+                    hue: Some(51.0),
+                    room: String::new(),
+                    apply_all: false,
+                },
+                "2026-11-09",
+            )
+            .expect("first");
+        board
+            .apply(
+                BoardAction::SaveCell {
+                    day: "Tue".into(),
+                    period_id: "p2".into(),
+                    name: "Physics".into(),
+                    hue: Some(200.0),
+                    room: String::new(),
+                    apply_all: false,
+                },
+                "2026-11-09",
+            )
+            .expect("second");
+        assert_eq!(board.subjects.len(), 2);
+
+        /* Both cells share "Math"; renaming one to "Physics" must land on the
+        existing Physics subject, not a third record of the same name. */
+        board
+            .cells
+            .insert("Mon-p2".into(), board.cells["Mon-p1"].clone());
+        board
+            .apply(
+                BoardAction::SaveCell {
+                    day: "Mon".into(),
+                    period_id: "p1".into(),
+                    name: "Physics".into(),
+                    hue: Some(300.0),
+                    room: String::new(),
+                    apply_all: false,
+                },
+                "2026-11-09",
+            )
+            .expect("rename one");
+        assert_eq!(board.subjects.len(), 2, "no duplicate Physics");
+        assert_eq!(board.cells["Mon-p1"], board.cells["Tue-p2"]);
+    }
+
+    #[test]
+    fn a_locked_timetable_stays_locked_through_a_save_and_reload() {
+        let mut board = board_with_class();
+        assert!(!board.view(date("2026-11-09"), 480).locked);
+        board
+            .apply(BoardAction::SetLocked { locked: true }, "2026-11-09")
+            .expect("lock");
+        assert!(board.view(date("2026-11-09"), 480).locked);
+
+        /* The lock lives in board.json, so it survives a restart. */
+        let json = serde_json::to_string(&board).expect("encode");
+        let mut reloaded: Board = serde_json::from_str(&json).expect("decode");
+        reloaded.sanitize();
+        assert!(reloaded.locked);
+        assert_eq!(reloaded.cells.len(), board.cells.len(), "lessons kept");
+
+        reloaded
+            .apply(BoardAction::SetLocked { locked: false }, "2026-11-09")
+            .expect("unlock");
+        assert!(!reloaded.view(date("2026-11-09"), 480).locked);
+    }
+
+    #[test]
+    fn a_day_can_be_renamed_and_named_back() {
+        let mut board = Board {
+            days: vec!["Mon".into(), "Tue".into()],
+            ..Board::default()
+        };
+        board
+            .apply(
+                BoardAction::RenameDay {
+                    day: "Mon".into(),
+                    label: "Thu 2 (sang)".into(),
+                },
+                "2026-11-09",
+            )
+            .expect("rename");
+        let view = board.view(date("2026-11-09"), 480);
+        assert_eq!(view.days[0].label, "Thu 2 (sang)");
+        assert_eq!(view.days[0].key, "Mon");
+        assert_eq!(view.days[1].label, "Tue");
+
+        /* A blank label is how a name goes back to the weekday. */
+        board
+            .apply(
+                BoardAction::RenameDay {
+                    day: "Mon".into(),
+                    label: "  ".into(),
+                },
+                "2026-11-09",
+            )
+            .expect("clear");
+        assert_eq!(board.view(date("2026-11-09"), 480).days[0].label, "Mon");
+    }
+
+    #[test]
+    fn a_very_long_day_name_is_cut_not_rejected() {
+        let mut board = Board {
+            days: vec!["Mon".into()],
+            ..Board::default()
+        };
+        board
+            .apply(
+                BoardAction::RenameDay {
+                    day: "Mon".into(),
+                    label: "x".repeat(80),
+                },
+                "2026-11-09",
+            )
+            .expect("rename");
+        assert_eq!(board.day_labels["Mon"].chars().count(), MAX_DAY_LABEL);
+    }
+
+    #[test]
+    fn day_columns_can_be_moved_and_the_order_survives_a_reload() {
+        let mut board = Board {
+            days: vec!["Mon".into(), "Tue".into(), "Wed".into()],
+            periods: vec![period("p1", "Period 1", "07:30", "08:15", false)],
+            ..Board::default()
+        };
+        board
+            .apply(
+                BoardAction::MoveDay {
+                    day: "Wed".into(),
+                    offset: -1,
+                },
+                "2026-11-09",
+            )
+            .expect("move");
+        assert_eq!(board.days, vec!["Mon", "Wed", "Tue"]);
+        /* Moving past either end is a quiet no-op, not an error. */
+        board
+            .apply(
+                BoardAction::MoveDay {
+                    day: "Mon".into(),
+                    offset: -1,
+                },
+                "2026-11-09",
+            )
+            .expect("edge");
+        assert_eq!(board.days, vec!["Mon", "Wed", "Tue"]);
+
+        /* The stored order is the column order, so loading must not sort it. */
+        let mut reloaded = board.clone();
+        reloaded.sanitize();
+        assert_eq!(reloaded.days, vec!["Mon", "Wed", "Tue"]);
+        let labels: Vec<String> = reloaded
+            .view(date("2026-11-09"), 480)
+            .days
+            .into_iter()
+            .map(|day| day.label)
+            .collect();
+        assert_eq!(labels, vec!["Mon", "Wed", "Tue"]);
+    }
+
+    #[test]
+    fn removing_a_day_forgets_its_name_and_drops_stale_names() {
+        let mut board = Board {
+            days: vec!["Mon".into(), "Tue".into()],
+            ..Board::default()
+        };
+        board
+            .apply(
+                BoardAction::RenameDay {
+                    day: "Tue".into(),
+                    label: "Lab day".into(),
+                },
+                "2026-11-09",
+            )
+            .expect("rename");
+        board
+            .apply(BoardAction::RemoveDay { day: "Tue".into() }, "2026-11-09")
+            .expect("remove");
+        assert!(!board.day_labels.contains_key("Tue"));
+
+        board.day_labels.insert("Fri".into(), "Ghost".into());
+        board.sanitize();
+        assert!(board.day_labels.is_empty(), "stale name kept");
+    }
+
+    #[test]
+    fn add_period_continues_after_the_break_from_setup() {
+        let mut board = Board::default();
+        board
+            .apply(
+                BoardAction::CreateGrid {
+                    days: vec!["Mon".into(), "Tue".into()],
+                    start: "07:30".into(),
+                    period_mins: 45,
+                    break_mins: 10,
+                    count: 2,
+                    long_after: None,
+                    long_mins: 0,
+                },
+                "2026-11-09",
+            )
+            .expect("grid");
+        assert_eq!(board.break_minutes, 10);
+        board
+            .apply(BoardAction::AddPeriod, "2026-11-09")
+            .expect("row");
+        let last = board.periods.last().expect("row");
+        assert_eq!(
+            last.start, "09:20",
+            "the 09:10 end plus the 10 minute break"
+        );
+        assert_eq!(last.end, "10:05");
+    }
+
+    #[test]
+    fn a_typed_break_is_remembered_for_the_next_row() {
+        let mut board = Board {
+            periods: vec![period("p1", "Period 1", "07:30", "08:15", false)],
+            ..Board::default()
+        };
+        board
+            .apply(BoardAction::SetBreak { minutes: 20 }, "2026-11-09")
+            .expect("break");
+        board
+            .apply(BoardAction::AddPeriod, "2026-11-09")
+            .expect("row");
+        assert_eq!(
+            board.periods.last().map(|p| p.start.as_str()),
+            Some("08:35")
+        );
+        /* A silly value is clamped, not stored as-is. */
+        board
+            .apply(BoardAction::SetBreak { minutes: 9999 }, "2026-11-09")
+            .expect("break");
+        assert_eq!(board.break_minutes, MAX_BREAK);
+    }
+
+    #[test]
+    fn a_new_subject_keeps_its_distance_from_the_others() {
+        let mut board = Board {
+            days: vec!["Mon".into()],
+            periods: vec![
+                period("p1", "Period 1", "07:30", "08:15", false),
+                period("p2", "Period 2", "08:20", "09:05", false),
+            ],
+            ..Board::default()
+        };
+        for (period_id, name) in [("p1", "Math"), ("p2", "Physics")] {
+            board
+                .apply(
+                    BoardAction::SaveCell {
+                        day: "Mon".into(),
+                        period_id: period_id.into(),
+                        name: name.into(),
+                        hue: None,
+                        room: String::new(),
+                        apply_all: false,
+                    },
+                    "2026-11-09",
+                )
+                .expect("save cell");
+        }
+        let hues: Vec<f64> = board.subjects.iter().map(|s| s.hue).collect();
+        assert_eq!(hues.len(), 2);
+        assert!(hue_distance(hues[0], hues[1]) > 40.0);
     }
 
     #[test]
@@ -1555,7 +2717,7 @@ mod tests {
                     day: "Mon".into(),
                     period_id: "p1".into(),
                     name: "Maths".into(),
-                    color: COLORS[1].into(),
+                    hue: Some(320.0),
                     room: String::new(),
                     apply_all: true,
                 },
@@ -1579,7 +2741,7 @@ mod tests {
                     day: "Mon".into(),
                     period_id: "p1".into(),
                     name: "Maths".into(),
-                    color: COLORS[0].into(),
+                    hue: Some(210.0),
                     room: String::new(),
                     apply_all: false,
                 },
@@ -1612,7 +2774,13 @@ mod tests {
 
     #[test]
     fn periods_reject_bad_or_overlapping_times() {
-        let mut board = Board::default();
+        let mut board = Board {
+            periods: vec![
+                period("p1", "Period 1", "07:30", "08:15", false),
+                period("p2", "Period 2", "08:20", "09:05", false),
+            ],
+            ..Board::default()
+        };
         let overlap = board.apply(
             BoardAction::UpdatePeriod {
                 id: "p1".into(),
@@ -1620,6 +2788,7 @@ mod tests {
                 start: "07:30".into(),
                 end: "08:40".into(),
                 is_break: false,
+                shift_later: false,
             },
             "2026-11-09",
         );
@@ -1631,6 +2800,7 @@ mod tests {
                 start: "09:00".into(),
                 end: "08:00".into(),
                 is_break: false,
+                shift_later: false,
             },
             "2026-11-09",
         );
@@ -1642,6 +2812,7 @@ mod tests {
                 start: "07:00".into(),
                 end: "07:25".into(),
                 is_break: false,
+                shift_later: false,
             },
             "2026-11-09",
         );
@@ -1651,16 +2822,15 @@ mod tests {
 
     #[test]
     fn weekend_toggle_changes_the_columns() {
-        let mut board = Board::default();
-        assert_eq!(board.days.len(), 5);
+        let mut board = board_with_class();
         board
             .apply(BoardAction::SetWeekend { show: true }, "2026-11-09")
             .expect("weekend on");
-        assert_eq!(board.days.len(), 7);
+        assert_eq!(board.days, vec!["Mon", "Tue", "Sat", "Sun"]);
         board
             .apply(BoardAction::SetWeekend { show: false }, "2026-11-09")
             .expect("weekend off");
-        assert_eq!(board.days.len(), 5);
+        assert_eq!(board.days, vec!["Mon", "Tue"]);
     }
 
     #[test]
@@ -1755,12 +2925,12 @@ mod tests {
 
     #[test]
     fn current_period_tracks_the_wall_clock() {
-        let board = Board::default();
+        let board = board_with_class();
         let view = board.view(date("2026-11-09"), 7 * 60 + 40);
         assert_eq!(view.current_period.as_deref(), Some("p1"));
         let later = board.view(date("2026-11-09"), 10 * 60 + 10);
-        assert_eq!(later.current_period.as_deref(), Some("p4")); // recess row
-                                                                 // Saturday has no column while the weekend is hidden.
+        assert_eq!(later.current_period, None);
+        // Saturday has no column, so there is never a current period there.
         let weekend = board.view(date("2026-11-14"), 7 * 60 + 40);
         assert_eq!(weekend.current_period, None);
     }
@@ -1773,7 +2943,8 @@ mod tests {
             .apply(BoardAction::ResetTimetable, "2026-11-09")
             .expect("reset");
         assert!(board.cells.is_empty());
-        assert_eq!(board.periods.len(), default_periods().len());
+        assert!(board.days.is_empty());
+        assert!(board.periods.is_empty());
         assert_eq!(board.tasks.len(), 1);
         assert_eq!(board.subjects.len(), 1);
     }
@@ -1808,7 +2979,7 @@ mod tests {
                 day: "Mon".into(),
                 period_id: "p1".into(),
                 name: "   ".into(),
-                color: String::new(),
+                hue: None,
                 room: String::new(),
                 apply_all: false,
             },
@@ -1822,7 +2993,7 @@ mod tests {
                     day: "Mon".into(),
                     period_id: "p1".into(),
                     name: long,
-                    color: String::new(),
+                    hue: None,
                     room: String::new(),
                     apply_all: false,
                 },
@@ -1843,12 +3014,15 @@ mod tests {
                 "2026-11-09",
             )
             .is_err());
+        board
+            .periods
+            .push(period("p9", "Recess", "10:00", "10:20", true));
         let break_row = board.apply(
             BoardAction::SaveCell {
                 day: "Mon".into(),
-                period_id: "p4".into(),
+                period_id: "p9".into(),
                 name: "Math".into(),
-                color: String::new(),
+                hue: None,
                 room: String::new(),
                 apply_all: false,
             },
@@ -1858,12 +3032,28 @@ mod tests {
     }
 
     #[test]
-    fn corrupt_files_fall_back_to_defaults() {
-        let path = std::env::temp_dir().join("flip-board-corrupt.json");
+    fn corrupt_files_fall_back_to_an_empty_board_and_are_kept() {
+        let path =
+            std::env::temp_dir().join(format!("flip-board-corrupt-{}.json", std::process::id()));
         std::fs::write(&path, "not json at all").expect("write");
         let board = load(&path);
-        assert_eq!(board.days.len(), 5);
+        assert!(board.days.is_empty());
+        assert!(board.periods.is_empty());
         assert!(board.cells.is_empty());
+        let kept: Vec<_> = std::fs::read_dir(std::env::temp_dir())
+            .unwrap()
+            .flatten()
+            .filter(|e| {
+                e.file_name().to_string_lossy().starts_with(&format!(
+                    "flip-board-corrupt-{}.json.unreadable-",
+                    std::process::id()
+                ))
+            })
+            .collect();
+        assert_eq!(kept.len(), 1, "the unreadable file should be copied aside");
+        for entry in kept {
+            let _ = std::fs::remove_file(entry.path());
+        }
         let _ = std::fs::remove_file(&path);
     }
 }

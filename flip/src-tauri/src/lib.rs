@@ -12,12 +12,29 @@ pub mod update;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+/// Writes a file through a temporary neighbour and a rename, so an interrupted
+/// save leaves the previous file intact instead of half a JSON document.
+pub fn write_atomic(path: &Path, bytes: &[u8], label: &str) {
+    let temp = path.with_extension("tmp");
+    if let Err(e) = std::fs::write(&temp, bytes) {
+        eprintln!("flip: could not write {label}: {e}");
+        let _ = std::fs::remove_file(&temp);
+        return;
+    }
+    if let Err(e) = std::fs::rename(&temp, path) {
+        eprintln!("flip: could not replace {label}: {e}");
+        let _ = std::fs::remove_file(&temp);
+    }
+}
+
 use tauri::Manager;
 
 use state::{Core, Mode, SharedCore};
 
 /// Flip keeps its files in one stable, user-visible folder, so they survive
-/// reinstall and never move when the app identifier changes.
+/// reinstall and never move when the app identifier changes. Only the Windows
+/// data-folder helpers use it; a phone keeps its files in app storage.
+#[cfg(windows)]
 const DATA_DIR: &str = "FlipData";
 const DATA_FILES: [&str; 2] = ["settings.json", "board.json"];
 
@@ -173,15 +190,21 @@ pub fn run() {
                 board_path,
             );
 
-            /* The saved zoom has to reach the window, not just the settings file. */
+            /* The saved zoom has to reach the window, not just the settings file.
+            Phones ignore it: the page is sized for the screen instead. */
+            #[cfg(desktop)]
             if let Some(window) = app.get_webview_window("main") {
                 if let Err(e) = window.set_zoom(saved_zoom as f64 / 100.0) {
                     eprintln!("flip: could not restore zoom: {e}");
                 }
             }
+            #[cfg(not(desktop))]
+            let _ = saved_zoom;
 
             let shared: SharedCore = Arc::new(Mutex::new(core));
             app.manage(shared);
+            /* Discord lives on the desktop; phones have no such IPC socket. */
+            #[cfg(desktop)]
             app.manage(discord::spawn());
 
             ticker::spawn(app.handle().clone());
@@ -197,7 +220,7 @@ pub fn run() {
             commands::timer_reset,
             commands::toggle_hour_format,
             commands::set_hour_format,
-            commands::set_accent,
+            commands::set_accent_hue,
             commands::set_language,
             commands::set_sound,
             commands::set_onboarded,
@@ -209,8 +232,11 @@ pub fn run() {
             commands::toggle_theme,
             commands::toggle_fullscreen,
             commands::exit_fullscreen,
+            commands::set_orientation,
             commands::get_board,
             commands::board_action,
+            commands::undo_board,
+            commands::redo_board,
             commands::start_focus,
             commands::cancel_focus,
             commands::set_dashboard,
@@ -219,6 +245,8 @@ pub fn run() {
             commands::delete_backup,
             commands::restore_backup,
             commands::export_data,
+            commands::save_export,
+            commands::read_timetable_table,
             commands::open_folder,
             commands::set_theme,
             commands::set_touch,

@@ -7,6 +7,10 @@
   var view = null;
   var listeners = [];
   var closeCurrentModal = null;
+  /* history.back() lands one task later, so a dialog opened right after another
+     one closed would receive that stale popstate and close itself. Count the
+     backs we asked for and swallow exactly those. */
+  var pendingBacks = 0;
   var toastTimer = 0;
 
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -14,6 +18,12 @@
   var DAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   /* ------------------------------------------------------------- dom helpers */
+
+  /** Subject colours come from a hue, so every surface agrees on them. */
+  function subjectColour(hue) {
+    if (window.FlipColor) return window.FlipColor.subjectColorFromHue(hue);
+    return { border: "var(--muted)", fill: "var(--panel-2)", badge: "var(--panel-2)", text: "var(--ink)" };
+  }
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -180,7 +190,11 @@
   function toast(message, options) {
     var node = $("toast");
     if (!node) return;
-    var opts = options || {};
+    /* Both shapes are used in the app: `toast(text, options)` and the shorter
+       `toast(text, "Undo", fn)` for an edit that can be taken back. */
+    var opts = typeof options === "string"
+      ? { actionLabel: options, onAction: arguments[2] }
+      : options || {};
     clear(node);
     node.appendChild(el("span", "toast-text", message));
     if (opts.actionLabel) {
@@ -217,7 +231,7 @@
   /* ------------------------------------------------------------------ modals */
 
   function isModalOpen() {
-    return Boolean(closeCurrentModal);
+    return Boolean(closeCurrentModal) || Boolean(closeCurrentMenu);
   }
 
   function closeModal() {
@@ -238,6 +252,11 @@
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
     panel.setAttribute("aria-label", opts.title);
+    if (opts.className) {
+      panel.classList.add(opts.className);
+      /* Lets the overlay itself go edge-to-edge for a phone sheet. */
+      overlay.classList.add("overlay-" + opts.className);
+    }
 
     var head = el("div", "modal-head");
     head.appendChild(el("h2", "", opts.title));
@@ -280,10 +299,38 @@
 
     var previousFocus = document.activeElement;
 
-    function close() {
+    /* Android's back button is the webview's back: one history entry per
+       dialog means back closes the dialog instead of leaving the app. */
+    var pushed = false;
+    try {
+      window.history.pushState({ flipModal: true }, "");
+      pushed = true;
+    } catch (_) {
+      /* a browser that refuses history still closes with Esc */
+    }
+
+    function onPop(event) {
+      /* The dialog's entry is the most recent one: nothing else should react
+         to this back press. */
+      if (event && event.stopImmediatePropagation) event.stopImmediatePropagation();
+      if (pendingBacks > 0) {
+        pendingBacks--;
+        return;
+      }
+      if (closeCurrentModal === close) close(true);
+    }
+
+    function close(fromHistory) {
       if (closeCurrentModal !== close) return;
       closeCurrentModal = null;
       document.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("popstate", onPop);
+      if (pushed && !fromHistory) {
+        pushed = false;
+        /* Removing the entry we added keeps the history clean. */
+        pendingBacks++;
+        window.history.back();
+      }
       clear(root);
       if (previousFocus && previousFocus.focus) {
         try {
@@ -345,13 +392,14 @@
       if (event.target === overlay) close();
     });
     document.addEventListener("keydown", onKeyDown, true);
+    if (pushed) window.addEventListener("popstate", onPop);
 
     closeCurrentModal = close;
     /* Colours, radios, files and hidden inputs are not where a dialog should
        start: focusing one of those scrolls the body down to it. Focus the first
        real field, and never let that focus move the panel. */
     var firstField = panel.querySelector(
-      "input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=hidden]), select, textarea, .btn.primary"
+      "input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=hidden]):not([type=range]), select, textarea, .btn.primary"
     );
     if (firstField) {
       setTimeout(function () {
@@ -365,6 +413,134 @@
       }, 0);
     }
     return close;
+  }
+
+  /* --------------------------------------------------------------- popovers */
+
+  var currentMenu = null;
+  var closeCurrentMenu = null;
+
+  /**
+   * A small menu next to an element: { label, run, danger, confirm } items.
+   * On a phone it becomes a bottom sheet. Back closes it before anything else.
+   */
+  function menu(anchor, items) {
+    closeMenu();
+    var layer = el("div", "popover-layer");
+    var panel = el("div", "menu popover");
+    panel.setAttribute("role", "menu");
+
+    var pushed = false;
+    try {
+      window.history.pushState({ flipMenu: true }, "");
+      pushed = true;
+    } catch (_) {
+      /* no history still closes on Esc */
+    }
+
+    function close(fromHistory) {
+      if (closeCurrentMenu !== close) return;
+      closeCurrentMenu = null;
+      document.removeEventListener("pointerdown", onOutside, true);
+      document.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("popstate", onPop);
+      if (pushed && !fromHistory) {
+        pushed = false;
+        pendingBacks++;
+        window.history.back();
+      }
+      layer.remove();
+      currentMenu = null;
+    }
+
+    function onOutside(event) {
+      if (!panel.contains(event.target) && !anchor.contains(event.target)) close();
+    }
+
+    function onKey(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    }
+
+    function onPop(event) {
+      if (event && event.stopImmediatePropagation) event.stopImmediatePropagation();
+      if (pendingBacks > 0) {
+        pendingBacks--;
+        return;
+      }
+      close(true);
+    }
+
+    items.forEach(function (item) {
+      var row = el("button", "menu-row" + (item.danger ? " danger" : ""), item.label);
+      row.type = "button";
+      row.setAttribute("role", "menuitem");
+      row.addEventListener("click", function () {
+        close();
+        if (item.confirm) {
+          confirmBox({
+            title: item.label,
+            message: item.confirm,
+            confirmLabel: item.label,
+            onConfirm: item.run,
+          });
+        } else if (item.run) {
+          item.run();
+        }
+      });
+      panel.appendChild(row);
+    });
+
+    layer.appendChild(panel);
+    document.body.appendChild(layer);
+
+    var rect = anchor.getBoundingClientRect();
+    var width = panel.offsetWidth || 200;
+    var height = panel.offsetHeight || 0;
+    var left = Math.min(rect.left, window.innerWidth - width - 12);
+    var top = rect.bottom + 6;
+    if (top + height > window.innerHeight - 12) top = Math.max(12, rect.top - height - 6);
+    panel.style.left = Math.round(Math.max(12, left)) + "px";
+    panel.style.top = Math.round(Math.max(12, top)) + "px";
+
+    currentMenu = panel;
+    closeCurrentMenu = close;
+    document.addEventListener("pointerdown", onOutside, true);
+    document.addEventListener("keydown", onKey, true);
+    window.addEventListener("popstate", onPop);
+    var first = panel.querySelector(".menu-row");
+    if (first) first.focus({ preventScroll: true });
+    return close;
+  }
+
+  function closeMenu() {
+    if (closeCurrentMenu) closeCurrentMenu();
+  }
+
+  function undo() {
+    return invoke("undo_board")
+      .then(function (next) {
+        setView(next);
+        return true;
+      })
+      .catch(function (err) {
+        toast(errorText(err));
+        return false;
+      });
+  }
+
+  function redo() {
+    return invoke("redo_board")
+      .then(function (next) {
+        setView(next);
+        return true;
+      })
+      .catch(function (err) {
+        toast(errorText(err));
+        return false;
+      });
   }
 
   function confirmBox(opts) {
@@ -405,7 +581,7 @@
 
     var title = el("div", "tip-title");
     var swatch = el("span", "tip-swatch");
-    swatch.style.background = subjectRow.color;
+    swatch.style.background = subjectColour(subjectRow.hue).border;
     title.appendChild(swatch);
     title.appendChild(el("span", "", subjectRow.name));
     if (subjectRow.room) title.appendChild(el("span", "tip-room", subjectRow.room));
@@ -512,6 +688,8 @@
       return view;
     },
     action: action,
+    undo: undo,
+    redo: redo,
     subject: subject,
     tasksForSubject: tasksForSubject,
     pendingForSubject: pendingForSubject,
@@ -530,10 +708,13 @@
     toast: toast,
     hideToast: hideToast,
     modal: modal,
+    menu: menu,
     closeModal: closeModal,
     isModalOpen: isModalOpen,
+    errorText: errorText,
     confirm: confirmBox,
     tooltip: { show: showTooltip, hide: hideTooltip, bind: bindTooltip },
+    subjectColour: subjectColour,
     initScroll: bindScrollHiding,
   };
 })();

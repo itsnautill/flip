@@ -74,6 +74,17 @@
     return hours + "h" + (rest ? " " + rest + "m" : "");
   }
 
+  /** A number plus a translated noun, so English can never leak through. */
+  function countText(value, one, many) {
+    var count = Number(value) || 0;
+    if (window.I18n && window.I18n.count) return window.I18n.count(count, one, many);
+    return count + " " + (count === 1 ? one : many);
+  }
+
+  function sessionText(value) {
+    return countText(value, "session", "sessions");
+  }
+
   function dayKeyOf(view) {
     return Board.dayKeyOf(view.today);
   }
@@ -83,9 +94,18 @@
     return subject ? subject.name : "";
   }
 
+  function subjectHue(id) {
+    var subject = Board.subject(id);
+    return subject ? Number(subject.hue) : 24;
+  }
+
+  function paintColour(hue) {
+    return window.FlipColor ? window.FlipColor.subjectColorFromHue(hue).border : "var(--muted)";
+  }
+
   function subjectColor(id) {
     var subject = Board.subject(id);
-    return subject ? subject.color : "var(--muted)";
+    return subject ? paintColour(subject.hue) : "var(--muted)";
   }
 
   function hasClassOn(view, dayKey) {
@@ -178,7 +198,7 @@
       body.appendChild(el("p", "hero-eyebrow", eyebrow));
 
       var title = el("div", "hero-title");
-      title.appendChild(el("span", "hero-swatch")).style.background = lesson.cell.color;
+      title.appendChild(el("span", "hero-swatch")).style.background = paintColour(lesson.cell.hue);
       title.appendChild(el("span", "", lesson.cell.name));
       body.appendChild(title);
 
@@ -229,7 +249,7 @@
         row.appendChild(el("span", "sched-time", lesson.period.start));
         var name = el("span", "sched-name");
         name.appendChild(el("i", "sched-dot"));
-        name.firstChild.style.background = lesson.cell.color;
+        name.firstChild.style.background = paintColour(lesson.cell.hue);
         name.appendChild(el("span", "", lesson.cell.name));
         row.appendChild(name);
         if (lesson.cell.room) row.appendChild(el("span", "sched-room", lesson.cell.room));
@@ -398,7 +418,7 @@
             .then(function (next) {
               if (window.Flip && next) window.Flip.apply(next);
               go("timer");
-              Board.toast("Focus session started · " + chosen + " minutes");
+              Board.toast("Focus session started · " + countText(chosen, "minute", "minutes"));
             })
             .catch(function (err) {
               Board.toast(String((err && err.message) || err));
@@ -411,7 +431,7 @@
       stats.appendChild(el("span", "", "Today"));
       stats.appendChild(el("strong", "", minutesText(focus.todaySecs || 0)));
       stats.appendChild(
-        el("span", "", (focus.sessionsToday || 0) + " session" + (focus.sessionsToday === 1 ? "" : "s"))
+        el("span", "", sessionText(focus.sessionsToday || 0))
       );
       body.appendChild(stats);
     },
@@ -596,7 +616,11 @@
       return !task.done && (task.date === boardView.today || task.due === boardView.today);
     }).length;
     var bits = [WEEKDAYS[date.getDay()] + ", " + date.getDate() + " " + MONTHS[date.getMonth()]];
-    bits.push(lessons.length ? lessons.length + " class" + (lessons.length === 1 ? "" : "es") + " today" : "no classes today");
+    bits.push(
+      lessons.length
+        ? countText(lessons.length, "class", "classes") + " " + (window.I18n ? window.I18n.t("today") : "today")
+        : "no classes today"
+    );
     if (openToday) bits.push(openToday + " task" + (openToday === 1 ? "" : "s") + " for today");
     subEl.textContent = bits.join(" · ");
   }

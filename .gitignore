@@ -23,3 +23,8 @@ desktop.ini
 # local tooling
 node_modules/
 .wrangler/
+
+# Android signing material and machine paths, never committed.
+*.jks
+local.properties
+*.keystore

@@ -317,8 +317,7 @@
     ["Wed", "13:00", "13:45", "Biology", "Room 4"],
   ];
 
-  function sheetXml() {
-    var table = [HEADER].concat(SAMPLE);
+  function sheetXml(table) {
     var rows = table
       .map(function (values, rowIndex) {
         var cells = values
@@ -398,9 +397,56 @@
           '<cellXfs count="2"><xf xfId="0"/><xf fontId="1" applyFont="1" xfId="0"/></cellXfs>' +
           "</styleSheet>",
       },
-      { name: "xl/worksheets/sheet1.xml", body: sheetXml() },
+      { name: "xl/worksheets/sheet1.xml", body: sheetXml([HEADER].concat(SAMPLE)) },
     ]);
   }
 
-  window.Xlsx = { readSheetRows: readSheetRows, buildTemplate: buildTemplate };
+  /** A real Excel workbook for any table of strings - the export path, where
+      Unicode never depends on a code page or a list separator. */
+  function buildSheet(table) {
+    return zip([
+      {
+        name: "[Content_Types].xml",
+        body:
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+          '<Default Extension="xml" ContentType="application/xml"/>' +
+          '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+          '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+          "</Types>",
+      },
+      {
+        name: "_rels/.rels",
+        body:
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+          "</Relationships>",
+      },
+      {
+        name: "xl/workbook.xml",
+        body:
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+          'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+          '<sheets><sheet name="Timetable" sheetId="1" r:id="rId1"/></sheets></workbook>',
+      },
+      {
+        name: "xl/_rels/workbook.xml.rels",
+        body:
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+          "</Relationships>",
+      },
+      { name: "xl/worksheets/sheet1.xml", body: sheetXml(table) },
+    ]);
+  }
+
+  window.Xlsx = {
+    readSheetRows: readSheetRows,
+    buildTemplate: buildTemplate,
+    buildSheet: buildSheet,
+  };
 })();

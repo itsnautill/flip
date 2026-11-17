@@ -141,6 +141,11 @@
     subject("s-nhac", "#C9974A")
   ];
 
+  var HUES = [51, 76, 134, 217, 295, 10, 249, 313, 148, 352];
+  subjects.forEach(function (subject, index) {
+    subject.hue = HUES[index % HUES.length];
+  });
+
   var timetable = {
     "Mon-p1": "s-toan", "Mon-p2": "s-van", "Mon-p3": "s-anh", "Mon-p4": "s-ly", "Mon-p5": "s-hdtn",
     "Tue-p1": "s-hoa", "Tue-p2": "s-sinh", "Tue-p3": "s-toan", "Tue-p4": "s-su", "Tue-p5": "s-nhac",
@@ -155,6 +160,11 @@
      including a lighter weekend, so the page always has something to show. */
   var today = new Date();
   var weekStart = "Mon";
+  var days = DAY_KEYS.slice();
+  var setupDismissed = false;
+  var dayLabels = {};
+  var breakMinutes = 5;
+  var locked = false;
 
   function at(offset) {
     return iso(shift(today, offset));
@@ -212,7 +222,7 @@
     discord: true,
     telemetry: false,
     installId: "",
-    accent: "#B4622D",
+    accentHue: 51,
     focusSecs: 25 * 60,
     dashboard: { order: ["next", "today", "due", "tasks", "focus", "stats"], hidden: [] },
     focusActive: false
@@ -292,7 +302,7 @@
       cells[key] = {
         subjectId: subject.id,
         name: subject.name,
-        color: subject.color,
+        hue: Number(subject.hue),
         room: subject.room,
         pending: pendingCount(subject.id)
       };
@@ -305,7 +315,7 @@
       return {
         id: subject.id,
         name: subject.name,
-        color: subject.color,
+        hue: Number(subject.hue),
         room: subject.room,
         pending: pendingCount(subject.id),
         inTimetable: onTimetable
@@ -324,7 +334,7 @@
         kind: "due",
         subjectId: first.subjectId,
         subjectName: subject ? subject.name : "",
-        subjectColor: subject ? subject.color : COLORS[0],
+        subjectHue: subject ? Number(subject.hue) : 51,
         date: iso(today),
         title: (subject ? subject.name : "") + " " + copy.suggestionTitle,
         question: copy.suggestionQuestion,
@@ -335,8 +345,8 @@
     }
 
     return {
-      days: DAY_KEYS.map(function (key) {
-        return { key: key, label: key, isToday: key === dayKey };
+      days: days.map(function (key) {
+        return { key: key, label: dayLabels[key] || key, isToday: key === dayKey };
       }),
       periods: periods,
       cells: cells,
@@ -350,7 +360,10 @@
       suggestionCount: suggestions.length,
       showWeekend: true,
       weekStart: weekStart,
-      colors: COLORS
+      setupDismissed: setupDismissed,
+      locked: locked,
+      canUndo: history.length > 0,
+      canRedo: future.length > 0
     };
   }
 
@@ -388,6 +401,16 @@
 
   /* --------------------------------------------------------------- commands */
 
+  function clockMinutes(text) {
+    var parts = String(text || "07:30").split(":");
+    return (Number(parts[0]) || 0) * 60 + (Number(parts[1]) || 0);
+  }
+
+  function clockText(minutes) {
+    var value = ((minutes % 1440) + 1440) % 1440;
+    return String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
+  }
+
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -396,8 +419,75 @@
     return Promise.resolve(clone(value));
   }
 
+  var history = [];
+  var future = [];
+
+  function remember() {
+    history.push(clone({ days: days, periods: periods, timetable: timetable, subjects: subjects, setupDismissed: setupDismissed }));
+    if (history.length > 40) history.shift();
+    future = [];
+  }
+
+  function step(back) {
+    var from = back ? history : future;
+    var to = back ? future : history;
+    if (!from.length) return Promise.reject("Nothing to " + (back ? "undo" : "redo") + ".");
+    var state = from.pop();
+    to.push(clone({ days: days, periods: periods, timetable: timetable, subjects: subjects, setupDismissed: setupDismissed }));
+    days = state.days;
+    periods = state.periods;
+    timetable = state.timetable;
+    subjects = state.subjects;
+    setupDismissed = state.setupDismissed;
+    return ok(buildView());
+  }
+
+  function parseTable(text) {
+    var lines = String(text).replace(/\r/g, "").split("\n").filter(function (line) { return line.trim(); });
+    if (!lines.length) return Promise.reject("Paste a table first.");
+    var grid = lines.map(function (line) { return line.split(line.indexOf("\t") >= 0 ? "\t" : /,|;/); });
+    var rows = [];
+    var clock = function (value) {
+      var match = String(value).match(/(\d{1,2})[:.h](\d{2})/);
+      return match ? match[1].padStart(2, "0") + ":" + match[2] : null;
+    };
+    for (var r = 1; r < grid.length; r++) {
+      var times = String(grid[r][0] || "").match(/(\d{1,2})[:.h](\d{2})\s*[-–]\s*(\d{1,2})[:.h](\d{2})/);
+      if (!times) continue;
+      for (var c = 1; c < grid[r].length; c++) {
+        var name = String(grid[r][c] || "").trim();
+        var day = grid[0][c] ? String(grid[0][c]).trim() : "";
+        if (!name || !day) continue;
+        rows.push({
+          day: day,
+          start: clock(times[1] + ":" + times[2]),
+          end: clock(times[3] + ":" + times[4]),
+          subject: name,
+          room: "",
+        });
+      }
+    }
+    if (!rows.length) return Promise.reject("That table has no lessons in it.");
+    var unique = function (values) {
+      return values.filter(function (value, index, all) { return all.indexOf(value) === index; }).length;
+    };
+    return ok({
+      rows: rows,
+      days: unique(rows.map(function (row) { return row.day; })),
+      periods: unique(rows.map(function (row) { return row.start + row.end; })),
+      subjects: unique(rows.map(function (row) { return row.subject.toLowerCase(); })),
+    });
+  }
+
   function boardAction(action) {
+    return applyAction(action).then(function (view) {
+      return view;
+    });
+  }
+
+  function applyAction(action) {
     var kind = action.kind;
+    remember();
     if (kind === "toggleTask") {
       tasks.forEach(function (task) {
         if (task.id === action.id) task.done = !task.done;
@@ -435,17 +525,83 @@
       tasks.forEach(function (task) {
         if (task.id === action.id) task.date = null;
       });
+    } else if (kind === "saveCellMany") {
+      var existingSubject = subjects.find(function (s) { return s.name === action.name; });
+      var placed = existingSubject || {
+        id: "s-" + Date.now(),
+        name: action.name,
+        hue: Number(action.hue) || 51,
+        room: action.room || ""
+      };
+      if (!existingSubject) subjects.push(placed);
+      if (typeof action.hue === "number") placed.hue = action.hue;
+      if (action.room) placed.room = action.room;
+      timetable[action.day + "-" + action.periodId] = placed.id;
+      (action.also || []).forEach(function (day) {
+        timetable[day + "-" + action.periodId] = placed.id;
+      });
+    } else if (kind === "createGrid") {
+      days = (action.days || []).slice();
+      periods = [];
+      timetable = {};
+      var cursor = clockMinutes(action.start);
+      for (var i = 0; i < action.count; i++) {
+        var end = cursor + action.periodMins;
+        periods.push({
+          id: "p" + (i + 1),
+          label: "Tiết " + (i + 1),
+          start: clockText(cursor),
+          end: clockText(end),
+          break: false
+        });
+        cursor = end + (action.breakMins || 0);
+        if (action.longAfter === i + 1) cursor += action.longMins || 0;
+      }
+      breakMinutes = Math.min(120, Number(action.breakMins) || 0);
+      dayLabels = {};
+      setupDismissed = true;
+    } else if (kind === "setSetup") {
+      setupDismissed = Boolean(action.dismissed);
+    } else if (kind === "moveCell") {
+      var fromKey = action.fromDay + "-" + action.fromPeriod;
+      var toKey = action.toDay + "-" + action.toPeriod;
+      var moving = timetable[fromKey];
+      if (moving) {
+        var displaced = timetable[toKey];
+        timetable[toKey] = moving;
+        if (displaced) timetable[fromKey] = displaced;
+        else delete timetable[fromKey];
+      }
+    } else if (kind === "paintCells") {
+      (action.cells || []).forEach(function (cell) {
+        timetable[cell.day + "-" + cell.periodId] = action.subjectId;
+      });
+    } else if (kind === "removeSubject") {
+      Object.keys(timetable).forEach(function (key) {
+        if (timetable[key] === action.id) delete timetable[key];
+      });
+      subjects = subjects.filter(function (subject) { return subject.id !== action.id; });
+      tasks.forEach(function (task) {
+        if (task.subjectId === action.id) task.subjectId = null;
+      });
+    } else if (kind === "movePeriod") {
+      var at = periods.findIndex(function (period) { return period.id === action.id; });
+      var next = at + action.offset;
+      if (at >= 0 && next >= 0 && next < periods.length) {
+        var row = periods.splice(at, 1)[0];
+        periods.splice(next, 0, row);
+      }
     } else if (kind === "saveCell") {
       var existing = subjects.find(function (s) { return s.name === action.name; });
       var subject = existing || {
         id: "s-" + Date.now(),
         name: action.name,
-        color: action.color || COLORS[0],
+        hue: Number(action.hue) || 51,
         room: action.room || ""
       };
       if (!existing) subjects.push(subject);
       subject.name = action.name;
-      subject.color = action.color || subject.color;
+      if (typeof action.hue === "number") subject.hue = action.hue;
       subject.room = action.room || "";
       timetable[action.day + "-" + action.periodId] = subject.id;
       if (action.applyAll) {
@@ -457,14 +613,20 @@
       delete timetable[action.day + "-" + action.periodId];
     } else if (kind === "addPeriod") {
       var index = periods.length + 1;
+      var lastRow = periods[periods.length - 1];
+      var startMin = lastRow ? clockMinutes(lastRow.end) + breakMinutes : 7 * 60 + 30;
       periods.push({
         id: "p" + Date.now(),
         label: "Tiết " + index,
-        start: "13:00",
-        end: "13:45",
+        start: clockText(startMin),
+        end: clockText(startMin + 45),
         break: false
       });
     } else if (kind === "updatePeriod") {
+      var before = null;
+      periods.forEach(function (period) {
+        if (period.id === action.id) before = clockMinutes(period.start);
+      });
       periods.forEach(function (period) {
         if (period.id !== action.id) return;
         period.label = action.label;
@@ -472,14 +634,93 @@
         period.end = action.end;
         period.break = Boolean(action.isBreak);
       });
+      if (action.shiftLater && before !== null) {
+        var delta = clockMinutes(action.start) - before;
+        var seen = false;
+        periods.forEach(function (period) {
+          if (period.id === action.id) {
+            seen = true;
+            return;
+          }
+          if (!seen || !delta) return;
+          period.start = clockText(clockMinutes(period.start) + delta);
+          period.end = clockText(clockMinutes(period.end) + delta);
+        });
+      }
     } else if (kind === "removePeriod") {
       periods = periods.filter(function (period) { return period.id !== action.id; });
     } else if (kind === "setWeekend") {
       snapshot.showWeekend = Boolean(action.show);
     } else if (kind === "setWeekStart") {
       weekStart = action.start === "Sun" ? "Sun" : "Mon";
+    } else if (kind === "addDay") {
+      if (days.indexOf(action.day) < 0) days.push(action.day);
+      days.sort(function (a, b) {
+        return DAY_KEYS.indexOf(a) - DAY_KEYS.indexOf(b);
+      });
+      setupDismissed = false;
+    } else if (kind === "removeDay") {
+      days = days.filter(function (day) { return day !== action.day; });
+      delete dayLabels[action.day];
+      Object.keys(timetable).forEach(function (key) {
+        if (key.indexOf(action.day + "-") === 0) delete timetable[key];
+      });
+    } else if (kind === "renameDay") {
+      var clean = String(action.label || "").trim().slice(0, 24);
+      if (clean) dayLabels[action.day] = clean;
+      else delete dayLabels[action.day];
+    } else if (kind === "moveDay") {
+      var dayAt = days.indexOf(action.day);
+      var dayTo = dayAt + action.offset;
+      if (dayAt >= 0 && dayTo >= 0 && dayTo < days.length) {
+        var movedDay = days.splice(dayAt, 1)[0];
+        days.splice(dayTo, 0, movedDay);
+      }
+    } else if (kind === "setLocked") {
+      locked = Boolean(action.locked);
+    } else if (kind === "setBreak") {
+      breakMinutes = Math.min(120, Number(action.minutes) || 0);
+    } else if (kind === "setGuide") {
+      setupDismissed = Boolean(action.dismissed);
+    } else if (kind === "importTimetable") {
+      if (!action.merge) {
+        timetable = {};
+        periods = [];
+        days = [];
+      }
+      (action.rows || []).forEach(function (row) {
+        if (!row.day || !row.start) return;
+        if (days.indexOf(row.day) < 0) days.push(row.day);
+        var period = periods.find(function (item) {
+          return item.start === row.start && item.end === row.end;
+        });
+        if (!period) {
+          period = {
+            id: "p" + (periods.length + 1) + "-" + row.start.replace(":", ""),
+            label: "Tiết " + (periods.length + 1),
+            start: row.start,
+            end: row.end,
+            break: false,
+          };
+          periods.push(period);
+        }
+        var subject = subjects.find(function (item) {
+          return item.name.toLowerCase() === String(row.subject || "").toLowerCase();
+        });
+        if (!subject) {
+          subject = { id: "s-" + (subjects.length + 1) + row.subject, name: row.subject, hue: 51, room: row.room || "" };
+          subjects.push(subject);
+        }
+        timetable[row.day + "-" + period.id] = subject.id;
+      });
+      periods.sort(function (a, b) { return a.start.localeCompare(b.start); });
+      days.sort(function (a, b) { return DAY_KEYS.indexOf(a) - DAY_KEYS.indexOf(b); });
+      setupDismissed = true;
     } else if (kind === "resetTimetable") {
       timetable = {};
+      periods = [];
+      days = [];
+      dayLabels = {};
     } else if (kind === "neverSuggest") {
       /* nothing to remember in the demo */
     }
@@ -527,8 +768,8 @@
       case "set_theme":
         snapshot.theme = args.theme;
         return ok(snapshot);
-      case "set_accent":
-        snapshot.accent = args.accent;
+      case "set_accent_hue":
+        snapshot.accentHue = Number(args.hue) || 0;
         return ok(snapshot);
       case "set_language":
         snapshot.language = args.language;
@@ -593,7 +834,15 @@
       case "restore_backup":
         return ok(snapshot);
       case "export_data":
-        return Promise.resolve("flip-export.json");
+        return Promise.resolve("Flip timetable.csv");
+      case "save_export":
+        return Promise.resolve("Flip timetable.xlsx");
+      case "read_timetable_table":
+        return parseTable(args.text || "");
+      case "undo_board":
+        return step(true);
+      case "redo_board":
+        return step(false);
       case "open_folder":
       case "open_url":
         return Promise.resolve(null);

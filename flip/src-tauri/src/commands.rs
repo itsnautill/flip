@@ -99,9 +99,9 @@ pub fn timer_set(core: State<'_, SharedCore>, secs: u32) -> Result<Snapshot, Str
     }
     let mut c = lock(core.inner());
     let now = Instant::now();
-    if c.mode != Mode::Timer {
-        return Err("Switch to the timer before setting a duration.".into());
-    }
+    /* Setting a duration *is* a timer action, so bring the timer into view
+    instead of refusing and showing an error banner. */
+    c.mode = Mode::Timer;
     c.timer.set_preset(secs);
     let snapshot = c.snapshot(now);
     let updated = Settings {
@@ -244,19 +244,15 @@ pub fn set_language(core: State<'_, SharedCore>, language: String) -> Snapshot {
 }
 
 #[tauri::command]
-pub fn set_accent(core: State<'_, SharedCore>, accent: String) -> Snapshot {
-    let mut c = lock(core.inner());
-    let accent = settings::normalise_accent(&accent);
-    if c.settings.accent != accent {
-        c.settings.accent = accent;
-        let updated = c.settings.clone();
-        let snapshot = c.snapshot(Instant::now());
-        let path = c.settings_path.clone();
-        drop(c);
-        settings::save(&path, &updated);
-        return snapshot;
-    }
-    c.snapshot(Instant::now())
+pub fn set_accent_hue(core: State<'_, SharedCore>, hue: f64) -> Snapshot {
+    change(&core, |s| s.accent_hue = Some(hue))
+}
+
+/// Reads a table the user pasted, without touching anything yet: the UI shows
+/// the counts and asks Replace or Merge before applying.
+#[tauri::command]
+pub fn read_timetable_table(text: String) -> Result<backup::TableImport, String> {
+    backup::parse_table(&text)
 }
 
 /// Writes the timetable template the import button hands out into Downloads.
@@ -349,6 +345,8 @@ pub fn toggle_theme(core: State<'_, SharedCore>) -> Snapshot {
 
 #[tauri::command]
 pub fn toggle_fullscreen(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot {
+    /* Fullscreen is a desktop window concept; phones have no window to expand. */
+    #[cfg(desktop)]
     match app.get_webview_window("main") {
         Some(window) => {
             let fullscreen = window.is_fullscreen().unwrap_or(false);
@@ -358,11 +356,14 @@ pub fn toggle_fullscreen(app: AppHandle, core: State<'_, SharedCore>) -> Snapsho
         }
         None => eprintln!("flip: main window unavailable"),
     }
+    #[cfg(not(desktop))]
+    let _ = app;
     shot(core.inner())
 }
 
 #[tauri::command]
 pub fn exit_fullscreen(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot {
+    #[cfg(desktop)]
     match app.get_webview_window("main") {
         Some(window) => {
             if window.is_fullscreen().unwrap_or(false) {
@@ -373,7 +374,81 @@ pub fn exit_fullscreen(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot 
         }
         None => eprintln!("flip: main window unavailable"),
     }
+    #[cfg(not(desktop))]
+    let _ = app;
     shot(core.inner())
+}
+
+/* ----------------------------------------------------------- phone orientation */
+
+/// Asks the Android activity for landscape or portrait. A desktop window has no
+/// orientation, so the call is a no-op there and the frontend keeps its layout.
+#[tauri::command]
+pub fn set_orientation(app: AppHandle, landscape: bool) -> bool {
+    #[cfg(target_os = "android")]
+    {
+        /* Touching the activity off the UI thread is not allowed, and a Tauri
+        command runs on a worker, so the call is posted to the main loop. */
+        let _ = app.run_on_main_thread(move || {
+            if let Err(e) = android_orientation(landscape) {
+                eprintln!("flip: could not change orientation: {e}");
+            }
+        });
+    }
+    #[cfg(not(target_os = "android"))]
+    let _ = (app, landscape);
+    landscape
+}
+
+#[cfg(target_os = "android")]
+fn android_orientation(landscape: bool) -> Result<(), String> {
+    use jni::objects::{JClass, JObject, JValue};
+
+    let ctx = ndk_context::android_context();
+    // SAFETY: ndk-context keeps a global reference to the live JVM.
+    let vm = unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }
+        .map_err(|e| format!("no Java VM: {e}"))?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|e| format!("no JNI environment: {e}"))?;
+
+    /* A native thread is attached without Java frames, so looking a class up by
+    name would use the system loader and miss the app's classes. Ask the
+    context for its loader and go through that instead. */
+    let context = unsafe { JObject::from_raw(ctx.context().cast()) };
+    let loader = env
+        .call_method(&context, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+        .map_err(|e| format!("no class loader: {e}"))?
+        .l()
+        .map_err(|e| format!("no class loader object: {e}"))?;
+    let name = env
+        .new_string("com.nautill.flip.MainActivity")
+        .map_err(|e| format!("no class name: {e}"))?;
+    let class = env
+        .call_method(
+            &loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&name)],
+        )
+        .map_err(|e| format!("MainActivity missing: {e}"))?
+        .l()
+        .map_err(|e| format!("MainActivity missing: {e}"))?;
+    let class = unsafe { JClass::from_raw(class.into_raw()) };
+
+    match env.call_static_method(
+        &class,
+        "setOrientation",
+        "(Z)V",
+        &[JValue::Bool(u8::from(landscape))],
+    ) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            env.exception_describe().ok();
+            env.exception_clear().ok();
+            Err(format!("setOrientation failed: {e}"))
+        }
+    }
 }
 
 /* ------------------------------------------------------------ timetable/tasks */
@@ -390,7 +465,47 @@ pub fn board_action(core: State<'_, SharedCore>, action: BoardAction) -> Result<
     let (today, minutes) = now_parts();
     let today_text = today.format("%Y-%m-%d").to_string();
     let mut c = lock(core.inner());
+    let before = c.board.clone();
+    /* Locking is a view state, not an edit: Ctrl+Z must not put the lock back. */
+    let view_only = matches!(action, BoardAction::SetLocked { .. });
     c.board.apply(action, &today_text)?;
+    if !view_only {
+        c.remember(before);
+    }
+    let path = c.board_path.clone();
+    let saved = c.board.clone();
+    let view = c.board.view(today, minutes);
+    drop(c);
+
+    board::save(&path, &saved);
+    Ok(view)
+}
+
+/// Steps one timetable edit back. The history is in memory, so a restart
+/// simply starts a new one; what is on disk is always what the grid shows.
+#[tauri::command]
+pub fn undo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
+    let (today, minutes) = now_parts();
+    let mut c = lock(core.inner());
+    if c.undo().is_none() {
+        return Err("Nothing to undo.".into());
+    }
+    let path = c.board_path.clone();
+    let saved = c.board.clone();
+    let view = c.board.view(today, minutes);
+    drop(c);
+
+    board::save(&path, &saved);
+    Ok(view)
+}
+
+#[tauri::command]
+pub fn redo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
+    let (today, minutes) = now_parts();
+    let mut c = lock(core.inner());
+    if c.redo().is_none() {
+        return Err("Nothing to redo.".into());
+    }
     let path = c.board_path.clone();
     let saved = c.board.clone();
     let view = c.board.view(today, minutes);
@@ -568,29 +683,70 @@ pub fn restore_backup(
     Ok(snapshot)
 }
 
+/// Where a downloaded file goes. Phones have no Downloads folder the app can
+/// write to, so they fall back to Flip's own data folder.
+fn export_dir(app: &AppHandle) -> PathBuf {
+    app.path()
+        .download_dir()
+        .or_else(|_| app.path().app_data_dir())
+        .unwrap_or_else(|_| std::env::temp_dir())
+}
+
+/// Rejects names that could climb out of the folder or upset a filesystem.
+fn safe_file_name(name: &str) -> Result<String, String> {
+    let trimmed = name.trim();
+    let ok = !trimmed.is_empty()
+        && trimmed.len() <= 120
+        && !trimmed.contains(['/', '\\', ':'])
+        && !trimmed.contains("..")
+        && trimmed.chars().all(|c| !c.is_control());
+    if ok {
+        Ok(trimmed.to_string())
+    } else {
+        Err("That file name is not valid.".into())
+    }
+}
+
 /// Writes a CSV or settings export into Downloads and answers with the path.
+/// `separator` is only used by the CSVs: Excel with Vietnamese regional
+/// settings expects `;`, most other tools expect `,`.
 #[tauri::command]
 pub fn export_data(
     app: AppHandle,
     core: State<'_, SharedCore>,
     kind: String,
+    separator: Option<String>,
 ) -> Result<String, String> {
     let (settings, board) = {
         let c = lock(core.inner());
         (c.settings.clone(), c.board.clone())
     };
+    let sep = match separator.as_deref() {
+        Some(";") => ';',
+        _ => ',',
+    };
     let (name, body) = match kind.as_str() {
-        "tasks" => ("Flip tasks.csv", backup::tasks_csv(&board)),
-        "timetable" => ("Flip timetable.csv", backup::timetable_csv(&board)),
+        "tasks" => ("Flip tasks.csv", backup::tasks_csv(&board, sep)),
+        "timetable" => ("Flip timetable.csv", backup::timetable_csv(&board, sep)),
         "settings" => ("Flip settings.json", backup::settings_json(&settings)?),
         _ => return Err("Unknown export.".into()),
     };
-    let dir = app
-        .path()
-        .download_dir()
-        .unwrap_or_else(|_| std::env::temp_dir());
-    let path = dir.join(name);
+    let name = safe_file_name(name)?;
+    let path = export_dir(&app).join(&name);
     std::fs::write(&path, body).map_err(|e| format!("Could not write {name}: {e}"))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Saves bytes the frontend built (an .xlsx workbook) next to the other
+/// exports. Byte-for-byte, so Unicode never passes through a code page.
+#[tauri::command]
+pub fn save_export(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<String, String> {
+    if bytes.is_empty() || bytes.len() > 8_000_000 {
+        return Err("That file is empty or far too large.".into());
+    }
+    let name = safe_file_name(&name)?;
+    let path = export_dir(&app).join(&name);
+    std::fs::write(&path, bytes).map_err(|e| format!("Could not write {name}: {e}"))?;
     Ok(path.to_string_lossy().to_string())
 }
 

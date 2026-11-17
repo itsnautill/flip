@@ -19,7 +19,7 @@ pub enum Mode {
     Timer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub mode: Mode,
@@ -46,8 +46,13 @@ pub struct Snapshot {
     pub telemetry: bool,
     /// Random per-install id; empty until telemetry is switched on.
     pub install_id: String,
-    /// The colour the user picked; the UI derives weights and ink from it.
-    pub accent: String,
+    /// Hue of the accent the user picked; the UI derives every weight, the
+    /// wash and the ink from it.
+    pub accent_hue: f64,
+    /// True while a timetable edit can be taken back. The history lives in
+    /// memory only and never reaches the disk.
+    pub can_undo: bool,
+    pub can_redo: bool,
     /// Length of one focus session, in seconds.
     pub focus_secs: u32,
     /// Widget order and visibility for the dashboard.
@@ -72,7 +77,14 @@ pub struct Core {
     pub board_path: PathBuf,
     /// Set while the timer is a focus session; cleared when it is logged.
     pub focus_target: Option<FocusTarget>,
+    /// Timetable snapshots taken before each edit, newest last. At most
+    /// `HISTORY_STEPS` of them, and never written to a file.
+    pub undo_stack: Vec<Board>,
+    pub redo_stack: Vec<Board>,
 }
+
+/// How many timetable edits can be taken back in one run.
+pub const HISTORY_STEPS: usize = 40;
 
 pub type SharedCore = Arc<Mutex<Core>>;
 
@@ -93,7 +105,37 @@ impl Core {
             board,
             board_path,
             focus_target: None,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
         }
+    }
+
+    /// Remembers the board as it was before an edit, and forgets any redo
+    /// branch, exactly like a text editor would.
+    pub fn remember(&mut self, before: Board) {
+        self.undo_stack.push(before);
+        if self.undo_stack.len() > HISTORY_STEPS {
+            self.undo_stack.remove(0);
+        }
+        self.redo_stack.clear();
+    }
+
+    /// Puts the previous snapshot back and returns the one it replaced.
+    pub fn undo(&mut self) -> Option<Board> {
+        let previous = self.undo_stack.pop()?;
+        let current = std::mem::replace(&mut self.board, previous);
+        self.redo_stack.push(current);
+        if self.redo_stack.len() > HISTORY_STEPS {
+            self.redo_stack.remove(0);
+        }
+        Some(self.board.clone())
+    }
+
+    pub fn redo(&mut self) -> Option<Board> {
+        let next = self.redo_stack.pop()?;
+        let current = std::mem::replace(&mut self.board, next);
+        self.undo_stack.push(current);
+        Some(self.board.clone())
     }
 
     pub fn snapshot(&self, now: Instant) -> Snapshot {
@@ -113,7 +155,12 @@ impl Core {
             discord: self.settings.discord,
             telemetry: self.settings.telemetry,
             install_id: self.settings.install_id.clone(),
-            accent: self.settings.accent.clone(),
+            accent_hue: self
+                .settings
+                .accent_hue
+                .unwrap_or(crate::settings::DEFAULT_ACCENT_HUE),
+            can_undo: !self.undo_stack.is_empty(),
+            can_redo: !self.redo_stack.is_empty(),
             focus_secs: self.settings.focus_secs,
             dashboard: self.settings.dashboard.clone(),
             focus_active: self.focus_target.is_some(),

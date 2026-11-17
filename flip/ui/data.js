@@ -153,25 +153,123 @@
       "Export",
       "Spreadsheets open in Excel, Numbers or Google Sheets. Exports are written to your Downloads folder. :3"
     );
-    var exportActions = el("div", "data-actions");
+
+    /* Excel first: it stores Unicode itself, so no encoding or list separator
+       can ever turn a Vietnamese subject name into rubbish. */
+    var excelButton = el("button", "btn small primary", "Timetable to Excel (.xlsx)");
+    excelButton.type = "button";
+    excelButton.addEventListener("click", function () {
+      exportTimetableXlsx(excelButton);
+    });
+    var excelRow = el("div", "data-actions");
+    excelRow.appendChild(excelButton);
+    exports.appendChild(excelRow);
+
+    var separator = ",";
+    var csvBlock = el("div", "export-csv");
+    var csvRow = el("div", "data-actions");
+    var csvButton = el("button", "btn small", "Timetable as CSV (for other apps)");
+    csvButton.type = "button";
+    csvButton.addEventListener("click", function () {
+      invoke("export_data", { kind: "timetable", separator: separator })
+        .then(describe)
+        .catch(function (err) {
+          Board.toast(String((err && err.message) || err));
+        });
+    });
+    csvRow.appendChild(csvButton);
+    csvBlock.appendChild(csvRow);
+
+    var separatorRow = el("div", "export-separator");
+    separatorRow.appendChild(el("span", "export-label", "CSV separator"));
+    var seg = el("div", "seg");
+    [
+      [",", "Comma"],
+      [";", "Semicolon"],
+    ].forEach(function (choice) {
+      var button = el("button", "seg-btn" + (choice[0] === separator ? " active" : ""), choice[1]);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(choice[0] === separator));
+      button.addEventListener("click", function () {
+        separator = choice[0];
+        seg.querySelectorAll(".seg-btn").forEach(function (node) {
+          var on = node === button;
+          node.classList.toggle("active", on);
+          node.setAttribute("aria-pressed", String(on));
+        });
+      });
+      seg.appendChild(button);
+    });
+    separatorRow.appendChild(seg);
+    csvBlock.appendChild(separatorRow);
+    csvBlock.appendChild(
+      el(
+        "p",
+        "hint",
+        "Excel with Vietnamese regional settings usually wants Semicolon; most other apps want Comma. The .xlsx export never has this problem."
+      )
+    );
+    exports.appendChild(csvBlock);
+
+    var moreRow = el("div", "data-actions");
     [
       ["tasks", "Tasks as CSV"],
-      ["timetable", "Timetable as CSV"],
       ["settings", "Settings as JSON"],
     ].forEach(function (pair) {
       var button = el("button", "btn small", pair[1]);
       button.type = "button";
       button.addEventListener("click", function () {
-        invoke("export_data", { kind: pair[0] })
+        invoke("export_data", { kind: pair[0], separator: separator })
           .then(describe)
           .catch(function (err) {
             Board.toast(String((err && err.message) || err));
           });
       });
-      exportActions.appendChild(button);
+      moreRow.appendChild(button);
     });
-    exports.appendChild(exportActions);
+    exports.appendChild(moreRow);
     pane.appendChild(exports);
+
+    function exportTimetableXlsx(button) {
+      var view = window.Board && window.Board.view();
+      if (!view) {
+        Board.toast("The timetable is not loaded yet.");
+        return;
+      }
+      var table = [["Day", "Start", "End", "Subject", "Room"]];
+      (view.days || []).forEach(function (day) {
+        (view.periods || []).forEach(function (period) {
+          if (period["break"]) return;
+          var cell = view.cells[day.key + "-" + period.id];
+          if (!cell) return;
+          table.push([day.label, period.start, period.end, cell.name, cell.room || ""]);
+        });
+      });
+      if (table.length === 1) {
+        Board.toast("Add a lesson first - there is nothing to export yet.");
+        return;
+      }
+      button.disabled = true;
+      var bytes;
+      try {
+        bytes = window.Xlsx.buildSheet(table);
+      } catch (_) {
+        button.disabled = false;
+        Board.toast("The spreadsheet could not be built.");
+        return;
+      }
+      invoke("save_export", {
+        name: "Flip timetable.xlsx",
+        bytes: Array.prototype.slice.call(bytes),
+      })
+        .then(describe)
+        .catch(function (err) {
+          Board.toast(String((err && err.message) || err));
+        })
+        .then(function () {
+          button.disabled = false;
+        });
+    }
 
     /* --------------------------------------------------------------- storage */
     var storage = block(

@@ -2,9 +2,24 @@
 <html lang="en" data-theme="light" data-motion="normal">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>Flip</title>
+  <!-- Colour maths loads first so the saved accent is painted before anything
+       else appears; a flash of the wrong accent is worse than a small script. -->
+  <script src="color.js"></script>
+  <script>
+    (function () {
+      try {
+        var hue = window.localStorage.getItem("flip.accentHue");
+        if (hue !== null && hue !== "" && window.FlipColor) {
+          window.FlipColor.applyAccent(Number(hue));
+        }
+      } catch (err) {
+        /* a private window can refuse storage; the snapshot still paints it */
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="polish.css">
   <script src="i18n.js" defer></script>
@@ -37,6 +52,12 @@
       <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen (F11)">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
+        </svg>
+      </button>
+      <button id="orient-btn" class="icon-btn" type="button" hidden aria-label="Switch to landscape" title="Switch to landscape">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="7" y="3" width="10" height="18" rx="2.4"></rect>
+          <path d="M10.4 19h3.2"></path>
         </svg>
       </button>
       <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog">
@@ -84,6 +105,11 @@
           </svg>
         </button>
       </div>
+      <div id="rotate-note" class="rotate-note" hidden>
+        <p class="rotate-title">The clock needs landscape</p>
+        <p class="rotate-sub">Turn the phone sideways to see the flip clock.</p>
+        <button class="btn primary" type="button" id="rotate-go">Turn to landscape</button>
+      </div>
       <div id="dots">
         <i class="dot active"></i>
         <i class="dot"></i>
@@ -97,7 +123,16 @@
           <h1>Timetable</h1>
         </div>
         <div class="head-actions">
+          <button class="btn icon-only" type="button" id="tt-lock" aria-pressed="false" aria-label="Lock timetable" title="Lock timetable">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="6.5" rx="1.8"/><path d="M5.5 7V5.4a2.5 2.5 0 015 0V7"/></svg>
+          </button>
           <label class="check"><input type="checkbox" id="tt-weekend"> <span>Weekend</span></label>
+          <button class="btn icon-only" type="button" id="tt-undo" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M5.5 4.5L2.5 7.5l3 3M2.5 7.5h6.8a3.7 3.7 0 010 7.4H6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="btn icon-only" type="button" id="tt-redo" title="Redo (Ctrl+Y)" aria-label="Redo">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10.5 4.5l3 3-3 3M13.5 7.5H6.7a3.7 3.7 0 000 7.4H10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button class="btn" type="button" id="tt-import" title="Import a timetable from an .xlsx file">Import</button>
           <button class="btn" type="button" id="tt-template" title="Save an empty timetable you can fill in">Download Template</button>
           <button class="btn" type="button" id="tt-add-period">Add row</button>
@@ -105,6 +140,7 @@
           <input type="file" id="tt-file" accept=".xlsx" hidden>
         </div>
       </div>
+      <div id="tt-brush" class="tt-brush" role="group" aria-label="Subjects" hidden></div>
       <div class="tt-scroll">
         <div id="tt-grid" class="tt-grid" role="grid" aria-label="Weekly timetable"></div>
       </div>
