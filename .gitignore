@@ -31,3 +31,6 @@ local.properties
 
 # python bytecode from the icon generator
 __pycache__/
+
+# release staging (installers and apks, never committed)
+flip/dist/
