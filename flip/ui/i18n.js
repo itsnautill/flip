@@ -17,6 +17,7 @@
     "Timetable": "Thời khóa biểu",
     "Tasks": "Công việc",
     "Sections": "Các mục",
+    "Display": "Hiển thị",
     "Settings": "Cài đặt",
     "Keyboard shortcuts": "Phím tắt",
     "Keyboard shortcuts (?)": "Phím tắt (?)",

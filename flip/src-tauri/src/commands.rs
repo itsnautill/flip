@@ -24,7 +24,11 @@ fn now_parts() -> (chrono::NaiveDate, u32) {
 
 fn board_view(core: &SharedCore) -> BoardView {
     let (today, minutes) = now_parts();
-    lock(core).board.view(today, minutes)
+    let c = lock(core);
+    let mut view = c.board.view(today, minutes);
+    view.can_undo = !c.undo_stack.is_empty();
+    view.can_redo = !c.redo_stack.is_empty();
+    view
 }
 
 #[tauri::command]
@@ -400,8 +404,31 @@ pub fn set_orientation(app: AppHandle, landscape: bool) -> bool {
     landscape
 }
 
+/// Hides the status bar and the navigation bar while the clock is idle. On the
+/// desktop it is a no-op, exactly like the orientation call.
+#[tauri::command]
+pub fn set_immersive(app: AppHandle, on: bool) -> bool {
+    #[cfg(target_os = "android")]
+    {
+        let _ = app.run_on_main_thread(move || {
+            if let Err(e) = android_static_bool("setSystemBarsHidden", on) {
+                eprintln!("flip: could not change the system bars: {e}");
+            }
+        });
+    }
+    #[cfg(not(target_os = "android"))]
+    let _ = (app, on);
+    on
+}
+
 #[cfg(target_os = "android")]
 fn android_orientation(landscape: bool) -> Result<(), String> {
+    android_static_bool("setOrientation", landscape)
+}
+
+/// Calls a `static void name(boolean)` method on the Android activity.
+#[cfg(target_os = "android")]
+fn android_static_bool(method: &str, value: bool) -> Result<(), String> {
     use jni::objects::{JClass, JObject, JValue};
 
     let ctx = ndk_context::android_context();
@@ -438,15 +465,15 @@ fn android_orientation(landscape: bool) -> Result<(), String> {
 
     match env.call_static_method(
         &class,
-        "setOrientation",
+        method,
         "(Z)V",
-        &[JValue::Bool(u8::from(landscape))],
+        &[JValue::Bool(u8::from(value))],
     ) {
         Ok(_) => Ok(()),
         Err(e) => {
             env.exception_describe().ok();
             env.exception_clear().ok();
-            Err(format!("setOrientation failed: {e}"))
+            Err(format!("{method} failed: {e}"))
         }
     }
 }
@@ -474,7 +501,9 @@ pub fn board_action(core: State<'_, SharedCore>, action: BoardAction) -> Result<
     }
     let path = c.board_path.clone();
     let saved = c.board.clone();
-    let view = c.board.view(today, minutes);
+    let mut view = c.board.view(today, minutes);
+    view.can_undo = !c.undo_stack.is_empty();
+    view.can_redo = !c.redo_stack.is_empty();
     drop(c);
 
     board::save(&path, &saved);
@@ -492,7 +521,9 @@ pub fn undo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
     }
     let path = c.board_path.clone();
     let saved = c.board.clone();
-    let view = c.board.view(today, minutes);
+    let mut view = c.board.view(today, minutes);
+    view.can_undo = !c.undo_stack.is_empty();
+    view.can_redo = !c.redo_stack.is_empty();
     drop(c);
 
     board::save(&path, &saved);
@@ -508,7 +539,9 @@ pub fn redo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
     }
     let path = c.board_path.clone();
     let saved = c.board.clone();
-    let view = c.board.view(today, minutes);
+    let mut view = c.board.view(today, minutes);
+    view.can_undo = !c.undo_stack.is_empty();
+    view.can_redo = !c.redo_stack.is_empty();
     drop(c);
 
     board::save(&path, &saved);

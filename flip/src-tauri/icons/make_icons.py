@@ -5,13 +5,19 @@ leaves hinged on a dark bar. Drawn fresh at every size so it stays crisp and
 the small sizes keep the hinge readable.
 
 Run from this folder:  python make_icons.py
+
+The Android launcher set is written to icons/android and then installed into
+gen/android/app/src/main/res, so a rebuilt project keeps Flip's icon instead of
+the Tauri template art that `tauri android init` drops in.
 """
 
+import shutil
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).parent
+GEN_RES = HERE.parent / "gen" / "android" / "app" / "src" / "main" / "res"
 BASE = 1024
 
 TILE_TOP = (16, 27, 58, 255)
@@ -93,8 +99,9 @@ def leaf(size, quad, radius, start, end, horizontal=False):
     return out
 
 
-def draw_icon(size):
-    img = tile(size)
+def card(size):
+    """The flip card on a transparent canvas, no tile behind it."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img, "RGBA")
 
     # The upper leaf leans left as it goes down; the lower one mirrors the lean.
@@ -155,6 +162,107 @@ def draw_icon(size):
     return img
 
 
+def draw_icon(size):
+    img = tile(size)
+    img.alpha_composite(card(size))
+    return img
+
+
+ANDROID_DENSITIES = [
+    ("mdpi", 48, 108),
+    ("hdpi", 72, 162),
+    ("xhdpi", 96, 216),
+    ("xxhdpi", 144, 324),
+    ("xxxhdpi", 192, 432),
+]
+
+ANDROID_BG = "#101B3A"
+
+ADAPTIVE_ICON = """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+  <background android:drawable="@color/ic_launcher_background"/>
+</adaptive-icon>
+"""
+
+COLOURS = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="ic_launcher_background">{background}</color>
+</resources>
+"""
+
+
+def android_icons():
+    """The launcher set: legacy square and round PNGs plus an adaptive icon.
+
+    The adaptive foreground keeps only the flip card, drawn small enough to
+    survive the 66% safe zone every launcher masks to, over a navy background.
+    """
+    master = draw_icon(BASE)
+    art = card(BASE)
+    art = art.crop(art.getbbox())
+
+    base = HERE / "android"
+    for density, legacy, adaptive in ANDROID_DENSITIES:
+        folder = base / f"mipmap-{density}"
+        folder.mkdir(parents=True, exist_ok=True)
+
+        square = master.resize((legacy, legacy), Image.LANCZOS)
+        square.save(folder / "ic_launcher.png")
+
+        mask = Image.new("L", (legacy * 4, legacy * 4), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, legacy * 4 - 1, legacy * 4 - 1), fill=255)
+        circle = square.copy()
+        circle.putalpha(mask.resize((legacy, legacy), Image.LANCZOS))
+        circle.save(folder / "ic_launcher_round.png")
+
+        target = int(adaptive * 0.62)
+        scale = min(target / art.width, target / art.height)
+        leaf = art.resize(
+            (round(art.width * scale), round(art.height * scale)), Image.LANCZOS
+        )
+        canvas = Image.new("RGBA", (adaptive, adaptive), (0, 0, 0, 0))
+        canvas.alpha_composite(
+            leaf, ((adaptive - leaf.width) // 2, (adaptive - leaf.height) // 2)
+        )
+        canvas.save(folder / "ic_launcher_foreground.png")
+
+    anydpi = base / "mipmap-anydpi-v26"
+    anydpi.mkdir(parents=True, exist_ok=True)
+    for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
+        (anydpi / name).write_text(ADAPTIVE_ICON, encoding="utf-8")
+
+    colours = base / "values"
+    colours.mkdir(parents=True, exist_ok=True)
+    (colours / "ic_launcher_background.xml").write_text(
+        COLOURS.format(background=ANDROID_BG), encoding="utf-8"
+    )
+    print("wrote the android launcher set")
+    install_into_project(base)
+
+
+def install_into_project(base):
+    """Copy the set into the generated Android project, when there is one."""
+    if not GEN_RES.is_dir():
+        print("no generated android project yet; icons/android is ready for it")
+        return
+
+    for density, _, _ in ANDROID_DENSITIES:
+        name = f"mipmap-{density}"
+        shutil.copytree(base / name, GEN_RES / name, dirs_exist_ok=True)
+    shutil.copytree(
+        base / "mipmap-anydpi-v26", GEN_RES / "mipmap-anydpi-v26", dirs_exist_ok=True
+    )
+
+    values = GEN_RES / "values"
+    values.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        base / "values" / "ic_launcher_background.xml",
+        values / "ic_launcher_background.xml",
+    )
+    print(f"installed the android icons into {GEN_RES}")
+
+
 def main():
     master = draw_icon(BASE)
     master.save(HERE / "icon.png")
@@ -188,7 +296,8 @@ def main():
         format="ICO",
         sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)],
     )
-    print("wrote icon.png, %d PNG sizes, store tiles and icon.ico" % len(sizes))
+    android_icons()
+    print("wrote icon.png, %d PNG sizes, store tiles, icon.ico and android" % len(sizes))
 
 
 if __name__ == "__main__":

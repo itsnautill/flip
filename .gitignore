@@ -28,3 +28,6 @@ node_modules/
 *.jks
 local.properties
 *.keystore
+
+# python bytecode from the icon generator
+__pycache__/

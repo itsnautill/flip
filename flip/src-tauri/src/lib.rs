@@ -233,6 +233,7 @@ pub fn run() {
             commands::toggle_fullscreen,
             commands::exit_fullscreen,
             commands::set_orientation,
+            commands::set_immersive,
             commands::get_board,
             commands::board_action,
             commands::undo_board,

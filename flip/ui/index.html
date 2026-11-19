@@ -47,8 +47,6 @@
     </nav>
     <span class="drag-fill" data-tauri-drag-region></span>
     <div class="chrome-right">
-      <button id="zoom-out" class="icon-btn text-icon" type="button" aria-label="Zoom out" title="Zoom out">−</button>
-      <button id="zoom-in" class="icon-btn text-icon" type="button" aria-label="Zoom in" title="Zoom in">+</button>
       <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen (F11)">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
@@ -66,7 +64,6 @@
           <path d="M19.4 13.9a1.6 1.6 0 0 0 .32 1.76l.06.06a1.9 1.9 0 1 1-2.7 2.7l-.06-.06a1.6 1.6 0 0 0-1.76-.32 1.6 1.6 0 0 0-.97 1.47V20a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.76.32l-.06.06a1.9 1.9 0 1 1-2.7-2.7l.06-.06a1.6 1.6 0 0 0 .32-1.76 1.6 1.6 0 0 0-1.47-.97H4a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.76l-.06-.06a1.9 1.9 0 1 1 2.7-2.7l.06.06a1.6 1.6 0 0 0 1.76.32H9.8a1.6 1.6 0 0 0 .97-1.47V4a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 .97 1.47 1.6 1.6 0 0 0 1.76-.32l.06-.06a1.9 1.9 0 1 1 2.7 2.7l-.06.06a1.6 1.6 0 0 0-.32 1.76V9.8a1.6 1.6 0 0 0 1.47.97H20a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.47.97z"></path>
         </svg>
       </button>
-      <button id="shortcuts-btn" class="icon-btn text-icon" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" aria-haspopup="dialog">?</button>
     </div>
   </header>
 
@@ -110,9 +107,9 @@
         <p class="rotate-sub">Turn the phone sideways to see the flip clock.</p>
         <button class="btn primary" type="button" id="rotate-go">Turn to landscape</button>
       </div>
-      <div id="dots">
-        <i class="dot active"></i>
-        <i class="dot"></i>
+      <div id="dots" role="group" aria-label="Display">
+        <button class="mode-btn active" type="button" data-mode="clock" aria-pressed="true">Clock</button>
+        <button class="mode-btn" type="button" data-mode="timer" aria-pressed="false">Timer</button>
       </div>
     </main>
 

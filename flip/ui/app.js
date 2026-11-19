@@ -9,10 +9,8 @@
 
   var clockGroup = document.getElementById("clock-group");
   var timerGroup = document.getElementById("timer-group");
-  var dots = Array.prototype.slice.call(document.querySelectorAll("#dots .dot"));
-  var zoomOutButton = document.getElementById("zoom-out");
-  var zoomInButton = document.getElementById("zoom-in");
-  var shortcutsButton = document.getElementById("shortcuts-btn");
+  var modeButtons = Array.prototype.slice.call(document.querySelectorAll("#dots .mode-btn"));
+  var modeIsClock = true;
   var settingsButton = document.getElementById("settings-btn");
   var fullscreenButton = document.getElementById("fullscreen-btn");
   var setTimerButton = document.getElementById("timer-set");
@@ -25,6 +23,16 @@
   var timerH = new FlipCard(timerGroup, { className: "hours" });
   var timerM = new FlipCard(timerGroup);
   var timerS = new FlipCard(timerGroup);
+
+  /* The two buttons under the clock are the phone's only way to swap the flip
+     clock for the timer and back, so they are real controls, not dots. */
+  modeButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      var wantClock = button.dataset.mode === "clock";
+      if (wantClock === modeIsClock) return;
+      send("switch_mode");
+    });
+  });
 
   var ampm = clockH.ampm;
   var finishedTimeout = 0;
@@ -75,6 +83,11 @@
     var portrait = isPortrait();
     document.documentElement.classList.toggle("android-portrait", portrait);
     if (rotateNote) rotateNote.hidden = !portrait;
+    /* Upright the warning is on screen, so nothing should be hidden. */
+    if (portrait) {
+      document.body.classList.remove("is-idle");
+      setImmersive(false);
+    }
     if (orientButton) {
       var label = portrait ? "Switch to landscape" : "Switch to portrait";
       orientButton.setAttribute("aria-label", label);
@@ -107,47 +120,6 @@
       portraitQuery.addEventListener("change", paintOrientation);
     }
     paintOrientation();
-  }
-
-  /* Zoom steps by ten percent and is remembered by Rust, so it also comes back
-     after a restart. The buttons respond straight away, including on a fast
-     double click, so hold the value locally until a snapshot lands. */
-  var zoomPending = 0;
-
-  function paintZoom(zoom) {
-    if (zoomOutButton) {
-      zoomOutButton.disabled = zoom <= 80;
-      zoomOutButton.title = "Zoom out (" + zoom + "%)";
-    }
-    if (zoomInButton) {
-      zoomInButton.disabled = zoom >= 160;
-      zoomInButton.title = "Zoom in (" + zoom + "%)";
-    }
-  }
-
-  function changeZoom(delta) {
-    var current = zoomPending || Number(lastSnapshot && lastSnapshot.zoom) || 100;
-    var next = Math.max(80, Math.min(160, current + delta));
-    if (next === current) return;
-    zoomPending = next;
-    paintZoom(next);
-    invoke("set_zoom", { percent: next })
-      .then(render)
-      .catch(function (err) {
-        zoomPending = 0;
-        console.error("flip: set_zoom failed", err);
-      });
-  }
-
-  if (zoomOutButton) {
-    zoomOutButton.addEventListener("click", function () {
-      changeZoom(-10);
-    });
-  }
-  if (zoomInButton) {
-    zoomInButton.addEventListener("click", function () {
-      changeZoom(10);
-    });
   }
 
   /* ------------------------------------------------------------------ accent */
@@ -596,21 +568,6 @@
       )
     );
 
-    generalPane.appendChild(
-      settingRow(
-        "Touch mode",
-        switchControl("Touch mode", snap.touch === true, function (on) {
-          document.documentElement.setAttribute("data-touch", on ? "on" : "off");
-          invoke("set_touch", { enabled: on })
-            .then(render)
-            .catch(function (err) {
-              console.error("flip: set_touch failed", err);
-            });
-        }),
-        "Bigger buttons, rows and spacing for touch screens."
-      )
-    );
-
     generalPane.appendChild(Board.el("h3", "", "Language and motion"));
 
     generalPane.appendChild(
@@ -780,10 +737,6 @@
     settingsButton.addEventListener("click", openSettings);
   }
 
-  if (shortcutsButton) {
-    shortcutsButton.addEventListener("click", openShortcuts);
-  }
-
   if (setTimerButton) {
     setTimerButton.addEventListener("click", function () {
       ensureAudio();
@@ -811,11 +764,8 @@
     if (!snap) return;
     soundOn = snap.sound !== false;
     applyMotion(snap.motion);
-    document.documentElement.setAttribute("data-touch", snap.touch === true ? "on" : "off");
     document.documentElement.setAttribute("data-wash", snap.wash === true ? "on" : "off");
 
-    zoomPending = 0;
-    paintZoom(Number(snap.zoom) || 100);
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     lastSnapshot = snap;
     applyTheme(snap.theme);
@@ -825,8 +775,12 @@
     var isClock = snap.mode === "clock";
     clockGroup.classList.toggle("active", isClock);
     timerGroup.classList.toggle("active", !isClock);
-    if (dots[0]) dots[0].classList.toggle("active", isClock);
-    if (dots[1]) dots[1].classList.toggle("active", !isClock);
+    modeIsClock = isClock;
+    modeButtons.forEach(function (button) {
+      var on = (button.dataset.mode === "clock") === isClock;
+      button.classList.toggle("active", on);
+      button.setAttribute("aria-pressed", String(on));
+    });
 
     var clock = snap.clock || {};
     clockH.set(text(clock.h, "--"));
@@ -909,9 +863,12 @@
     if (name !== "timer") {
       window.Board.tooltip.hide();
       document.body.classList.remove("hide-cursor");
+      document.body.classList.remove("is-idle");
+      setImmersive(false);
     } else {
       render(lastSnapshot);
       armCursorHide();
+      wakeClock();
     }
   }
 
@@ -1064,6 +1021,47 @@
 
   var cursorTimeout = 0;
 
+  /* The clock and the timer are the two screens worth watching from across a
+     room, so their controls step aside after ten quiet seconds. Any tap on the
+     stage - or any key - brings them straight back. */
+  var idleTimeout = 0;
+  var IDLE_MS = 10000;
+
+  /* The system bars follow the controls: hidden while the clock is idle, back
+     the moment anything is touched. Android only; the desktop call is a no-op. */
+  var immersive = false;
+
+  function setImmersive(on) {
+    if (immersive === on) return;
+    immersive = on;
+    if (!ANDROID) return;
+    invoke("set_immersive", { on: on }).catch(function (err) {
+      console.error("flip: set_immersive failed", err);
+    });
+  }
+
+  function wakeClock() {
+    clearTimeout(idleTimeout);
+    if (document.body.classList.contains("is-idle")) {
+      document.body.classList.remove("is-idle");
+    }
+    setImmersive(false);
+    idleTimeout = setTimeout(function () {
+      if (currentView !== "timer") return;
+      if (window.Board && window.Board.isModalOpen()) return;
+      /* The portrait warning is a message, not the clock: it stays put. */
+      if (document.documentElement.classList.contains("android-portrait")) return;
+      document.body.classList.add("is-idle");
+      setImmersive(true);
+    }, IDLE_MS);
+  }
+
+  ["pointerdown", "mousedown", "touchstart", "mousemove", "keydown", "wheel"].forEach(
+    function (name) {
+      window.addEventListener(name, wakeClock, { passive: true });
+    }
+  );
+
   function looksFullscreen() {
     if (document.fullscreenElement) return true;
     if (typeof screen === "undefined") return false;
@@ -1077,7 +1075,10 @@
     clearTimeout(cursorTimeout);
     document.body.classList.remove("hide-cursor");
     cursorTimeout = setTimeout(function () {
-      if (currentView === "timer" && looksFullscreen()) {
+      /* A phone has no cursor to hide, and this class also hides the timer
+         tools - which are the only gear the timer has. The ten second idle
+         rule below is what puts the phone's controls away. */
+      if (currentView === "timer" && looksFullscreen() && !ANDROID) {
         document.body.classList.add("hide-cursor");
       }
     }, 2000);

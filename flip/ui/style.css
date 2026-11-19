@@ -56,6 +56,13 @@
   --shadow: 0 2px 4px rgba(78, 60, 36, .06), 0 16px 32px rgba(78, 60, 36, .10);
   --radius: 14px;
   --radius-sm: 10px;
+  /* System bars. Android's WebView answers 0 for every env(safe-area-*) query
+     and the Tauri activity draws edge to edge, so the Android block at the end
+     of polish.css puts the platform's own sizes in these. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 html[data-theme="dark"] {
@@ -245,7 +252,10 @@ textarea {
 
 .view {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: none;
 }
 
@@ -259,7 +269,10 @@ textarea {
 
 .group {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -415,7 +428,10 @@ textarea {
 .flap::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: #000;
   opacity: 0;
   pointer-events: none;
@@ -572,28 +588,34 @@ body.hide-cursor #timer-tools {
 
 #dots {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 10px;
-  pointer-events: none;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
   z-index: 60;
 }
 
-.dot {
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ink);
-  opacity: .22;
-  transition: opacity .25s, transform .25s;
+#dots .mode-btn {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.dot.active {
-  opacity: .85;
-  transform: scale(1.25);
+#dots .mode-btn.active {
+  background: var(--panel-2);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 
 #timer-group.paused .d {
@@ -839,6 +861,10 @@ textarea {
 .tt-scroll {
   overflow: auto;
   padding-bottom: 6px;
+}
+
+.tt-grid[hidden] {
+  display: none;
 }
 
 .tt-grid {
@@ -1500,7 +1526,10 @@ textarea {
 
 .overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 200;
   display: flex;
   align-items: center;
@@ -1716,7 +1745,7 @@ html[data-theme="dark"] .overlay {
   }
 
   .chrome-right {
-    margin-left: 0;
+    margin-left: auto;
     flex: 0 0 auto;
     align-self: center;
     justify-content: flex-end;
@@ -2272,7 +2301,10 @@ html[data-theme="dark"] .accent-swatch {
 #tt-import.is-busy::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   margin: auto;
   width: 14px;
   height: 14px;
@@ -3433,7 +3465,10 @@ html[data-theme="dark"] .chip-btn {
 .chip-btn::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: -1;
   border-radius: inherit;
   background: linear-gradient(112deg,

@@ -309,8 +309,18 @@
     weekend.checked = Boolean(view.showWeekend);
     paintUndo(view);
 
-    /* Zero days used to break the grid template; one empty column keeps it
-       legal without pretending a day exists. */
+    /* No days means no week to draw. A corner cell plus a placeholder column
+       only pushed the first period into the header row, which looked broken;
+       the setup card below is the honest answer until days exist. */
+    if (!days.length) {
+      grid.hidden = true;
+      Board.clear(grid);
+      renderSetup(view);
+      renderBrush(view);
+      return;
+    }
+
+    grid.hidden = false;
     grid.style.setProperty("--day-count", String(Math.max(1, days.length)));
     Board.clear(grid);
 
@@ -481,7 +491,9 @@
   var setupPreset = "Mon-Fri";
 
   function renderSetup(view) {
-    if (locked || !needsSetup(view) || view.setupDismissed) {
+    /* A dismissed setup card may stay hidden only once the week actually has
+       days; an empty week always offers the way in. */
+    if (locked || !needsSetup(view) || (view.setupDismissed && view.days.length)) {
       setup.hidden = true;
       return;
     }

@@ -1687,6 +1687,9 @@ pub struct BoardView {
     pub setup_dismissed: bool,
     /// Read-only grid: the UI hides every editing control while this is set.
     pub locked: bool,
+    /// False while the in-memory history has nothing to take back or put back.
+    pub can_undo: bool,
+    pub can_redo: bool,
 }
 
 impl Board {
@@ -1773,6 +1776,8 @@ impl Board {
             suggestions,
             show_weekend: self.days.iter().any(|d| d == "Sat"),
             locked: self.locked,
+            can_undo: false,
+            can_redo: false,
             week_start: self.week_start.clone(),
             setup_dismissed: self.setup_dismissed,
         }
