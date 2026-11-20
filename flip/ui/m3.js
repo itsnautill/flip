@@ -1,9 +1,9 @@
 /* Flip — soft M3 behaviour.
 
-   Waves are drawn ONCE as SVG paths. Motion is a CSS transform on the path
-   group (translate for linear bars, rotate for the ring), so progress changes
-   are a clip/dash change and nothing recomputes geometry per frame. The CSS
-   animation only runs while the host is on screen and the window is visible. */
+   Waves are drawn ONCE as SVG paths. Motion is a CSS transform on a path group
+   (translate for linear bars, rotate for the ring), so progress changes only
+   move a clip or an arc mask and nothing recomputes geometry per frame. The CSS
+   animation runs only while the host is on screen and the window is visible. */
 (function () {
   "use strict";
 
@@ -27,48 +27,87 @@
 
   /* ------------------------------------------------------- wavy progress */
 
+  /* One structure for every linear bar:
+
+       .wave-host
+         .wave-rail            (inset so the round caps are never cut)
+           .wave-track-line    (the flat light track, full width)
+           .wave-clip          (STATIC clip: only its inset changes)
+             svg > .wave-flow > .wave-active   (fixed geometry, translate only)
+           .wave-dot           (rides the end of the fill)
+
+     Progress moves the clip and the dot, never the wave. The path is a whole
+     number of periods long and translates by exactly one wavelength, so the
+     loop is invisible and the bar's start and end do not move while it flows. */
+
+  /** One period-symmetric wavy line, 1 unit = 1 CSS pixel. */
+  function wavePath(width, height, wavelength, amp) {
+    var cy = height / 2;
+    var step = wavelength / 12;
+    var periods = Math.ceil((width + wavelength * 2) / wavelength);
+    var total = periods * wavelength;
+    var d = "";
+    for (var x = 0; x <= total + 0.001; x += step) {
+      var y = cy + amp * Math.sin((x / wavelength) * Math.PI * 2);
+      d += (d ? "L" : "M") + x.toFixed(2) + " " + y.toFixed(2);
+    }
+    return d;
+  }
+
   function WavyLinear(host, options) {
     var opts = options || {};
     this.host = host;
     this.value = 0;
-    this.height = opts.height == null ? 12 : opts.height;
-    this.stroke = opts.stroke == null ? 3 : opts.stroke;
+    this.height = opts.height == null ? 14 : opts.height;
+    this.stroke = opts.stroke == null ? 4 : opts.stroke;
     this.amp = opts.amplitude == null ? 3 : opts.amplitude;
-    this.wavelength = opts.wavelength == null ? 34 : opts.wavelength;
+    this.wavelength = opts.wavelength == null ? 32 : opts.wavelength;
     this.width = 0;
     this.indeterminate = false;
-    var id = "waveclip" + ++uid;
+    this.shown = -1;
+    this.pathAmp = -1;
+
+    host.classList.add("wave-host");
+    host.style.setProperty("--wave-h", this.height + "px");
+    host.style.setProperty("--wave-stroke", this.stroke + "px");
+
+    var rail = document.createElement("div");
+    rail.className = "wave-rail";
+    var track = document.createElement("div");
+    track.className = "wave-track-line";
+    var clip = document.createElement("div");
+    clip.className = "wave-clip";
 
     var svg = svgEl("svg", { "aria-hidden": "true", focusable: "false" });
-    svg.style.height = this.height + "px";
-    var defs = svgEl("defs", {});
-    var clip = svgEl("clipPath", { id: id, clipPathUnits: "userSpaceOnUse" });
-    this.clipRect = svgEl("rect", { x: 0, y: 0, width: 0, height: this.height });
-    clip.appendChild(this.clipRect);
-    defs.appendChild(clip);
-    svg.appendChild(defs);
+    var flow = svgEl("g", { class: "wave-flow" });
+    var active = svgEl("path", { class: "wave-active" });
+    flow.appendChild(active);
+    svg.appendChild(flow);
+    clip.appendChild(svg);
 
-    this.track = svgEl("path", { class: "wave-track" });
-    this.group = svgEl("g", { class: "wave-group", "clip-path": "url(#" + id + ")" });
-    this.active = svgEl("path", { class: "wave-active" });
-    this.group.appendChild(this.active);
-    this.dot = svgEl("circle", { class: "wave-dot", r: this.stroke / 2 + 0.5 });
-    svg.appendChild(this.track);
-    svg.appendChild(this.group);
-    svg.appendChild(this.dot);
-    host.appendChild(svg);
+    var dot = document.createElement("span");
+    dot.className = "wave-dot";
 
+    rail.appendChild(track);
+    rail.appendChild(clip);
+    rail.appendChild(dot);
+    host.appendChild(rail);
+
+    this.rail = rail;
     this.svg = svg;
-    this.host.classList.add("wave-host");
+    this.flow = flow;
+    this.active = active;
+    this.clip = clip;
+    this.dot = dot;
 
     var self = this;
     this.resize = function () {
-      self.width = host.clientWidth || 0;
+      self.width = rail.clientWidth || 0;
       self.build();
     };
     if (window.ResizeObserver) {
       this.observer = new ResizeObserver(this.resize);
-      this.observer.observe(host);
+      this.observer.observe(rail);
     }
     this.resize();
   }
@@ -76,19 +115,16 @@
   WavyLinear.prototype.build = function () {
     var w = this.width;
     if (!w) return;
-    var cy = this.height / 2;
-    var inset = this.stroke / 2 + 1;
-    var end = Math.max(inset, w - inset);
-    this.start = inset + 1;
-    this.end = end;
-    this.stop = this.stroke + 3;
-
-    this.svg.setAttribute("viewBox", "0 0 " + w + " " + this.height);
-    this.track.setAttribute("d", "M" + this.start + " " + cy + "H" + (end - this.stop));
-    this.track.style.strokeWidth = this.stroke;
-    this.dot.setAttribute("cx", end - this.stop / 2);
-    this.dot.setAttribute("cy", cy);
-    this.dot.setAttribute("r", this.stroke / 2 + 0.5);
+    var geo = Math.ceil(w + this.wavelength * 2);
+    this.svg.setAttribute("width", String(geo));
+    this.svg.setAttribute("height", String(this.height));
+    this.svg.setAttribute("viewBox", "0 0 " + geo + " " + this.height);
+    this.svg.style.width = geo + "px";
+    this.svg.style.height = this.height + "px";
+    /* The same px length drives the path and the keyframes. */
+    this.svg.style.setProperty("--wave-len", this.wavelength + "px");
+    this.shown = -1;
+    this.pathAmp = -1;
     this.draw();
   };
 
@@ -104,85 +140,112 @@
 
   WavyLinear.prototype.draw = function () {
     if (!this.width) return;
-    var usable = this.end - this.start - this.stop - 6;
-    if (usable <= 0) return;
-
     var shown = this.indeterminate ? 1 : this.value;
-    var width = Math.max(0, usable * shown);
-    this.clipRect.setAttribute("width", String(width));
-    this.clipRect.setAttribute("height", String(this.height));
-    this.group.style.display = shown <= 0 ? "none" : "";
-    this.dot.style.display = shown > 0.995 || this.indeterminate ? "none" : "1";
+    var w = this.width;
+    var stroke = this.stroke;
 
-    /* Amplitude eases to flat at both ends of the track. */
-    var ease = this.indeterminate ? 1 : Math.sin(Math.PI * Math.min(1, Math.max(0.001, this.value)));
-    var amp = reduced() ? 0 : this.amp * Math.pow(ease, 0.6);
-    var cy = this.height / 2;
-    var len = this.wavelength;
+    /* Amplitude eases to flat at 0% and 100%. */
+    var ease = this.indeterminate ? 1 : Math.sin(Math.PI * Math.min(1, Math.max(0, shown)));
+    var amp = reduced() ? 0 : this.amp * Math.pow(ease, 0.55);
+    var fill = w * shown;
+    var dotGap = shown > 0.01 && shown < 0.99 ? stroke + 4 : 0;
 
-    /* A wave that repeats past the clip so the translate loops seamlessly. */
-    var steps = Math.max(24, Math.round((usable + len * 2) / 4));
-    var d = "";
-    for (var i = 0; i <= steps; i++) {
-      var x = (i * 4);
-      var y = cy + amp * Math.sin((x / len) * Math.PI * 2);
-      d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(2);
+    this.host.style.setProperty("--wave-fill", Math.max(0, fill - dotGap) + "px");
+    this.host.style.setProperty("--wave-dot-x", fill + "px");
+    this.clip.style.visibility = shown <= 0 ? "hidden" : "";
+    this.dot.style.opacity = shown > 0.01 && shown < 0.99 ? "1" : "0";
+
+    /* Rebuild the path only when its shape actually changed; the CSS transform
+       animation keeps running through it, so the wave never restarts. */
+    if (this.shown !== shown || this.pathAmp !== amp) {
+      this.shown = shown;
+      this.pathAmp = amp;
+      this.active.setAttribute("d", wavePath(w, this.height, this.wavelength, amp));
     }
-    this.active.setAttribute("d", d);
-    this.active.style.strokeWidth = this.stroke;
-    this.group.style.setProperty("--wave-len", len + "px");
-
-    if (amp > 0.2 && shown > 0) this.group.classList.add("wave-live");
-    else this.group.classList.remove("wave-live");
   };
 
   WavyLinear.prototype.destroy = function () {
     if (this.observer) this.observer.disconnect();
-    if (this.svg.parentNode) this.svg.parentNode.removeChild(this.svg);
+    if (this.rail.parentNode) this.rail.parentNode.removeChild(this.rail);
   };
 
-  /* A wavy ring: one static path, progress by dash offset, motion by rotate. */
+  /* Circular ring: the filled arc is a static mask whose length follows the
+     progress; the wavy line flows by rotating exactly one wave (360/N). */
   function WavyRing(svg, options) {
     var opts = options || {};
     var R = 168;
     var cx = 200;
     var cy = 200;
     var amp = opts.amplitude == null ? 4 : opts.amplitude;
-    var wavelength = opts.wavelength == null ? 62 : opts.wavelength;
+    var waves = opts.waves || 12;
+    var stroke = opts.stroke || 4;
+    var id = "ringmask" + ++uid;
     svg.setAttribute("viewBox", "0 0 400 400");
 
-    this.track = svgEl("path", { class: "ring-track" });
-    var group = svgEl("g", { class: "ring-wave" });
-    this.active = svgEl("path", {
-      class: "ring-active",
-      pathLength: "100",
-      "stroke-dasharray": "100",
-      "stroke-dashoffset": "100",
+    var defs = svgEl("defs", {});
+    var mask = svgEl("mask", {
+      id: id,
+      maskUnits: "userSpaceOnUse",
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 400,
     });
+    var arc = svgEl("circle", {
+      class: "ring-arc",
+      cx: cx,
+      cy: cy,
+      r: R,
+      fill: "none",
+      stroke: "#fff",
+      "stroke-width": stroke + 6,
+      pathLength: "100",
+      "stroke-dasharray": "0 100",
+      transform: "rotate(-90 " + cx + " " + cy + ")",
+    });
+    mask.appendChild(arc);
+    defs.appendChild(mask);
+    svg.appendChild(defs);
 
-    var circumference = 2 * Math.PI * R;
-    var steps = Math.round(circumference / 2);
+    this.track = svgEl("path", { class: "ring-track" });
+    this.track.setAttribute(
+      "d",
+      "M" + cx + " " + (cy - R) + "A" + R + " " + R + " 0 1 1 " + (cx - 0.01) + " " + (cy - R)
+    );
+
+    var clipped = svgEl("g", { mask: "url(#" + id + ")" });
+    var flow = svgEl("g", { class: "ring-flow" });
+    var active = svgEl("path", { class: "ring-active" });
+
+    /* Integer waves around the circle: rotating by 360/N lands the path on an
+       identical shape, so the loop has no seam. */
+    var steps = 900;
     var d = "";
     for (var i = 0; i <= steps; i++) {
-      var a = -Math.PI / 2 + (i / steps) * Math.PI * 2;
-      var rr = R + amp * Math.sin((i / steps) * (circumference / wavelength) * Math.PI * 2);
-      var x = cx + Math.cos(a) * rr;
-      var y = cy + Math.sin(a) * rr;
-      d += (i ? "L" : "M") + x.toFixed(2) + " " + y.toFixed(2);
+      var t = i / steps;
+      var a = -Math.PI / 2 + t * Math.PI * 2;
+      var rr = R + amp * Math.sin(t * waves * Math.PI * 2);
+      d += (i ? "L" : "M") + (cx + Math.cos(a) * rr).toFixed(2) + " " + (cy + Math.sin(a) * rr).toFixed(2);
     }
-    this.active.setAttribute("d", d);
-    group.appendChild(this.active);
-    this.track.setAttribute("d", "M" + cx + " " + (cy - R) + "A" + R + " " + R + " 0 1 1 " + (cx - 0.01) + " " + (cy - R));
+    active.setAttribute("d", d);
+    flow.appendChild(active);
+    clipped.appendChild(flow);
     svg.appendChild(this.track);
-    svg.appendChild(group);
-    this.group = group;
+    svg.appendChild(clipped);
+
+    svg.style.setProperty("--ring-step", 360 / waves + "deg");
     this.svg = svg;
+    this.arc = arc;
+    this.active = active;
+    this.flow = flow;
+    this.value = 0;
   }
 
   WavyRing.prototype.set = function (value) {
-    this.value = Math.max(0, Math.min(1, Number(value) || 0));
-    this.active.setAttribute("stroke-dashoffset", String(100 * (1 - this.value)));
-    this.group.classList.toggle("ring-live", !reduced() && this.value > 0.02 && this.value < 0.995);
+    var next = Math.max(0, Math.min(1, Number(value) || 0));
+    this.value = next;
+    this.arc.setAttribute("stroke-dasharray", (next * 100).toFixed(2) + " 100");
+    this.flow.style.visibility = next <= 0.002 ? "hidden" : "";
   };
 
   window.M3 = {
@@ -211,6 +274,15 @@
     if (!io || seen.has(host)) return;
     seen.add(host);
     io.observe(host);
+  }
+
+  /* A hidden window paints nothing, so stop the transform work too. */
+  function watchVisibility() {
+    function paint() {
+      document.documentElement.classList.toggle("waves-hidden", document.hidden);
+    }
+    document.addEventListener("visibilitychange", paint);
+    paint();
   }
 
   /* -------------------------------------------------------- stage mode */
@@ -268,13 +340,25 @@
   function wireTimerRing() {
     var svg = document.getElementById("timer-ring");
     if (!svg || !window.Flip) return;
-    var ring = new WavyRing(svg, { amplitude: 4, wavelength: 62 });
+    var ring = new WavyRing(svg, { amplitude: 4, waves: 12 });
+    watchWave(svg);
+    /* The snapshot carries the remaining time, not the duration. An idle timer
+       shows its preset, so that is where the total comes from; a running
+       countdown keeps the last total it saw start. */
+    var total = 0;
     window.Flip.subscribe(function (snap) {
       var timer = (snap && snap.timer) || {};
-      var total = Number(timer.secs || 0);
-      var remaining = Number(timer.h || 0) * 3600 + Number(timer.m || 0) * 60 + Number(timer.s || 0);
+      var remaining =
+        Number(timer.h || 0) * 3600 + Number(timer.m || 0) * 60 + Number(timer.s || 0);
+      if (timer.state === "idle") {
+        total = remaining;
+      } else if (remaining > total) {
+        total = remaining;
+      } else if (total === 0 && snap && snap.focusSecs) {
+        total = Number(snap.focusSecs) || 0;
+      }
       var progress = total > 0 ? 1 - remaining / total : 0;
-      if (timer.state === "idle") progress = 0;
+      if (timer.state === "idle" || timer.state === "finished") progress = 0;
       ring.set(progress);
     });
   }
@@ -296,7 +380,7 @@
           host = document.createElement("div");
           host.className = "wave-host day-wave";
           head ? head.parentNode.insertBefore(host, head.nextSibling) : column.insertBefore(host, column.firstChild);
-          host.__wave = new WavyLinear(host, { amplitude: 2.4, wavelength: 24, height: 9, stroke: 3 });
+          host.__wave = new WavyLinear(host, { amplitude: 2.2, wavelength: 26, height: 11, stroke: 4 });
           watchWave(host);
         }
         host.__wave.set(total ? done / total : 0);
@@ -349,10 +433,10 @@
         var fill = track.querySelector("span");
         var host = document.createElement("div");
         host.className = "wave-host";
-        host.style.height = "12px";
         track.appendChild(host);
         track.__fill = fill;
-        track.__wave = new WavyLinear(host, { amplitude: 1.6, wavelength: 30, height: 9, stroke: 2.5 });
+        if (fill) fill.style.display = "none";
+        track.__wave = new WavyLinear(host, { amplitude: 2, wavelength: 30, height: 12, stroke: 4 });
         watchWave(host);
         updateBar(track);
       }
@@ -379,6 +463,12 @@
         requestAnimationFrame(convertBars);
       }).observe(tasks, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
     }
+    var dash = document.getElementById("dash-grid");
+    if (dash) {
+      new MutationObserver(function () {
+        requestAnimationFrame(convertBars);
+      }).observe(dash, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+    }
   }
 
   /* ----------------------------------------------------------- importer */
@@ -387,13 +477,14 @@
     var button = document.getElementById("tt-import");
     var host = document.getElementById("tt-wave");
     if (!button || !host) return;
-    var wave = new WavyLinear(host, { amplitude: 3.4, wavelength: 40, height: 14, stroke: 3 });
+    var wave = new WavyLinear(host, { amplitude: 3.4, wavelength: 40, height: 16, stroke: 4 });
     var state = false;
 
     function apply(busy) {
       if (busy === state) return;
       state = busy;
       host.hidden = !busy;
+      wave.resize();
       wave.setIndeterminate(busy);
     }
 
@@ -477,7 +568,6 @@
       requestAnimationFrame(paint);
     }).observe(board, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
 
-    /* All seven days fit, so today is already on screen when the tab opens. */
     var tab = document.getElementById("tab-tasks");
     if (tab) {
       tab.addEventListener("click", function () {
@@ -517,6 +607,7 @@
   }
 
   function boot() {
+    watchVisibility();
     wireStageMode();
     wireTimerTransport();
     wireTimerRing();

@@ -181,6 +181,13 @@
   --dur-effects-default: 260ms;
   --dur-effects-slow: 420ms;
 
+  /* Waves: one wavelength flows per --wave-flow-duration, and the fill grows
+     (or shrinks) over --wave-grow-duration. Tune both here. */
+  --wave-flow-duration: 1.5s;
+  --wave-grow-duration: 380ms;
+  --wave-grow-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ring-flow-duration: 3.2s;
+
   /* --------------------------------------------------------- state layers */
   --state-hover: color-mix(in srgb, var(--on-surface) 8%, transparent);
   --state-focus: color-mix(in srgb, var(--on-surface) 10%, transparent);

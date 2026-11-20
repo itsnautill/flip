@@ -1861,61 +1861,115 @@ html[data-m3="on"] .theme-modes .seg-btn.active {
 
 /* ------------------------------------------------------------- waves */
 
+/* The wave is a thin stroke on the track's baseline. The clip (and only the
+   clip) follows progress; the path itself never changes size. */
 html[data-m3="on"] .wave-host {
   position: relative;
-  width: 100%;
-  overflow: hidden;
-  border-radius: var(--r-full);
-}
-
-html[data-m3="on"] .wave-host svg {
   display: block;
   width: 100%;
-  height: 100%;
-  overflow: visible;
+  height: var(--wave-h, 12px);
 }
 
-html[data-m3="on"] .wave-track {
-  fill: none;
-  stroke: color-mix(in srgb, var(--on-surface) 12%, transparent);
-  stroke-linecap: round;
+html[data-m3="on"] .wave-rail {
+  position: absolute;
+  inset: 0 4px;
+}
+
+html[data-m3="on"] .wave-track-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--wave-stroke, 4px);
+  transform: translateY(-50%);
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--on-surface) 11%, transparent);
+}
+
+html[data-m3="on"] .wave-clip {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 calc(100% - var(--wave-fill, 0px)) 0 0);
+  transition: clip-path var(--wave-grow-duration) var(--wave-grow-ease);
+}
+
+html[data-m3="on"] .wave-clip svg {
+  display: block;
+  overflow: visible;
 }
 
 html[data-m3="on"] .wave-active {
   fill: none;
   stroke: var(--accent);
+  stroke-width: var(--wave-stroke, 4px);
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 html[data-m3="on"] .wave-dot {
-  fill: var(--accent);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(var(--wave-stroke, 4px) + 2px);
+  height: calc(var(--wave-stroke, 4px) + 2px);
+  margin-left: calc((var(--wave-stroke, 4px) + 2px) / -2);
+  border-radius: var(--r-full);
+  background: var(--accent);
+  transform: translate3d(var(--wave-dot-x, 0px), -50%, 0);
+  transition: transform var(--wave-grow-duration) var(--wave-grow-ease),
+    opacity var(--dur-effects-fast) linear;
 }
 
 html[data-m3="on"] .day-wave {
-  margin: 0 4px 2px;
+  margin: 2px 4px 0;
 }
 
-/* Wave motion is a CSS transform on a prebuilt path: no per-frame JS. */
-@keyframes wave-slide {
+/* Motion is a transform on a prebuilt path: no per-frame JS, no restart. */
+@keyframes wave-flow {
   from {
     transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translate3d(var(--wave-len, 34px), 0, 0);
+    transform: translate3d(calc(-1 * var(--wave-len, 32px)), 0, 0);
   }
 }
 
-html[data-m3="on"] .wave-live {
-  animation: wave-slide 1s linear infinite;
+html[data-m3="on"] .wave-flow {
+  animation: wave-flow var(--wave-flow-duration) linear infinite;
   will-change: transform;
 }
 
-html[data-m3="on"] .wave-paused .wave-live {
+/* Ring: one wave of rotation per cycle, inside a static arc mask. */
+@keyframes ring-flow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--ring-step, 30deg));
+  }
+}
+
+html[data-m3="on"] #timer-ring .ring-arc {
+  transition: stroke-dasharray var(--wave-grow-duration) linear;
+}
+
+html[data-m3="on"] #timer-ring .ring-flow {
+  transform-box: view-box;
+  transform-origin: 200px 200px;
+  animation: ring-flow var(--ring-flow-duration) linear infinite;
+  will-change: transform;
+}
+
+html[data-m3="on"] .wave-paused .wave-flow,
+html[data-m3="on"] .waves-hidden .wave-flow,
+html[data-m3="on"] .wave-paused .ring-flow,
+html[data-m3="on"] .waves-hidden .ring-flow {
   animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-m3="on"] .wave-live {
+  html[data-m3="on"] .wave-flow,
+  html[data-m3="on"] .ring-flow {
     animation: none;
     will-change: auto;
   }
