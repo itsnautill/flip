@@ -26,6 +26,8 @@ pub struct Snapshot {
     pub clock: ClockView,
     pub timer: TimerView,
     pub theme: String,
+    /// The palette painted over the base; empty for none.
+    pub palette: String,
     /// "en" or "vi"; the UI picks its strings from this.
     pub language: String,
     /// Whether interface sounds are on.
@@ -110,6 +112,13 @@ impl Core {
         }
     }
 
+    /// Stamps the board with the moment and the device, so a sync can tell
+    /// which of two copies is the newer one. Called on every local change.
+    pub fn touch_board(&mut self) {
+        self.board.updated_ms = crate::sync::now_ms();
+        self.board.updated_by = self.settings.device_id.clone();
+    }
+
     /// Remembers the board as it was before an edit, and forgets any redo
     /// branch, exactly like a text editor would.
     pub fn remember(&mut self, before: Board) {
@@ -145,6 +154,7 @@ impl Core {
             clock: clock_view(local.hour(), local.minute(), self.settings.use_12h),
             timer: self.timer.view(now),
             theme: self.settings.theme.clone(),
+            palette: self.settings.palette.clone(),
             language: self.settings.language.clone(),
             sound: self.settings.sound,
             onboarded: self.settings.onboarded,

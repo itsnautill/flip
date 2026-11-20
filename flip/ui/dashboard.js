@@ -170,6 +170,20 @@
 
   var WIDGETS = {};
 
+  /* The glyph each card header carries, in the tonal badge the Material skin
+     paints. Paths only: the wrapper SVG is built in card(). */
+  var GLYPHS = {
+    next: '<path d="M5 12h12"></path><path d="M12 5l7 7-7 7"></path>',
+    today:
+      '<rect x="4" y="5.5" width="16" height="14.5" rx="3"></rect><path d="M4 10.2h16M8.5 3.5v4M15.5 3.5v4"></path>',
+    due: '<circle cx="12" cy="12.5" r="7.5"></circle><path d="M12 8.5v4.2l2.8 1.7"></path>',
+    tasks:
+      '<path d="M4.5 7.5l2 2 3.5-3.5M4.5 16.5l2 2 3.5-3.5"></path><path d="M12.5 7.5H20M12.5 17.5H20"></path>',
+    focus:
+      '<circle cx="12" cy="13.5" r="7"></circle><path d="M12 10v4l2.6 1.6M9.5 2.5h5M12 2.5V6"></path>',
+    stats: '<path d="M5.5 19v-7M12 19V5M18.5 19v-9"></path>',
+  };
+
   WIDGETS.next = {
     title: "Next up",
     render: function (body) {
@@ -381,10 +395,9 @@
         var stop = el("button", "btn small", "Stop");
         stop.type = "button";
         stop.addEventListener("click", function () {
-          invoke("cancel_focus").then(function (next) {
-            if (window.Flip && next) window.Flip.apply(next);
-            Board.toast("Focus session cancelled");
-          });
+          /* Stopping early still credits the minutes spent, so the toast says
+             how much was saved. */
+          if (window.Flip && window.Flip.stopFocus) window.Flip.stopFocus();
         });
         var open = el("button", "btn small primary", "Open timer");
         open.type = "button";
@@ -563,6 +576,13 @@
     node.dataset.widget = id;
 
     var head = el("div", "widget-head");
+    var badge = el("span", "widget-badge");
+    badge.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      (GLYPHS[id] || "") +
+      "</svg>";
+    head.appendChild(badge);
     var title = el("h2", "", def.title);
     head.appendChild(title);
     var tools = el("div", "widget-tools");

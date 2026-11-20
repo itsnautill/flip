@@ -38,6 +38,9 @@
   var finishedTimeout = 0;
   var shakeTimeout = 0;
   var currentView = "dashboard";
+  var VIEW_ORDER = ["dashboard", "timer", "timetable", "tasks"];
+  /* While the first paint happens, a restored section must not chirp. */
+  var booting = true;
   var lastSnapshot = null;
   var snapshotListeners = [];
 
@@ -47,16 +50,35 @@
 
   /* ------------------------------------------------------------------- theme */
 
-  var THEMES = ["light", "light-hc", "dark", "dark-hc", "flat"];
+  /* A mode is the base (system, light or dark) and a palette is painted over
+     it, so every theme works in both light and dark. System is a choice, not
+     an attribute: it resolves to the base the computer is using, and follows
+     that base when the computer switches. */
+  var currentMode = "light";
+  var currentPalette = "";
 
-  function applyTheme(theme) {
-    var wanted = THEMES.indexOf(theme) >= 0 ? theme : "light";
-    if (document.documentElement.getAttribute("data-theme") !== wanted) {
-      document.documentElement.setAttribute("data-theme", wanted);
+  function applyTheme(mode, palette) {
+    if (!window.FlipThemes) return;
+    var nextMode = window.FlipThemes.modeKnown(mode) ? String(mode) : "light";
+    var nextPalette = window.FlipThemes.paletteOf(palette) ? String(palette) : "";
+    currentMode = nextMode;
+    currentPalette = nextPalette;
+    var root = document.documentElement;
+    var before = root.getAttribute("data-theme") + "|" + (root.getAttribute("data-palette") || "");
+    window.FlipThemes.paint(nextMode, nextPalette);
+    var after = root.getAttribute("data-theme") + "|" + (root.getAttribute("data-palette") || "");
+    if (before !== after) {
       /* Subject colours and the accent are derived per theme, so anything
          already painted asks for a fresh coat. */
       window.dispatchEvent(new CustomEvent("flip-theme"));
+      if (lastSnapshot) applyAccent(lastSnapshot.accentHue);
     }
+  }
+
+  if (window.FlipThemes) {
+    window.FlipThemes.watchSystem(function () {
+      if (currentMode === "system") applyTheme("system", currentPalette);
+    });
   }
 
   if (fullscreenButton) {
@@ -122,6 +144,150 @@
     paintOrientation();
   }
 
+  /* ------------------------------------------------------------ keep on top */
+
+  /* Pinning Flip above other windows is a desktop idea. Rust owns the window,
+     so the button only remembers the choice and asks Rust for it again. */
+  var pinButton = document.getElementById("pin-btn");
+  var pinned = false;
+  try {
+    pinned = window.localStorage.getItem("flip.keepOnTop") === "1";
+  } catch (_) {
+    pinned = false;
+  }
+
+  function paintPin() {
+    if (!pinButton) return;
+    pinButton.setAttribute("aria-pressed", String(pinned));
+    var label = pinned ? "Stop keeping Flip on top" : "Keep Flip on top";
+    pinButton.setAttribute("aria-label", label);
+    pinButton.title = label;
+  }
+
+  function askPin(on) {
+    pinned = Boolean(on);
+    try {
+      window.localStorage.setItem("flip.keepOnTop", pinned ? "1" : "0");
+    } catch (_) {
+      /* the choice still holds for this run */
+    }
+    paintPin();
+    invoke("set_on_top", { on: pinned }).catch(function (err) {
+      console.error("flip: set_on_top failed", err);
+    });
+  }
+
+  if (pinButton && !ANDROID) {
+    pinButton.hidden = false;
+    pinButton.addEventListener("click", function () {
+      askPin(!pinned);
+    });
+    paintPin();
+    if (pinned) askPin(true);
+  }
+
+  /* -------------------------------------------------------------- focus chip */
+
+  /* A focus session keeps counting while the user is on another section, so
+     the header carries a live clock with a stop button. Stopping credits the
+     whole minutes already spent. */
+  var focusChip = null;
+  var focusChipTime = null;
+  var focusStopping = false;
+
+  function buildFocusChip() {
+    var right = document.querySelector(".chrome-right");
+    if (!right) return;
+
+    var wrap = document.createElement("div");
+    wrap.id = "focus-chip";
+    wrap.hidden = true;
+
+    var dot = document.createElement("span");
+    dot.className = "focus-chip-dot";
+    dot.setAttribute("aria-hidden", "true");
+    wrap.appendChild(dot);
+
+    var time = document.createElement("button");
+    time.type = "button";
+    time.className = "focus-chip-time";
+    time.addEventListener("click", function () {
+      setView("timer");
+      wakeClock();
+    });
+    wrap.appendChild(time);
+
+    var stop = document.createElement("button");
+    stop.type = "button";
+    stop.className = "focus-chip-stop";
+    stop.setAttribute("aria-label", "Stop focus session");
+    stop.title = "Stop focus session";
+    stop.innerHTML =
+      '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">' +
+      '<path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+    stop.addEventListener("click", function () {
+      stopFocus();
+    });
+    wrap.appendChild(stop);
+
+    right.insertBefore(wrap, right.firstChild);
+    focusChip = wrap;
+    focusChipTime = time;
+  }
+
+  function paintFocusChip(snap) {
+    if (!focusChip) return;
+    var timer = (snap && snap.timer) || {};
+    var on = Boolean(snap && snap.focusActive);
+    focusChip.hidden = !on;
+    focusChip.classList.toggle("paused", Boolean(on && timer.state === "paused"));
+    if (!on) return;
+    focusChipTime.textContent =
+      String(timer.h || "00") + ":" + String(timer.m || "00") + ":" + String(timer.s || "00");
+    var t = window.I18n ? window.I18n.t : function (s) { return s; };
+    var label = t("Focus session") + " · " + t("Open timer");
+    focusChipTime.title = label;
+    focusChipTime.setAttribute("aria-label", label);
+  }
+
+  /** Whole seconds a running focus session has already used up. */
+  function focusSpentSecs() {
+    var snap = lastSnapshot;
+    if (!snap || !snap.focusActive) return 0;
+    var timer = snap.timer || {};
+    var left =
+      Number(timer.h || 0) * 3600 + Number(timer.m || 0) * 60 + Number(timer.s || 0);
+    return Math.max(0, (Number(snap.focusSecs) || 0) - left);
+  }
+
+  function stopFocus() {
+    if (focusStopping || !lastSnapshot || !lastSnapshot.focusActive) return;
+    focusStopping = true;
+    var minutes = Math.floor(focusSpentSecs() / 60);
+    invoke("cancel_focus")
+      .then(function (next) {
+        if (next) render(next);
+        var t = window.I18n ? window.I18n.t : function (s) { return s; };
+        var message =
+          minutes > 0
+            ? t("Focus stopped") +
+              " · " +
+              window.I18n.count(minutes, "minute", "minutes") +
+              " " +
+              t("saved")
+            : t("Focus session cancelled");
+        window.Board.toast(message);
+      })
+      .catch(function (err) {
+        console.error("flip: cancel_focus failed", err);
+      })
+      .then(function () {
+        focusStopping = false;
+      });
+  }
+
+  buildFocusChip();
+
   /* ------------------------------------------------------------------ accent */
 
   /* Flip stores one hue. Every weight, the ink that sits on it and the wash
@@ -148,6 +314,8 @@
     ["T", "Switch 12/24-hour clock"],
     ["F or F11", "Toggle fullscreen"],
     ["Esc", "Leave fullscreen"],
+    ["N", "New task"],
+    ["Ctrl + 1 – 4", "Jump to a section"],
     ["?", "Show this list"],
   ];
 
@@ -157,7 +325,7 @@
       Board.el(
         "p",
         "shortcut-note",
-        "F, F11 and ? work in every section. The rest apply to the Timer. XD"
+        "F, F11, ?, N and Ctrl+1–4 work everywhere. The rest apply to the Timer."
       )
     );
     var list = Board.el("div", "shortcut-list");
@@ -296,13 +464,17 @@
 
   var pendingAccent = null;
 
-  var THEME_CHOICES = [
-    ["light", "Light", "Soft off-white with warm accents."],
-    ["light-hc", "Light High Contrast", "Black text on white, stronger borders."],
-    ["dark", "Dark", "Grey panels rather than pure black."],
-    ["dark-hc", "Dark High Contrast", "White on black with brighter accents."],
-    ["flat", "Flat", "Square corners, thin borders, no shadows."],
-  ];
+  /* The open sync panel, if there is one, so a sync that happens on its own
+     can paint into it and be heard without anything being pressed. */
+  var syncSheet = null;
+
+  function syncLabel(result) {
+    var t = window.I18n ? window.I18n.t : function (s) { return s; };
+    if (result && result.changed && result.name) {
+      return t("Synced with") + " " + result.name + ".";
+    }
+    return t(String((result && result.message) || ""));
+  }
 
   function themePreview() {
     var box = Board.el("div", "theme-preview");
@@ -372,7 +544,9 @@
     var current = String(snap.accent || "#B4622D").toUpperCase();
     var isTwelve = Boolean(snap.clock && snap.clock.is12h);
     var currentLang = String(snap.language || "en");
-    var theme = String(snap.theme || "light");
+    var theme =
+      window.FlipThemes && window.FlipThemes.modeKnown(snap.theme) ? String(snap.theme) : "light";
+    var palette = String(snap.palette || "");
     var motion = String(snap.motion || "normal");
 
     var body = Board.el("div", "settings");
@@ -419,44 +593,125 @@
 
     /* ---- appearance ---- */
 
-    appearancePane.appendChild(Board.el("h3", "", "Theme"));
+    /* The mode and the palette move independently, so a palette keeps
+       whatever base is chosen and the Light/Dark row always says which base
+       the app is painted from. A new palette also brings its own accent hue,
+       which the Accent section can still override afterwards. */
+    function pickTheme(nextMode, nextPalette) {
+      if (!window.FlipThemes) return;
+      if (!window.FlipThemes.modeKnown(nextMode)) nextMode = "light";
+      if (!window.FlipThemes.paletteOf(nextPalette)) nextPalette = "";
+      if (nextMode === theme && nextPalette === palette) return;
+      var paletteChanged = nextPalette !== palette;
+      theme = nextMode;
+      palette = nextPalette;
+      applyTheme(theme, palette);
+      paintThemes();
+      var hue = paletteChanged ? window.FlipThemes.hueFor(palette) : null;
+      if (hue !== null) {
+        accentHue = hue;
+        if (slider) slider.set(hue);
+        markPresets(hue);
+        pendingAccent = null;
+        applyAccent(hue);
+      }
+      invoke("set_theme", { theme: theme })
+        .then(function () {
+          return invoke("set_palette", { palette: palette });
+        })
+        .then(function () {
+          if (hue === null) return invoke("get_snapshot");
+          return invoke("set_accent_hue", { hue: hue });
+        })
+        .then(render)
+        .catch(function (err) {
+          console.error("flip: set_theme failed", err);
+        });
+    }
 
-    var grid = Board.el("div", "theme-grid");
+    appearancePane.appendChild(Board.el("h3", "", "Mode"));
+
+    var modeRow = Board.el("div", "seg theme-modes");
+    modeRow.setAttribute("role", "group");
+    modeRow.setAttribute("aria-label", "Theme mode");
+    var modeButtons = [];
+    (window.FlipThemes ? window.FlipThemes.modes : []).forEach(function (mode) {
+      var button = Board.el("button", "seg-btn", mode[1]);
+      button.type = "button";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", function () {
+        pickTheme(mode[0], palette);
+      });
+      modeRow.appendChild(button);
+      modeButtons.push({ name: mode[0], button: button });
+      if (!mode[2]) return;
+      button.title = mode[2];
+    });
+    appearancePane.appendChild(modeRow);
+    appearancePane.appendChild(
+      Board.el("p", "mode-note", "Every theme below follows this mode.")
+    );
+
+    appearancePane.appendChild(Board.el("h3", "", "Custom themes"));
+
+    var grid = Board.el("div", "theme-grid theme-grid-custom");
     grid.setAttribute("role", "radiogroup");
-    grid.setAttribute("aria-label", "Theme");
+    grid.setAttribute("aria-label", "Custom themes");
     var cards = [];
-    THEME_CHOICES.forEach(function (choice) {
+    var extraCards = [];
+    var expanded = false;
+
+    (window.FlipThemes ? window.FlipThemes.custom : []).forEach(function (choice, index) {
       var card = Board.el("button", "theme-card");
       card.type = "button";
       card.setAttribute("role", "radio");
-      card.setAttribute("data-theme-preview", choice[0]);
-      card.setAttribute("aria-checked", String(choice[0] === theme));
+      card.setAttribute("data-theme-preview", choice.id);
+      card.setAttribute("aria-checked", String(choice.id === palette));
       card.appendChild(themePreview());
       var name = Board.el("span", "theme-name");
       name.appendChild(Board.el("span", "theme-dot"));
-      name.appendChild(Board.el("span", "", choice[1]));
+      name.appendChild(Board.el("span", "", choice.name));
       card.appendChild(name);
-      card.appendChild(Board.el("span", "theme-note", choice[2]));
+      card.appendChild(Board.el("span", "theme-note", choice.note));
       card.addEventListener("click", function () {
-        if (choice[0] === theme) return;
-        theme = choice[0];
-        paintThemes();
-        invoke("set_theme", { theme: choice[0] })
-          .then(render)
-          .catch(function (err) {
-            console.error("flip: set_theme failed", err);
-          });
+        pickTheme(theme, choice.id);
       });
+      /* Two palettes are on show; the rest wait behind View more themes. */
+      if (index > 1) {
+        card.hidden = true;
+        extraCards.push(card);
+      }
       grid.appendChild(card);
-      cards.push({ name: choice[0], card: card });
+      cards.push({ name: choice.id, card: card });
     });
+    appearancePane.appendChild(grid);
+
+    var moreButton = Board.el("button", "btn small theme-more", "View more themes");
+    moreButton.type = "button";
+    moreButton.setAttribute("aria-expanded", "false");
+    moreButton.addEventListener("click", function () {
+      expanded = !expanded;
+      extraCards.forEach(function (card) {
+        card.hidden = !expanded;
+      });
+      moreButton.setAttribute("aria-expanded", String(expanded));
+      moreButton.textContent = expanded ? "Show fewer themes" : "View more themes";
+      /* The new row can land under the footer; keep the button in view. */
+      moreButton.scrollIntoView({ block: "nearest" });
+    });
+    if (extraCards.length) appearancePane.appendChild(moreButton);
 
     function paintThemes() {
+      modeButtons.forEach(function (entry) {
+        var on = entry.name === theme;
+        entry.button.classList.toggle("active", on);
+        entry.button.setAttribute("aria-pressed", String(on));
+      });
       cards.forEach(function (entry) {
-        entry.card.setAttribute("aria-checked", String(entry.name === theme));
+        entry.card.setAttribute("aria-checked", String(entry.name === palette));
       });
     }
-    appearancePane.appendChild(grid);
+    paintThemes();
 
     appearancePane.appendChild(Board.el("h3", "", "Accent"));
 
@@ -733,6 +988,422 @@
     }, 0);
   }
 
+  /* ---------------------------------------------------------------- wi-fi sync */
+
+  /* Pairing is a three-step handshake, in the shape of a phone-linking app:
+     the Wi-Fi rule first, then the six digits, then a short animation while the
+     two devices actually talk. A device address is never shown, only its code. */
+  function openSync() {
+    var t = window.I18n ? window.I18n.t : function (s) { return s; };
+    var closed = false;
+    var timers = [];
+    var running = false;
+    var autoTimer = 0;
+    var lastCode = "";
+    var stage = "verify";
+
+    function wait(ms) {
+      return new Promise(function (resolve) {
+        timers.push(setTimeout(resolve, ms));
+      });
+    }
+
+    function errText(err) {
+      return String(err && err.message ? err.message : err);
+    }
+
+    var body = Board.el("div", "sync-sheet");
+    body.dataset.dir = "fwd";
+
+    var rail = Board.el("div", "sync-rail");
+    var railSegs = [];
+    for (var r = 0; r < 3; r++) {
+      var seg = Board.el("span", "sync-rail-seg");
+      seg.setAttribute("aria-hidden", "true");
+      rail.appendChild(seg);
+      railSegs.push(seg);
+    }
+    body.appendChild(rail);
+
+    var steps = [];
+    function addStep() {
+      var section = Board.el("section", "sync-step");
+      body.appendChild(section);
+      steps.push(section);
+      return section;
+    }
+
+    /* ---- step 1: the network, and the code to read out ---- */
+
+    var stepOne = addStep();
+
+    var art = Board.el("div", "sync-art");
+    art.setAttribute("aria-hidden", "true");
+    art.innerHTML =
+      '<span class="sync-art-ring"></span><span class="sync-art-ring"></span>' +
+      '<span class="sync-art-ring"></span><span class="sync-art-core">' +
+      '<svg viewBox="0 0 24 24"><path d="M3.5 8.6a13 13 0 0 1 17 0"/>' +
+      '<path d="M6.6 12.1a9 9 0 0 1 10.8 0"/><path d="M9.7 15.6a5 5 0 0 1 4.6 0"/>' +
+      '<circle cx="12" cy="19" r="1.3"/></svg></span>';
+    stepOne.appendChild(art);
+    stepOne.appendChild(Board.el("h3", "sync-title", "Connect to the same Wi-Fi"));
+    stepOne.appendChild(
+      Board.el("p", "sub sync-lede", "Both devices need the same Wi-Fi. No internet, no account.")
+    );
+
+    var codeBlock = Board.el("div", "sync-code-block");
+    codeBlock.appendChild(Board.el("span", "sync-code-label", "Your code"));
+    var codeValue = Board.el("strong", "sync-code-value", "———");
+    codeBlock.appendChild(codeValue);
+    codeBlock.appendChild(
+      Board.el("p", "sub", "Type it on your other device, with both apps open.")
+    );
+    stepOne.appendChild(codeBlock);
+
+    var nextButton = Board.el("button", "btn primary sync-next", "I have the other code");
+    nextButton.type = "button";
+    stepOne.appendChild(nextButton);
+
+    /* ---- step 2: the six digits ---- */
+
+    var stepTwo = addStep();
+    stepTwo.appendChild(Board.el("h3", "sync-title", "Enter their code"));
+    stepTwo.appendChild(
+      Board.el("p", "sub sync-lede", "Type the six digits shown on your other device.")
+    );
+
+    var otp = Board.el("div", "sync-otp");
+    otp.setAttribute("role", "group");
+    otp.setAttribute("aria-label", t("Pairing code"));
+    var cells = [];
+    for (var c = 0; c < 6; c++) {
+      var cell = document.createElement("input");
+      cell.type = "text";
+      cell.className = "sync-otp-cell";
+      cell.inputMode = "numeric";
+      cell.maxLength = 1;
+      cell.autocomplete = "one-time-code";
+      cell.spellcheck = false;
+      cells.push(cell);
+      otp.appendChild(cell);
+    }
+    stepTwo.appendChild(otp);
+
+    var line = Board.el("div", "sync-line");
+    line.hidden = true;
+    line.appendChild(Board.el("span", "sync-dot"));
+    var lineText = Board.el("span", "sync-line-text", "");
+    line.appendChild(lineText);
+    stepTwo.appendChild(line);
+
+    var actions = Board.el("div", "sync-actions");
+    var backButton = Board.el("button", "btn small", "Back");
+    backButton.type = "button";
+    var goButton = Board.el("button", "btn primary", "Connect");
+    goButton.type = "button";
+    actions.appendChild(backButton);
+    actions.appendChild(goButton);
+    stepTwo.appendChild(actions);
+
+    /* ---- step 3: verify, then copy ---- */
+
+    var stepThree = addStep();
+    var stageBox = Board.el("div", "sync-stage");
+    stageBox.setAttribute("aria-hidden", "true");
+    var spinner = Board.el("span", "sync-ring");
+    var check = Board.el("div", "sync-check");
+    check.innerHTML =
+      '<svg viewBox="0 0 48 48"><circle class="sync-check-ring" cx="24" cy="24" r="21"/>' +
+      '<path class="sync-check-mark" d="M15 25.2l6.4 6.4L33.6 18.8"/></svg>';
+    var fail = Board.el("div", "sync-fail");
+    fail.innerHTML =
+      '<svg viewBox="0 0 48 48"><circle class="sync-check-ring" cx="24" cy="24" r="21"/>' +
+      '<path class="sync-check-mark" d="M18 18l12 12M30 18L18 30"/></svg>';
+    stageBox.appendChild(spinner);
+    stageBox.appendChild(check);
+    stageBox.appendChild(fail);
+    stepThree.appendChild(stageBox);
+
+    var stageTitle = Board.el("h3", "sync-title", "Verifying code");
+    var stageText = Board.el("p", "sub sync-lede", "Talking to your other device…");
+    stepThree.appendChild(stageTitle);
+    stepThree.appendChild(stageText);
+
+    var progress = Board.el("div", "sync-progress");
+    var progressFill = Board.el("span", "sync-progress-fill");
+    progress.appendChild(progressFill);
+    stepThree.appendChild(progress);
+
+    var retryButton = Board.el("button", "btn small sync-retry", "Try again");
+    retryButton.type = "button";
+    stepThree.appendChild(retryButton);
+
+    var autoRow = Board.el("div", "setting-row sync-auto");
+    var autoText = Board.el("div", "setting-text");
+    autoText.appendChild(Board.el("div", "setting-title", "Sync automatically"));
+    autoText.appendChild(
+      Board.el("div", "sub", "Checks every few seconds while both apps are open.")
+    );
+    autoRow.appendChild(autoText);
+    var autoSwitch = switchControl("Sync automatically", true, function (on) {
+      if (!lastCode) return;
+      invoke("set_pair_code", { code: lastCode, auto: on })
+        .then(paint)
+        .catch(function (err) {
+          console.error("flip: set_pair_code failed", err);
+        });
+    });
+    autoRow.appendChild(autoSwitch);
+    stepThree.appendChild(autoRow);
+
+    var current = 1;
+
+    function goStep(n, silent) {
+      if (closed) return;
+      body.dataset.dir = n < current ? "back" : "fwd";
+      current = n;
+      steps.forEach(function (section, index) {
+        section.classList.toggle("is-active", index + 1 === n);
+      });
+      railSegs.forEach(function (seg, index) {
+        seg.classList.toggle("is-on", index + 1 <= n);
+        seg.classList.toggle("is-now", index + 1 === n);
+      });
+      if (!silent) playSound("syncTick");
+      if (n === 2) {
+        timers.push(
+          setTimeout(function () {
+            if (closed) return;
+            var target = cells[5];
+            for (var i = 0; i < cells.length; i++) {
+              if (!cells[i].value) {
+                target = cells[i];
+                break;
+              }
+            }
+            target.focus({ preventScroll: true });
+          }, 90)
+        );
+      }
+    }
+
+    function setStage(name, title, text) {
+      stage = name;
+      stepThree.classList.remove("is-verify", "is-connected", "is-sync", "is-done", "is-error");
+      stepThree.classList.add("is-" + name);
+      stageTitle.textContent = title;
+      stageText.textContent = text;
+    }
+
+    function setLine(kind, message) {
+      line.classList.remove("busy", "ok", "error");
+      if (kind) line.classList.add(kind);
+      lineText.textContent = message || "";
+      line.hidden = !message;
+    }
+
+    function cellValue() {
+      var digits = "";
+      for (var i = 0; i < cells.length; i++) digits += cells[i].value.replace(/\D/g, "");
+      return digits;
+    }
+
+    function fillOtp(code) {
+      var digits = String(code || "").replace(/\D/g, "").slice(0, 6);
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].value = digits.charAt(i) || "";
+        cells[i].classList.toggle("is-filled", Boolean(cells[i].value));
+      }
+    }
+
+    function paint(info) {
+      if (!info) return info;
+      var digits = String(info.code || "");
+      codeValue.textContent = digits.replace(/^(\d{3})(\d{3})$/, "$1 $2") || "———";
+      if (info.peerCode) lastCode = String(info.peerCode);
+      if (typeof info.auto === "boolean") {
+        autoSwitch.setAttribute("aria-checked", String(info.auto));
+      }
+      return info;
+    }
+
+    function finish(result) {
+      var changed = Boolean(result && result.changed);
+      progressFill.style.width = "100%";
+      setStage("done", t("All set"), syncLabel(result));
+      playSound(changed ? "syncDone" : "syncLink");
+      if (changed) {
+        window.Board.load().catch(function () {});
+      }
+    }
+
+    function start() {
+      var code = cellValue();
+      if (code.length !== 6) {
+        setLine("error", t("Type all six digits."));
+        playSound("syncFail");
+        return;
+      }
+      if (running || closed) return;
+      running = true;
+      clearTimeout(autoTimer);
+      lastCode = code;
+      setLine("", "");
+      goButton.disabled = true;
+      goStep(3);
+      setStage("verify", t("Verifying code"), t("Talking to your other device…"));
+      progressFill.style.width = "0%";
+      playSound("syncStart");
+
+      var result = null;
+      var work = invoke("set_pair_code", { code: code, auto: null }).then(function (info) {
+        paint(info);
+        return invoke("sync_now");
+      });
+
+      /* The two devices really are quick; the pauses are what makes the steps
+         readable instead of a flicker. */
+      Promise.all([work, wait(900)])
+        .then(function (out) {
+          if (closed) return;
+          result = out[0] || {};
+          setStage("connected", t("Connected"), result.name || t("Your other device"));
+          playSound("syncLink");
+          return wait(620).then(function () {
+            if (closed) return;
+            setStage("sync", t("Syncing"), t("Moving your timetable and tasks…"));
+            progressFill.style.width = "6%";
+            requestAnimationFrame(function () {
+              progressFill.style.width = "88%";
+            });
+            return wait(820);
+          });
+        })
+        .then(function () {
+          if (closed) return;
+          finish(result || {});
+        })
+        .catch(function (err) {
+          if (closed) return;
+          setStage("error", t("Couldn't connect"), t(errText(err)));
+          progressFill.style.width = "0%";
+          playSound("syncFail");
+        })
+        .then(function () {
+          running = false;
+          goButton.disabled = false;
+        });
+    }
+
+    /* ---- wiring ---- */
+
+    nextButton.addEventListener("click", function () {
+      goStep(2);
+    });
+    backButton.addEventListener("click", function () {
+      goStep(1);
+    });
+    goButton.addEventListener("click", start);
+    retryButton.addEventListener("click", function () {
+      setLine("", "");
+      progressFill.style.width = "0%";
+      goStep(2);
+    });
+
+    cells.forEach(function (cell, index) {
+      cell.addEventListener("input", function () {
+        var digits = cell.value.replace(/\D/g, "");
+        cell.value = digits.slice(-1);
+        cell.classList.toggle("is-filled", Boolean(cell.value));
+        if (!cell.value) return;
+        if (index < 5) cells[index + 1].focus();
+        if (cellValue().length === 6) {
+          clearTimeout(autoTimer);
+          autoTimer = setTimeout(start, 260);
+        }
+      });
+      cell.addEventListener("keydown", function (event) {
+        /* Correcting a digit must cancel the auto-start the last one queued. */
+        if (event.key === "Backspace") clearTimeout(autoTimer);
+        if (event.key === "Backspace" && !cell.value && index > 0) {
+          event.preventDefault();
+          cells[index - 1].value = "";
+          cells[index - 1].classList.remove("is-filled");
+          cells[index - 1].focus();
+        } else if (event.key === "ArrowLeft" && index > 0) {
+          event.preventDefault();
+          cells[index - 1].focus();
+        } else if (event.key === "ArrowRight" && index < 5) {
+          event.preventDefault();
+          cells[index + 1].focus();
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          start();
+        }
+      });
+      cell.addEventListener("focus", function () {
+        cell.select();
+      });
+    });
+
+    otp.addEventListener("paste", function (event) {
+      var clip = event.clipboardData || window.clipboardData;
+      var digits = String((clip && clip.getData("text")) || "")
+        .replace(/\D/g, "")
+        .slice(0, 6);
+      if (!digits) return;
+      event.preventDefault();
+      fillOtp(digits);
+      if (digits.length === 6) start();
+    });
+
+    syncSheet = {
+      show: function (result) {
+        /* A background sync only speaks up when it actually moved something. */
+        if (!result || !result.changed) return;
+        window.Board.load().catch(function () {});
+        if (stage === "done") {
+          stageText.textContent = syncLabel(result);
+          playSound("syncDone");
+        }
+      },
+    };
+
+    invoke("sync_info")
+      .then(function (info) {
+        if (closed) return;
+        paint(info);
+        if (info && info.peerCode) {
+          lastCode = String(info.peerCode);
+          fillOtp(lastCode);
+        }
+      })
+      .catch(function (err) {
+        console.error("flip: sync_info failed", err);
+      });
+
+    goStep(1, true);
+
+    Board.modal({
+      title: "Wi-Fi sync",
+      body: body,
+      saveLabel: "Done",
+      hideCancel: true,
+      className: "modal-sync",
+      onSave: function () {},
+      onClose: function () {
+        closed = true;
+        timers.forEach(clearTimeout);
+        timers = [];
+        clearTimeout(autoTimer);
+        syncSheet = null;
+      },
+    });
+  }
+
+  var syncButton = document.getElementById("sync-btn");
+  if (syncButton) syncButton.addEventListener("click", openSync);
+
   if (settingsButton) {
     settingsButton.addEventListener("click", openSettings);
   }
@@ -768,7 +1439,7 @@
 
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     lastSnapshot = snap;
-    applyTheme(snap.theme);
+    applyTheme(snap.theme, snap.palette);
     /* A preview inside the settings dialog wins until it is committed. */
     if (pendingAccent === null) applyAccent(snap.accentHue);
 
@@ -800,6 +1471,7 @@
     timerGroup.classList.toggle("l2", !showHours);
     timerGroup.classList.toggle("paused", timer.state === "paused");
     timerGroup.classList.toggle("typing", Boolean(timer.typing));
+    paintFocusChip(snap);
 
     for (var i = 0; i < snapshotListeners.length; i++) {
       try {
@@ -820,9 +1492,18 @@
 
   /* -------------------------------------------------------------------- tabs */
 
+  function rememberView(name) {
+    try {
+      window.localStorage.setItem("flip.view", name);
+    } catch (_) {
+      /* a refused store only costs the memory */
+    }
+  }
+
   function setView(name, fromHistory) {
     if (name === currentView) return;
     currentView = name;
+    rememberView(name);
     /* One entry per section, so Android's back button and the browser's back
        both walk through the app instead of leaving it. */
     if (!fromHistory) {
@@ -833,6 +1514,7 @@
       }
     }
     document.body.dataset.view = name;
+    if (name === "timetable" || name === "tasks") warmSections();
     if (window.Dashboard) {
       if (name === "dashboard") window.Dashboard.show();
       else window.Dashboard.hide();
@@ -849,7 +1531,7 @@
       tab.setAttribute("aria-selected", String(active));
     });
 
-    playSound("tab");
+    if (!booting) playSound("tab");
     var fresh = document.querySelector('.view[data-view="' + name + '"]');
     if (fresh) {
       fresh.classList.remove("stagger");
@@ -973,6 +1655,24 @@
     },
     uncheck: function () {
       tone(392, 0, 0.1, 0.05, "sine");
+    },
+    syncStart: function () {
+      tone(560, 0, 0.06, 0.035, "sine");
+    },
+    syncDone: function () {
+      tone(660, 0, 0.08, 0.05, "sine");
+      tone(990, 0.07, 0.15, 0.03, "sine");
+    },
+    syncFail: function () {
+      tone(320, 0, 0.11, 0.035, "sine");
+      tone(240, 0.09, 0.16, 0.028, "sine");
+    },
+    syncTick: function () {
+      tone(600, 0, 0.045, 0.022, "sine");
+    },
+    syncLink: function () {
+      tone(520, 0, 0.07, 0.04, "sine");
+      tone(780, 0.06, 0.13, 0.03, "sine");
     },
     chime: chime
   };
@@ -1103,9 +1803,17 @@
   }
 
   window.addEventListener("keydown", function (e) {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (window.Board && window.Board.isModalOpen()) return;
     if (isField(e.target)) return;
+
+    /* Ctrl/Cmd + 1-4 jumps between the sections, like browser tabs. */
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-4]$/.test(e.key)) {
+      e.preventDefault();
+      if (!e.repeat) setView(VIEW_ORDER[Number(e.key) - 1]);
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     ensureAudio();
 
@@ -1131,6 +1839,21 @@
       e.preventDefault();
       if (!e.repeat) send("toggle_fullscreen");
       return;
+    }
+
+    /* N is the short way to the New task button on the two task screens. */
+    if (e.key.toLowerCase() === "n") {
+      var newTask =
+        currentView === "tasks"
+          ? document.getElementById("new-task")
+          : currentView === "dashboard"
+            ? document.getElementById("dash-new-task")
+            : null;
+      if (newTask) {
+        e.preventDefault();
+        if (!e.repeat) newTask.click();
+        return;
+      }
     }
 
     if (currentView !== "timer") return;
@@ -1212,6 +1935,9 @@
           console.error("flip: board reload failed", err);
         });
       });
+      await listen("sync-status", function (event) {
+        if (syncSheet) syncSheet.show(event.payload);
+      });
       await listen("focus-finished", function (event) {
         var secs = Number(event && event.payload ? event.payload : 0);
         window.Board.toast(
@@ -1232,6 +1958,7 @@
       return lastSnapshot;
     },
     apply: render,
+    stopFocus: stopFocus,
     go: function (view) {
       setView(view);
     },
@@ -1252,11 +1979,40 @@
   /* The board sections register their renderers first, then load their data. */
   window.Dashboard.init();
   window.Dashboard.show();
-  window.Timetable.init();
-  window.Tasks.init();
+
+  /* Flip reopens on the section it was closed on. */
+  var savedView = null;
+  try {
+    savedView = window.localStorage.getItem("flip.view");
+  } catch (_) {
+    savedView = null;
+  }
+  if (savedView && savedView !== currentView && VIEW_ORDER.indexOf(savedView) >= 0) {
+    setView(savedView, true);
+  }
+  booting = false;
+
+  /* The timetable and the task board are the two largest builds in the app and
+     neither is on screen at launch, so they are built after the first frame.
+     Board.on hands them whatever data has already arrived. */
+  var sectionsReady = false;
+
+  function warmSections() {
+    if (sectionsReady) return;
+    sectionsReady = true;
+    window.Timetable.init();
+    window.Tasks.init();
+  }
+
   window.Board.load().catch(function (err) {
     console.error("flip: get_board failed", err);
   });
 
   start();
+
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(warmSections, { timeout: 600 });
+  } else {
+    setTimeout(warmSections, 16);
+  }
 })();

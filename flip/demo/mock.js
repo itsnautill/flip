@@ -212,6 +212,7 @@
     clock: { h: "07", m: "00", s: "00", pm: false, is12h: false },
     timer: { state: "idle", h: "00", m: "00", s: "00", secs: 0, showHours: false, typing: false, remaining: 0 },
     theme: "light",
+    palette: "",
     language: language,
     sound: false,
     onboarded: true,
@@ -229,6 +230,8 @@
   };
 
   var backups = [];
+  var syncPeerCode = "";
+  var syncAuto = true;
 
   /* -------------------------------------------------------------- view shapes */
 
@@ -768,6 +771,9 @@
       case "set_theme":
         snapshot.theme = args.theme;
         return ok(snapshot);
+      case "set_palette":
+        snapshot.palette = args.palette || "";
+        return ok(snapshot);
       case "set_accent_hue":
         snapshot.accentHue = Number(args.hue) || 0;
         return ok(snapshot);
@@ -819,6 +825,28 @@
         snapshot.timer.remaining = 0;
         paintTimer();
         return ok(snapshot);
+      case "sync_info":
+        return Promise.resolve({
+          name: "Demo PC",
+          code: "482913",
+          peerCode: syncPeerCode,
+          auto: syncAuto,
+        });
+      case "set_pair_code":
+        syncPeerCode = String(args.code || "").replace(/\D/g, "");
+        if (args.auto !== null && args.auto !== undefined) syncAuto = Boolean(args.auto);
+        return Promise.resolve({
+          name: "Demo PC",
+          code: "482913",
+          peerCode: syncPeerCode,
+          auto: syncAuto,
+        });
+      case "sync_now":
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve({ changed: false, message: "Already up to date.", name: "Demo PC" });
+          }, 350);
+        });
       case "app_version":
         return Promise.resolve("1.0.2-demo");
       case "save_template":

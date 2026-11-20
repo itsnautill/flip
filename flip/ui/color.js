@@ -195,9 +195,16 @@
     }
 
     var panel = dark ? "#221F1A" : "#FFFDF7";
+    var soft = oklch(dark ? 0.2 : 0.94, dark ? 0.04 : 0.04, h);
     var textWeight = light;
     var text = oklch(textWeight, chroma, h);
-    for (var tries = 0; tries < 16 && contrast(text, panel) < 4.6; tries++) {
+    /* Accent-coloured labels also sit on the accent tint (the today column,
+       active chips), which is darker than the panel, so both have to pass. */
+    for (
+      var tries = 0;
+      tries < 16 && (contrast(text, panel) < 4.6 || contrast(text, soft) < 4.5);
+      tries++
+    ) {
       textWeight = clamp(textWeight + (dark ? 0.03 : -0.03), 0.16, 0.94);
       text = oklch(textWeight, chroma, h);
     }
@@ -208,7 +215,7 @@
       ink: ink,
       hover: oklch(clamp(light + (dark ? 0.05 : -0.04), 0.2, 0.92), chroma, h),
       active: oklch(clamp(light + (dark ? -0.05 : 0.04), 0.18, 0.9), chroma, h),
-      soft: oklch(dark ? 0.2 : 0.94, dark ? 0.04 : 0.04, h),
+      soft: soft,
       line: oklch(dark ? 0.55 : 0.72, 0.1, h),
       focus: oklch(dark ? 0.78 : 0.48, 0.14, h),
       text: text,

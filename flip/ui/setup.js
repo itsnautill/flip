@@ -14,12 +14,11 @@
 
   var ACCENTS = ["#B4622D", "#B25C6B", "#4F7A5B", "#3F6E8C", "#6B5CA5", "#8A6A3B"];
 
+  /* The wizard offers the three modes; the custom palettes live in Settings. */
   var THEMES = [
+    ["system", "System"],
     ["light", "Light"],
-    ["light-hc", "Light High Contrast"],
     ["dark", "Dark"],
-    ["dark-hc", "Dark High Contrast"],
-    ["flat", "Flat"],
   ];
 
   var STEP_KEY = "flip-setup-step";

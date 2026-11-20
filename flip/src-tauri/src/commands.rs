@@ -120,11 +120,18 @@ pub fn timer_set(core: State<'_, SharedCore>, secs: u32) -> Result<Snapshot, Str
 }
 
 #[tauri::command]
-pub fn timer_reset(core: State<'_, SharedCore>) -> Snapshot {
+pub fn timer_reset(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot {
     let mut c = lock(core.inner());
     let now = Instant::now();
     if c.mode == Mode::Timer {
+        /* Resetting a focus session stops it, so it is credited like any other
+           early finish rather than vanishing. */
+        let saved = credit_focus(&mut c, now);
         c.timer.reset();
+        let snapshot = c.snapshot(now);
+        drop(c);
+        save_credited(&app, saved);
+        return snapshot;
     }
     c.snapshot(now)
 }
@@ -297,7 +304,15 @@ where
 
 #[tauri::command]
 pub fn set_theme(core: State<'_, SharedCore>, theme: String) -> Snapshot {
+    let theme = settings::normalise_theme(&theme);
     change(&core, |s| s.theme = theme)
+}
+
+/// Paints a palette over whichever base is chosen; empty removes it.
+#[tauri::command]
+pub fn set_palette(core: State<'_, SharedCore>, palette: String) -> Snapshot {
+    let palette = settings::normalise_palette(&palette);
+    change(&core, |s| s.palette = palette)
 }
 
 #[tauri::command]
@@ -381,6 +396,29 @@ pub fn exit_fullscreen(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot 
     #[cfg(not(desktop))]
     let _ = app;
     shot(core.inner())
+}
+
+/// Desktop only: keeps the window above the others while you study. A phone has
+/// no windows to stack, so there it answers `false` and the button stays hidden.
+#[tauri::command]
+pub fn set_on_top(app: AppHandle, core: State<'_, SharedCore>, on: bool) -> bool {
+    #[cfg(desktop)]
+    {
+        let settings_path = {
+            let c = lock(core.inner());
+            c.settings_path.clone()
+        };
+        let dir = settings_path
+            .parent()
+            .map(|dir| dir.to_path_buf())
+            .unwrap_or_else(|| std::env::temp_dir());
+        return crate::window_state::set_on_top(&app, &dir, on);
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = (app, core, on);
+        false
+    }
 }
 
 /* ----------------------------------------------------------- phone orientation */
@@ -497,6 +535,7 @@ pub fn board_action(core: State<'_, SharedCore>, action: BoardAction) -> Result<
     let view_only = matches!(action, BoardAction::SetLocked { .. });
     c.board.apply(action, &today_text)?;
     if !view_only {
+        c.touch_board();
         c.remember(before);
     }
     let path = c.board_path.clone();
@@ -519,6 +558,7 @@ pub fn undo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
     if c.undo().is_none() {
         return Err("Nothing to undo.".into());
     }
+    c.touch_board();
     let path = c.board_path.clone();
     let saved = c.board.clone();
     let mut view = c.board.view(today, minutes);
@@ -537,6 +577,7 @@ pub fn redo_board(core: State<'_, SharedCore>) -> Result<BoardView, String> {
     if c.redo().is_none() {
         return Err("Nothing to redo.".into());
     }
+    c.touch_board();
     let path = c.board_path.clone();
     let saved = c.board.clone();
     let mut view = c.board.view(today, minutes);
@@ -584,14 +625,47 @@ pub fn start_focus(
     Ok(snapshot)
 }
 
-/// Leaving a focus session early keeps it out of the study history.
+/// Stops the running countdown, logging the whole minutes already spent so a
+/// session stopped at 12:30 still counts as 12 minutes. Returns the board to
+/// save when something was logged.
+fn credit_focus(c: &mut crate::state::Core, now: Instant) -> Option<(PathBuf, crate::board::Board)> {
+    let target = c.focus_target.take()?;
+    let minutes = c.timer.spent_secs(now) / 60;
+    if minutes == 0 {
+        return None;
+    }
+    let today = chrono::Local::now()
+        .date_naive()
+        .format("%Y-%m-%d")
+        .to_string();
+    c.board
+        .add_session(target.task_id, target.subject_id, minutes * 60, &today);
+    c.touch_board();
+    Some((c.board_path.clone(), c.board.clone()))
+}
+
+fn save_credited(app: &AppHandle, saved: Option<(PathBuf, crate::board::Board)>) {
+    let Some((path, board)) = saved else {
+        return;
+    };
+    board::save(&path, &board);
+    if let Err(e) = app.emit("board-changed", ()) {
+        eprintln!("flip: could not emit board-changed: {e}");
+    }
+}
+
+/// Stopping a focus session early credits the minutes already spent.
 #[tauri::command]
-pub fn cancel_focus(core: State<'_, SharedCore>) -> Snapshot {
+pub fn cancel_focus(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot {
     let mut c = lock(core.inner());
     let now = Instant::now();
-    c.focus_target = None;
+    let saved = credit_focus(&mut c, now);
     c.timer.reset();
-    c.snapshot(now)
+    let snapshot = c.snapshot(now);
+    drop(c);
+
+    save_credited(&app, saved);
+    snapshot
 }
 
 #[tauri::command]
@@ -702,6 +776,7 @@ pub fn restore_backup(
         let mut c = lock(core.inner());
         c.settings = restored.settings.clone();
         c.board = restored.board.clone();
+        c.touch_board();
         c.timer = Timer::new(restored.settings.timer_preset_secs);
         c.focus_target = None;
         c.snapshot(Instant::now())
@@ -826,6 +901,40 @@ pub fn open_url(url: String) -> Result<(), String> {
 #[tauri::command]
 pub fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+/* ---------------------------------------------------------------- wi-fi sync */
+
+/// The address, pairing code and paired device the settings pane shows.
+#[tauri::command]
+pub fn sync_info(core: State<'_, SharedCore>) -> crate::sync::SyncInfo {
+    crate::sync::info(core.inner())
+}
+
+/// Remembers the other device's code. An empty code turns syncing off, and
+/// `auto` says whether the background check should run.
+#[tauri::command]
+pub fn set_pair_code(
+    core: State<'_, SharedCore>,
+    code: String,
+    auto: Option<bool>,
+) -> crate::sync::SyncInfo {
+    change(&core, |s| {
+        s.peer_code = code.trim().to_string();
+        if let Some(auto) = auto {
+            s.sync_auto = auto;
+        }
+    });
+    crate::sync::info(core.inner())
+}
+
+/// One sync, asked for by hand. The background watcher does the rest.
+#[tauri::command]
+pub fn sync_now(
+    app: AppHandle,
+    core: State<'_, SharedCore>,
+) -> Result<crate::sync::SyncResult, String> {
+    crate::sync::sync_once(&app, core.inner())
 }
 
 #[tauri::command]

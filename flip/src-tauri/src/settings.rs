@@ -17,9 +17,12 @@ pub const SETTINGS_VERSION: u32 = 3;
 /// Dashboard widgets, in the order a fresh install shows them.
 pub const DASH_WIDGETS: [&str; 6] = ["next", "today", "due", "tasks", "focus", "stats"];
 
-/// The looks the app ships with. `light` and `dark` are the defaults; the
-/// high-contrast pair and `flat` are for people who want less decoration.
-pub const THEMES: [&str; 5] = ["light", "light-hc", "dark", "dark-hc", "flat"];
+/// The bases the app is painted from. A palette is laid over whichever of
+/// these is chosen, so every theme works in light and in dark.
+pub const THEMES: [&str; 3] = ["system", "light", "dark"];
+
+/// The palettes that can be painted over a base.
+pub const PALETTES: [&str; 5] = ["blossom", "paper", "mint", "slate", "midnight"];
 
 /// "snappy" removes animation entirely for people who find it distracting.
 pub const MOTIONS: [&str; 4] = ["extra", "normal", "fast", "snappy"];
@@ -85,8 +88,11 @@ pub struct Settings {
     pub version: u32,
     pub use_12h: bool,
     pub timer_preset_secs: u32,
-    /// One of `THEMES`; "light" unless the user picked another.
+    /// One of `THEMES`: the light or dark base, or "system" to follow the
+    /// computer. "light" unless the user picked another.
     pub theme: String,
+    /// One of `PALETTES`, or empty for no palette. Painted over `theme`.
+    pub palette: String,
     /// "en" (default) or "vi".
     pub language: String,
     /// Play the small interface sounds.
@@ -119,6 +125,16 @@ pub struct Settings {
     /// Length of a focus session, in seconds.
     pub focus_secs: u32,
     pub dashboard: Dashboard,
+    /// This install's own id, stamped on every board change so a sync can tell
+    /// which copy is the newer one.
+    pub device_id: String,
+    /// The six digits another device types to sync with this one.
+    pub sync_code: String,
+    /// The six digits this device types to reach the other one. The address is
+    /// never stored or shown: it is found from the code on the local network.
+    pub peer_code: String,
+    /// Keeps both boards level without pressing anything.
+    pub sync_auto: bool,
 }
 
 impl Default for Settings {
@@ -128,6 +144,7 @@ impl Default for Settings {
             use_12h: false,
             timer_preset_secs: 300,
             theme: "light".into(),
+            palette: String::new(),
             language: "en".into(),
             sound: true,
             onboarded: false,
@@ -142,20 +159,44 @@ impl Default for Settings {
             accent: String::new(),
             focus_secs: DEFAULT_FOCUS_SECS,
             dashboard: Dashboard::default(),
+            device_id: String::new(),
+            sync_code: String::new(),
+            peer_code: String::new(),
+            sync_auto: true,
         }
     }
 }
 
-/// Older builds stored "beige" and "dark"; both still load.
+/// Older builds stored "beige", the high-contrast pair and "flat"; those land
+/// on the two bases. "system" follows the computer.
 pub fn normalise_theme(value: &str) -> String {
     match value.trim() {
+        "system" => "system",
         "dark" => "dark",
-        "light-hc" => "light-hc",
-        "dark-hc" => "dark-hc",
-        "flat" => "flat",
+        "dark-hc" => "dark",
         _ => "light",
     }
     .to_string()
+}
+
+/// A palette name, or empty for none. Anything else means none.
+pub fn normalise_palette(value: &str) -> String {
+    let trimmed = value.trim();
+    if PALETTES.contains(&trimmed) {
+        trimmed.to_string()
+    } else {
+        String::new()
+    }
+}
+
+/// The base a palette used to be painted on, before every palette could sit on
+/// either base. Only needed to read an older settings file.
+fn palette_base(value: &str) -> Option<&'static str> {
+    match value.trim() {
+        "blossom" | "paper" | "mint" | "slate" => Some("light"),
+        "midnight" => Some("dark"),
+        _ => None,
+    }
 }
 
 pub fn normalise_motion(value: &str) -> String {
@@ -175,6 +216,39 @@ pub fn normalise_accent_hue(value: f64) -> f64 {
     } else {
         DEFAULT_ACCENT_HUE
     }
+}
+
+/// A six-digit code another device has to type. Made the same way as the
+/// install id: two seeded hashers over the clock and the process id, so no
+/// random-number crate is needed.
+fn new_sync_code() -> String {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let mut hasher = RandomState::new().build_hasher();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    hasher.write_u128(nanos);
+    hasher.write_u32(std::process::id());
+    format!("{:06}", hasher.finish() % 1_000_000)
+}
+
+fn is_sync_code(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit())
+}
+
+/// A pairing code is digits only; anything else is simply dropped.
+pub fn normalise_pair_code(value: &str) -> String {
+    value
+        .trim()
+        .chars()
+        .filter(char::is_ascii_digit)
+        .take(8)
+        .collect()
 }
 
 /// A random id for this install, made without pulling in a random-number crate.
@@ -218,7 +292,14 @@ pub fn normalise_install_id(value: &str) -> String {
 /// Every value a stored or restored settings object can get wrong, repaired in
 /// one place so loading, restoring and importing all agree.
 pub fn normalise(mut settings: Settings) -> Settings {
+    /* Files from before 1.4 kept the palette in `theme`. Split it apart and
+    keep the base that palette used to be painted on. */
+    if let Some(base) = palette_base(&settings.theme) {
+        settings.palette = settings.theme.clone();
+        settings.theme = base.to_string();
+    }
     settings.theme = normalise_theme(&settings.theme);
+    settings.palette = normalise_palette(&settings.palette);
     settings.motion = normalise_motion(&settings.motion);
     settings.zoom = settings.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
     if settings.language != "vi" {
@@ -233,6 +314,18 @@ pub fn normalise(mut settings: Settings) -> Settings {
     settings.accent_hue = Some(normalise_accent_hue(hue));
     settings.accent.clear();
     settings.install_id = normalise_install_id(&settings.install_id);
+    /* Every copy of Flip needs an identity and a pairing code before it can
+    sync, so both are made on first use and then kept. */
+    settings.device_id = normalise_install_id(&settings.device_id);
+    if settings.device_id.is_empty() {
+        settings.device_id = new_install_id();
+    }
+    settings.sync_code = if is_sync_code(&settings.sync_code) {
+        settings.sync_code.trim().to_string()
+    } else {
+        new_sync_code()
+    };
+    settings.peer_code = normalise_pair_code(&settings.peer_code);
     if settings.timer_preset_secs > crate::timer::MAX_SECS {
         settings.timer_preset_secs = crate::timer::MAX_SECS;
     }
@@ -245,7 +338,16 @@ pub fn normalise(mut settings: Settings) -> Settings {
 pub fn load(path: &Path) -> Settings {
     match std::fs::read_to_string(path) {
         Ok(raw) => match serde_json::from_str::<Settings>(&raw) {
-            Ok(settings) => normalise(settings),
+            Ok(settings) => {
+                let settings = normalise(settings);
+                /* A file from before Wi-Fi sync has no device id or pairing
+                code. Write them back once, so the code another device was
+                told keeps working after a restart. */
+                if !raw.contains("\"syncCode\"") || !raw.contains("\"deviceId\"") {
+                    save(path, &settings);
+                }
+                settings
+            }
             Err(e) => {
                 eprintln!("flip: ignoring unreadable settings: {e}");
                 Settings::default()
@@ -320,6 +422,31 @@ mod tests {
     }
 
     #[test]
+    fn a_fresh_settings_file_gets_a_code_and_a_device_id() {
+        let settings = normalise(Settings::default());
+        assert_eq!(settings.sync_code.len(), 6);
+        assert!(settings.sync_code.chars().all(|c| c.is_ascii_digit()));
+        assert!(!settings.device_id.is_empty());
+        assert!(settings.peer_code.is_empty());
+        assert!(settings.sync_auto);
+
+        /* A code the user already has is never replaced. */
+        let kept = normalise(Settings {
+            sync_code: "123456".into(),
+            device_id: settings.device_id.clone(),
+            ..Settings::default()
+        });
+        assert_eq!(kept.sync_code, "123456");
+    }
+
+    #[test]
+    fn a_typed_code_keeps_only_its_digits() {
+        assert_eq!(normalise_pair_code(" 48-29 13 "), "482913");
+        assert_eq!(normalise_pair_code("abc"), "");
+        assert_eq!(normalise_pair_code("1234567890"), "12345678");
+    }
+
+    #[test]
     fn dashboard_keeps_known_widgets_and_appends_new_ones() {
         let mut dash = Dashboard {
             order: vec!["tasks".into(), "tasks".into(), "nope".into()],
@@ -336,13 +463,37 @@ mod tests {
     #[test]
     fn themes_and_motions_are_known_values_only() {
         assert_eq!(normalise_theme("beige"), "light");
-        assert_eq!(normalise_theme("dark-hc"), "dark-hc");
+        assert_eq!(normalise_theme("dark-hc"), "dark");
+        assert_eq!(normalise_theme("system"), "system");
+        assert_eq!(normalise_theme("blossom"), "light");
         assert_eq!(normalise_theme("neon"), "light");
+        assert_eq!(normalise_palette("blossom"), "blossom");
+        assert_eq!(normalise_palette("neon"), "");
+        assert_eq!(normalise_palette("  mint "), "mint");
         assert_eq!(normalise_motion("snappy"), "snappy");
         assert_eq!(normalise_motion("wobble"), "normal");
         assert_eq!(normalise_zoom(105), 110);
         assert_eq!(normalise_zoom(10), 80);
         assert_eq!(normalise_zoom(400), 160);
+    }
+
+    /// A palette saved as the theme by an older build becomes a palette on the
+    /// base it used to paint, so the look does not change under the user.
+    #[test]
+    fn a_saved_palette_becomes_a_palette_on_its_base() {
+        let midnight = normalise(Settings {
+            theme: "midnight".into(),
+            ..Settings::default()
+        });
+        assert_eq!(midnight.theme, "dark");
+        assert_eq!(midnight.palette, "midnight");
+
+        let blossom = normalise(Settings {
+            theme: "blossom".into(),
+            ..Settings::default()
+        });
+        assert_eq!(blossom.theme, "light");
+        assert_eq!(blossom.palette, "blossom");
     }
 
     #[test]

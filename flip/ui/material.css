@@ -1,0 +1,1385 @@
+/* Material 3 Expressive skin.
+
+   Loaded after polish.css, so this sheet decides the look. Every colour role is
+   derived from the app's own theme tokens (--bg / --panel / --accent), so all
+   thirteen themes and every accent hue keep driving the skin.
+
+   Shape: M3 Expressive leans on large, soft corners. Radii are generous, and
+   `corner-shape: squircle` turns them into true superellipse corners wherever
+   the engine understands it (Chrome 139+); older engines, including the Android
+   WebView 83 build, simply draw the same corners as ordinary round ones.
+
+   Rules are prefixed with html[data-material="on"] so they outrank the older
+   passes, and properties those passes marked !important are marked here too. */
+
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+  /* M3 Expressive shape scale. One variable still reshapes every control that
+     the older passes round through --r-control: pills for actions. */
+  --r-control: 999px;
+  --radius: 28px;
+  --radius-sm: 18px;
+
+  --shape-xs: 14px;
+  --shape-sm: 20px;
+  --shape-md: 26px;
+  --shape-lg: 30px;
+  --shape-xl: 34px;
+
+  /* Colour roles, from the active theme's palette. */
+  --md-primary: var(--accent);
+  --md-on-primary: var(--accent-ink);
+  --md-primary-container: var(--accent-soft);
+  --md-on-primary-container: var(--accent);
+  --md-secondary-container: var(--accent-soft);
+  --md-on-secondary-container: var(--accent);
+  --md-surface: var(--bg);
+  --md-surface-container-lowest: var(--panel);
+  --md-surface-container-low: var(--panel-2);
+  --md-surface-container: var(--panel-2);
+  --md-surface-container-high: var(--panel-3);
+  --md-surface-container-highest: var(--panel-3);
+  --md-on-surface: var(--ink);
+  --md-on-surface-variant: var(--ink-soft);
+  --md-outline: var(--line-2);
+  --md-outline-variant: var(--line);
+  --md-error: var(--danger);
+  --md-error-container: var(--danger-soft);
+  --md-on-error-container: var(--danger);
+  --md-inverse-surface: var(--ink);
+  --md-inverse-on-surface: var(--panel);
+
+  /* Elevation, in the M3 key-shadow + ambient-shadow pairs. Expressive surfaces
+     are mostly flat, so only floating things (FAB, dock, dialog) lift. */
+  --md-elev-1: 0 1px 2px rgba(0, 0, 0, .10), 0 1px 3px 1px rgba(0, 0, 0, .08);
+  --md-elev-2: 0 1px 2px rgba(0, 0, 0, .12), 0 2px 6px 2px rgba(0, 0, 0, .10);
+  --md-elev-3: 0 4px 8px 3px rgba(0, 0, 0, .10), 0 1px 3px rgba(0, 0, 0, .14);
+
+  /* M3 motion. */
+  --md-ease: cubic-bezier(.2, 0, 0, 1);
+  --md-ease-out: cubic-bezier(.05, .7, .1, 1);
+  --md-ease-spring: cubic-bezier(.34, 1.36, .44, 1);
+  --md-dur-short: 150ms;
+  --md-dur-med: 250ms;
+}
+
+/* -------------------------------------------------------------------- base */
+
+html[data-material="on"] body {
+  font-family: "Roboto", "Roboto Flex", var(--font);
+  color: var(--md-on-surface);
+  letter-spacing: .15px;
+}
+
+/* M3 surfaces are flat: no warm painting behind the cards unless the user
+   turned the accent wash on. */
+html[data-material="on"]:not([data-wash="on"]) body {
+  background: var(--md-surface) !important;
+}
+
+html[data-material="on"] :focus-visible {
+  outline: 2px solid var(--md-primary) !important;
+  outline-offset: 2px;
+}
+
+html[data-material="on"] .sub {
+  margin-top: 4px;
+  color: var(--md-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: .2px;
+}
+
+html[data-material="on"] .view-head h1,
+html[data-material="on"] .view-title h1 {
+  color: var(--md-on-surface);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -.2px;
+}
+
+/* The greeting is the screen title, so it takes the larger expressive step. */
+html[data-material="on"] #dash-greeting {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -.5px;
+}
+
+/* ---------------------------------------------------------------- app bar */
+
+html[data-material="on"] #chrome {
+  height: 64px;
+  padding: 0 16px;
+  gap: 12px;
+  border-bottom: 0 !important;
+  background: var(--md-surface) !important;
+  box-shadow: none !important;
+}
+
+html[data-material="on"] .brand {
+  padding-left: 4px;
+  color: var(--md-on-surface);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -.2px;
+  opacity: 1;
+}
+
+/* The navigation bar: a rounded tonal track holding pill tabs, so it reads as
+   one soft pill rather than a flat strip. The open section is a lifted pill in
+   the primary colour. On a narrow window the same markup becomes the bar at the
+   bottom, so these rules stop where the dock begins. */
+@media (min-width: 721px) {
+html[data-material="on"] #tabs {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 52px;
+  padding: 5px;
+  border: 0;
+  border-radius: 999px !important;
+  background: var(--md-surface-container-low) !important;
+  box-shadow: none !important;
+}
+
+html[data-material="on"] .tab {
+  position: relative;
+  height: 42px;
+  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--md-on-surface-variant);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: .1px;
+  transition: background var(--md-dur-short) var(--md-ease),
+    color var(--md-dur-short) var(--md-ease);
+}
+
+html[data-material="on"] .tab-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+html[data-material="on"] .tab::after {
+  display: none;
+}
+
+html[data-material="on"] .tab:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  color: var(--md-on-surface);
+}
+
+html[data-material="on"] .tab.active {
+  background: var(--md-surface-container-lowest) !important;
+  box-shadow: var(--md-elev-1) !important;
+  color: var(--md-primary);
+}
+}
+
+/* ------------------------------------------------------------ icon buttons */
+
+html[data-material="on"] .icon-btn,
+html[data-material="on"] #chrome .icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+  transition: background var(--md-dur-short) var(--md-ease), color var(--md-dur-short) var(--md-ease);
+}
+
+html[data-material="on"] .icon-btn:hover,
+html[data-material="on"] #chrome .icon-btn:hover {
+  /* The solid first declaration is the Android WebView 83 fallback. */
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  border: 0 !important;
+  color: var(--md-on-surface);
+}
+
+html[data-material="on"] .icon-btn:active {
+  transform: none;
+}
+
+/* Compact icon buttons inside cards keep a 32 dp target. */
+html[data-material="on"] .widget-tool,
+html[data-material="on"] .tt-head-menu,
+html[data-material="on"] .widget-actions .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% !important;
+}
+
+html[data-material="on"] #pin-btn[aria-pressed="true"] {
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+}
+
+/* ----------------------------------------------------------------- buttons */
+
+/* Secondary actions are tonal pills, the primary action is a filled pill. */
+html[data-material="on"] .btn {
+  min-height: 40px;
+  padding: 0 20px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--md-secondary-container) !important;
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel)) !important;
+  box-shadow: none !important;
+  color: var(--md-on-secondary-container) !important;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .1px;
+  transition: background var(--md-dur-short) var(--md-ease),
+    box-shadow var(--md-dur-short) var(--md-ease),
+    transform var(--md-dur-short) var(--md-ease);
+}
+
+html[data-material="on"] .btn:hover {
+  border: 0 !important;
+  background: var(--md-secondary-container) !important;
+  background: color-mix(in srgb, var(--md-secondary-container) 82%, var(--md-on-secondary-container)) !important;
+  color: var(--md-on-secondary-container) !important;
+  transform: none;
+}
+
+html[data-material="on"] .btn:active {
+  transform: none;
+}
+
+html[data-material="on"] .btn.small {
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 13.5px;
+}
+
+html[data-material="on"] .btn.primary,
+html[data-material="on"] .btn.primary:hover {
+  border-color: transparent !important;
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+}
+
+html[data-material="on"] .btn.primary:hover {
+  background: color-mix(in srgb, var(--md-primary) 88%, var(--md-on-primary)) !important;
+  box-shadow: var(--md-elev-1) !important;
+}
+
+html[data-material="on"] .btn.danger {
+  border-color: transparent !important;
+  background: var(--md-error-container) !important;
+  color: var(--md-on-error-container) !important;
+}
+
+html[data-material="on"] .btn.danger:hover {
+  background: var(--md-error-container) !important;
+  background: color-mix(in srgb, var(--md-error-container) 84%, var(--md-on-error-container)) !important;
+}
+
+html[data-material="on"] .btn.ghost {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--md-primary) !important;
+}
+
+html[data-material="on"] .btn.ghost:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-primary) 8%, transparent) !important;
+}
+
+html[data-material="on"] .btn.icon-only {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+html[data-material="on"] .btn.wide {
+  min-height: 44px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ fields */
+
+/* Outlined fields with the expressive corner: a large radius, and a single
+   outline that turns primary on focus. */
+html[data-material="on"] input[type="text"],
+html[data-material="on"] input[type="number"],
+html[data-material="on"] input[type="time"],
+html[data-material="on"] input[type="date"],
+html[data-material="on"] input[type="search"],
+html[data-material="on"] select,
+html[data-material="on"] textarea {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--md-on-surface) !important;
+  font-size: 15px;
+  letter-spacing: .2px;
+}
+
+html[data-material="on"] textarea {
+  padding: 13px 18px;
+  border-radius: var(--shape-sm) !important;
+  corner-shape: squircle;
+}
+
+html[data-material="on"] input[type="text"]:focus,
+html[data-material="on"] input[type="number"]:focus,
+html[data-material="on"] input[type="time"]:focus,
+html[data-material="on"] input[type="date"]:focus,
+html[data-material="on"] input[type="search"]:focus,
+html[data-material="on"] select:focus,
+html[data-material="on"] textarea:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: inset 0 0 0 1px var(--md-primary) !important;
+}
+
+html[data-material="on"] .field {
+  gap: 8px;
+}
+
+html[data-material="on"] .field > span {
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .4px;
+}
+
+html[data-material="on"] .field.inline {
+  min-height: 48px;
+  padding: 0 6px 0 16px;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+}
+
+html[data-material="on"] .field.inline select {
+  min-height: 44px;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-material="on"] .check {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--md-on-surface);
+  font-size: 14px;
+}
+
+html[data-material="on"] .check:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 6%, transparent) !important;
+}
+
+html[data-material="on"] input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px !important;
+  corner-shape: squircle;
+  accent-color: var(--md-primary);
+}
+
+html[data-material="on"] .quick-add input {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: 999px !important;
+  background: var(--md-surface-container-lowest) !important;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------- segmented controls */
+
+/* A tonal track with the picked segment lifted out on its own pill. */
+html[data-material="on"] .seg,
+html[data-material="on"] .theme-modes {
+  padding: 4px;
+  gap: 2px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--md-surface-container) !important;
+  overflow: visible !important;
+}
+
+html[data-material="on"] .seg-btn {
+  min-height: 32px;
+  padding: 0 16px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--md-on-surface-variant) !important;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+html[data-material="on"] .seg-btn + .seg-btn {
+  border-left: 0 !important;
+}
+
+html[data-material="on"] .seg-btn.active,
+html[data-material="on"] .theme-modes .seg-btn.active {
+  background: var(--md-surface-container-lowest) !important;
+  color: var(--md-primary) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12) !important;
+}
+
+/* ------------------------------------------------------------------- chips */
+
+html[data-material="on"] .chip-btn {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .1px;
+}
+
+html[data-material="on"] .chip-btn:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  color: var(--md-on-surface);
+}
+
+html[data-material="on"] .chip-btn.active {
+  border-color: transparent !important;
+  background: var(--md-secondary-container) !important;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel)) !important;
+  color: var(--md-on-secondary-container) !important;
+}
+
+/* --------------------------------------------------------------- switches */
+
+html[data-material="on"] .switch,
+html[data-material="on"][data-touch="on"] .switch {
+  width: 52px;
+  height: 32px;
+  border: 2px solid var(--md-outline) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+}
+
+html[data-material="on"] .switch::after,
+html[data-material="on"][data-touch="on"] .switch::after {
+  top: 50%;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--md-outline);
+  box-shadow: none;
+  transform: translateY(-50%);
+  transition: left var(--md-dur-med) var(--md-ease), width var(--md-dur-med) var(--md-ease),
+    height var(--md-dur-med) var(--md-ease), background var(--md-dur-med) var(--md-ease),
+    transform var(--md-dur-med) var(--md-ease);
+}
+
+html[data-material="on"] .switch[aria-checked="true"],
+html[data-material="on"][data-touch="on"] .switch[aria-checked="true"] {
+  border-color: var(--md-primary) !important;
+  background: var(--md-primary) !important;
+}
+
+html[data-material="on"] .switch[aria-checked="true"]::after,
+html[data-material="on"][data-touch="on"] .switch[aria-checked="true"]::after {
+  left: 100%;
+  width: 24px;
+  height: 24px;
+  background: var(--md-on-primary);
+  transform: translate(-100%, -50%) translateX(-4px);
+}
+
+/* -------------------------------------------------------------- surfaces */
+
+/* Filled cards, no borders, no drop shadow: the tonal step does the work. */
+html[data-material="on"] .widget,
+html[data-material="on"] .task-card,
+html[data-material="on"] .suggestion,
+html[data-material="on"] .tt-guide,
+html[data-material="on"] .ai-summary,
+html[data-material="on"] .data-block {
+  border: 0 !important;
+  border-radius: var(--shape-lg) !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-lowest) !important;
+  box-shadow: none !important;
+}
+
+html[data-material="on"] .widget {
+  padding: 18px 18px 20px;
+  gap: 12px;
+}
+
+html[data-material="on"] .widget:hover {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: var(--md-surface-container-lowest) !important;
+  transform: none;
+}
+
+/* The leading tonal badge is what makes a widget header read like a Material
+   list item: a squircle of primary-container colour with the section glyph. */
+html[data-material="on"] .widget-head {
+  gap: 12px;
+}
+
+html[data-material="on"] .widget-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50% !important;
+  background: var(--md-secondary-container);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  color: var(--md-on-secondary-container);
+}
+
+html[data-material="on"] .widget-badge:empty {
+  display: none;
+}
+
+html[data-material="on"] .widget-badge svg {
+  width: 21px;
+  height: 21px;
+}
+
+html[data-material="on"] .widget-head h2 {
+  flex: 1;
+  min-width: 0;
+  color: var(--md-on-surface) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  letter-spacing: .1px;
+  text-transform: none !important;
+}
+
+html[data-material="on"] .widget-note,
+html[data-material="on"] .link-btn {
+  color: var(--md-on-surface-variant);
+}
+
+html[data-material="on"] .link-btn {
+  font-weight: 500;
+}
+
+html[data-material="on"] .empty {
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--shape-sm) !important;
+  corner-shape: squircle;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------- density */
+
+/* Cards size to their content and sit closer together, so the dashboard fills
+   the window instead of leaving islands of empty card. */
+html[data-material="on"] .dash-grid {
+  gap: 12px;
+}
+
+html[data-material="on"] .widget {
+  min-height: 0;
+  padding: 16px 18px 16px;
+  gap: 10px;
+}
+
+html[data-material="on"] .widget-body {
+  gap: 8px;
+}
+
+html[data-material="on"] .widget-badge {
+  width: 36px;
+  height: 36px;
+}
+
+html[data-material="on"] .widget-badge svg {
+  width: 19px;
+  height: 19px;
+}
+
+html[data-material="on"] .view-head {
+  margin-bottom: 12px;
+}
+
+html[data-material="on"] .widget-head h2 {
+  font-size: 15px !important;
+}
+
+html[data-material="on"] .sched-row,
+html[data-material="on"] .deadline-row,
+html[data-material="on"] .dash-task {
+  min-height: 34px;
+  padding: 4px 12px;
+}
+
+html[data-material="on"] .hero-title {
+  font-size: 22px;
+}
+
+/* The hero is a statement card: its text sits in the middle of the space it
+   shares with the schedule, instead of a lone link pinned to the floor. */
+html[data-material="on"] .widget-next .widget-body {
+  justify-content: center;
+  gap: 6px;
+}
+
+html[data-material="on"] .widget-next .widget-link {
+  margin-top: 6px;
+}
+
+html[data-material="on"] .focus-clock {
+  font-size: 28px;
+}
+
+html[data-material="on"] .figure {
+  padding: 10px 12px;
+}
+
+html[data-material="on"] .widget-stats .figure-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Above the phone layout the dashboard is three tidy rows: a full-width banner
+   for what is next, the three lists side by side, then focus and the week.
+   Nothing is stretched to fill a column it does not need. */
+@media (min-width: 761px) {
+  html[data-material="on"] .widget-next {
+    grid-column: span 12;
+  }
+
+  html[data-material="on"] .widget-today,
+  html[data-material="on"] .widget-due,
+  html[data-material="on"] .widget-tasks {
+    grid-column: span 4;
+  }
+
+  html[data-material="on"] .widget-focus,
+  html[data-material="on"] .widget-stats {
+    grid-column: span 6;
+  }
+
+  /* The banner lays its line out horizontally: what is next, when, and the way
+     to the timetable on the far right. */
+  html[data-material="on"] .widget-next .widget-body {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px 14px;
+  }
+
+  html[data-material="on"] .widget-next .widget-body > * {
+    margin: 0;
+  }
+
+  html[data-material="on"] .widget-next .hero-title {
+    flex: 0 0 auto;
+    font-size: 20px;
+  }
+
+  html[data-material="on"] .widget-next .hero-bar,
+  html[data-material="on"] .widget-next .dash-hint {
+    flex-basis: 100%;
+  }
+
+  html[data-material="on"] .widget-next .widget-link {
+    margin-left: auto;
+  }
+}
+
+/* ---------------------------------------------------- dashboard list rows */
+
+/* Tonal, generously rounded rows with a hover state layer, like the rows in
+   the reference: the row shape carries the hierarchy, not a divider line. */
+html[data-material="on"] .sched-row,
+html[data-material="on"] .deadline-row,
+html[data-material="on"] .dash-task {
+  min-height: 42px;
+  padding: 6px 10px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--md-surface-container-low) !important;
+  gap: 10px;
+  transition: background var(--md-dur-short) var(--md-ease);
+}
+
+html[data-material="on"] .sched-row + .sched-row,
+html[data-material="on"] .deadline-row + .deadline-row,
+html[data-material="on"] .dash-task + .dash-task {
+  margin-top: 4px;
+}
+
+html[data-material="on"] .sched-row:hover,
+html[data-material="on"] .deadline-row:hover,
+html[data-material="on"] .dash-task:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 6%, transparent) !important;
+}
+
+html[data-material="on"] .sched-row.state-now {
+  background: var(--md-secondary-container) !important;
+}
+
+html[data-material="on"] .sched-row.state-now .sched-name,
+html[data-material="on"] .sched-row.state-now .sched-time {
+  color: var(--md-on-secondary-container);
+}
+
+html[data-material="on"] .sched-time {
+  width: 42px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-material="on"] .sched-row.state-now,
+html[data-material="on"] .sched-flag,
+html[data-material="on"] .hero-chip,
+html[data-material="on"] .deadline-when,
+html[data-material="on"] .pill {
+  border-radius: 999px !important;
+}
+
+html[data-material="on"] .dash-task {
+  padding: 8px 10px;
+}
+
+html[data-material="on"] .figure {
+  border-radius: var(--shape-md) !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-low) !important;
+}
+
+html[data-material="on"] .hero-eyebrow {
+  color: var(--md-on-surface-variant) !important;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+html[data-material="on"] .hero-title {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -.2px;
+  line-height: 1.2;
+}
+
+html[data-material="on"] .focus-clock {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-material="on"] .widget-link {
+  align-self: flex-start;
+  color: var(--md-primary) !important;
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------------- tasks */
+
+html[data-material="on"] .day-col {
+  border: 0 !important;
+  border-radius: var(--shape-lg) !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container) !important;
+}
+
+html[data-material="on"] .day-col.today {
+  background: var(--md-secondary-container) !important;
+}
+
+html[data-material="on"] .day-col.today .day-head strong {
+  color: var(--md-on-secondary-container);
+}
+
+html[data-material="on"] .task {
+  border: 0 !important;
+  border-radius: 20px !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-lowest) !important;
+  box-shadow: none !important;
+}
+
+html[data-material="on"] .task:hover {
+  border: 0 !important;
+  box-shadow: var(--md-elev-1) !important;
+  transform: none;
+}
+
+html[data-material="on"] .task-title {
+  font-size: 13.5px;
+  letter-spacing: .15px;
+}
+
+html[data-material="on"] .day-head strong {
+  font-size: 12px;
+  letter-spacing: .5px;
+}
+
+html[data-material="on"] .chip,
+html[data-material="on"] .pill,
+html[data-material="on"] .tag {
+  border-radius: 999px !important;
+}
+
+/* ------------------------------------------------------------ timetable */
+
+/* The grid already spaces its cells; the container steps back and the cells
+   themselves become rounded tiles. */
+html[data-material="on"] .tt-grid {
+  border: 0 !important;
+  border-radius: var(--shape-lg) !important;
+  background: transparent !important;
+}
+
+html[data-material="on"] .tt-cell.filled {
+  background: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container);
+}
+
+html[data-material="on"] .tt-cell.filled .tt-room,
+html[data-material="on"] .tt-cell.filled .tt-edit {
+  color: var(--md-on-primary-container);
+  opacity: .8;
+}
+
+html[data-material="on"] .tt-cell.today {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-secondary-container) 55%, transparent) !important;
+}
+
+html[data-material="on"] .tt-head,
+html[data-material="on"] .tt-corner {
+  background: var(--md-surface-container-low) !important;
+}
+
+html[data-material="on"] .tt-cell,
+html[data-material="on"] .tt-time {
+  min-height: 54px;
+}
+
+html[data-material="on"] .tt-cell {
+  padding: 7px 10px 7px 12px;
+  border-radius: 20px !important;
+  corner-shape: squircle;
+  border-color: transparent !important;
+  background: var(--md-surface-container-lowest) !important;
+}
+
+html[data-material="on"] .tt-cell.filled {
+  border-color: transparent !important;
+}
+
+html[data-material="on"] .tt-time,
+html[data-material="on"] .tt-head,
+html[data-material="on"] .tt-corner {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--md-surface-container-low) !important;
+}
+
+html[data-material="on"] .tt-head.today {
+  background: var(--md-secondary-container) !important;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel)) !important;
+  color: var(--md-on-secondary-container);
+}
+
+/* Subject brushes: filter pills in the subject's own colour. */
+html[data-material="on"] .brush-chip {
+  min-height: 34px;
+  border-radius: 999px !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* The empty add-row / add-column buttons are outlined controls. */
+html[data-material="on"] .tt-add-row,
+html[data-material="on"] .tt-add-col {
+  border-style: solid !important;
+  border-width: 1px !important;
+  border-color: var(--md-outline-variant) !important;
+  border-radius: var(--shape-sm) !important;
+  corner-shape: squircle;
+  background: transparent !important;
+  color: var(--md-primary);
+  font-weight: 500;
+}
+
+html[data-material="on"] .tt-add-row:hover,
+html[data-material="on"] .tt-add-col:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-primary) 8%, transparent) !important;
+}
+
+/* Text fields show focus with the outline itself, not a second ring. */
+html[data-material="on"] input:focus-visible,
+html[data-material="on"] select:focus-visible,
+html[data-material="on"] textarea:focus-visible {
+  outline: none !important;
+}
+
+/* ------------------------------------------------------------- settings */
+
+html[data-material="on"] .settings-nav button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px !important;
+  color: var(--md-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+html[data-material="on"] .settings-nav button:hover {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+}
+
+html[data-material="on"] .settings-nav button.active {
+  background: var(--md-secondary-container) !important;
+  color: var(--md-on-secondary-container) !important;
+}
+
+html[data-material="on"] .settings-pane h3 {
+  color: var(--md-on-surface);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .1px;
+}
+
+html[data-material="on"] .setting-row {
+  padding: 14px 12px;
+  border-radius: var(--shape-sm) !important;
+  corner-shape: squircle;
+}
+
+html[data-material="on"] .setting-row:hover {
+  background: var(--md-surface-container-low);
+  background: color-mix(in srgb, var(--md-on-surface) 5%, transparent);
+}
+
+html[data-material="on"] .setting-title {
+  color: var(--md-on-surface);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: .15px;
+}
+
+html[data-material="on"] .setting-text .sub {
+  font-size: 12.5px;
+}
+
+html[data-material="on"] .theme-card {
+  border-radius: var(--shape-md) !important;
+  corner-shape: squircle;
+  border: 1px solid var(--md-outline-variant) !important;
+  background: var(--md-surface-container-lowest) !important;
+}
+
+html[data-material="on"] .theme-card[aria-checked="true"] {
+  border: 2px solid var(--md-primary) !important;
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+html[data-material="on"] .overlay {
+  background: rgba(0, 0, 0, .32);
+}
+
+html[data-material="on"] .modal {
+  border: 0 !important;
+  border-radius: var(--shape-xl) !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-lowest) !important;
+  box-shadow: var(--md-elev-3) !important;
+}
+
+html[data-material="on"] .modal-head {
+  padding: 24px 24px 6px;
+}
+
+html[data-material="on"] .modal-head h2 {
+  color: var(--md-on-surface);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -.1px;
+}
+
+html[data-material="on"] .modal-head .icon-btn {
+  margin: -8px -8px -8px 0;
+}
+
+html[data-material="on"] .modal-body {
+  padding: 8px 24px 24px;
+  gap: 16px;
+}
+
+html[data-material="on"] .modal-foot {
+  padding: 0 24px 24px;
+  gap: 8px;
+}
+
+html[data-material="on"] .modal-foot .btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--md-primary) !important;
+  box-shadow: none;
+}
+
+html[data-material="on"] .modal-foot .btn.primary {
+  padding: 0 24px;
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+}
+
+html[data-material="on"] .modal-foot .btn.danger {
+  background: var(--md-error-container) !important;
+  color: var(--md-on-error-container) !important;
+}
+
+/* The Wi-Fi sync wizard already rounds its surfaces; keep its steps on the
+   shape scale instead of the panel's own corners. */
+html[data-material="on"] .sync-code-block,
+html[data-material="on"] .sync-art-core,
+html[data-material="on"] .sync-art-ring {
+  border-radius: var(--shape-sm) !important;
+  corner-shape: squircle;
+}
+
+html[data-material="on"] .sync-otp-cell {
+  min-height: 48px;
+  border-radius: var(--shape-xs) !important;
+  corner-shape: squircle;
+}
+
+/* -------------------------------------------------------------- menus etc */
+
+html[data-material="on"] .menu,
+html[data-material="on"] .menu.popover {
+  padding: 8px;
+  border: 0 !important;
+  border-radius: var(--shape-md) !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-lowest) !important;
+  box-shadow: var(--md-elev-2) !important;
+}
+
+html[data-material="on"] .menu-row {
+  min-height: 40px;
+  border-radius: 999px !important;
+  color: var(--md-on-surface);
+  font-size: 14px;
+}
+
+html[data-material="on"] .menu-row:hover,
+html[data-material="on"] .menu-row:focus-visible {
+  background: var(--md-surface-container-low) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  color: var(--md-on-surface) !important;
+  outline: none;
+}
+
+html[data-material="on"] .tooltip {
+  border: 0 !important;
+  border-radius: 16px !important;
+  corner-shape: squircle;
+  background: var(--md-surface-container-highest) !important;
+  box-shadow: var(--md-elev-2) !important;
+  color: var(--md-on-surface);
+}
+
+/* The snackbar. */
+html[data-material="on"] .toast {
+  min-height: 48px;
+  padding: 12px 18px 14px;
+  border: 0 !important;
+  border-radius: var(--shape-xl) !important;
+  corner-shape: squircle;
+  background: var(--md-inverse-surface) !important;
+  box-shadow: var(--md-elev-3) !important;
+  color: var(--md-inverse-on-surface) !important;
+}
+
+html[data-material="on"] .toast-text {
+  color: inherit;
+  font-size: 14px;
+  letter-spacing: .2px;
+}
+
+html[data-material="on"] .toast-progress {
+  background: color-mix(in srgb, var(--md-inverse-on-surface) 20%, transparent);
+}
+
+html[data-material="on"] .toast-progress i {
+  background: var(--md-primary);
+}
+
+/* ------------------------------------------------------------- timer view */
+
+html[data-material="on"] #dots {
+  padding: 4px !important;
+  gap: 2px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--md-surface-container) !important;
+  overflow: visible !important;
+}
+
+html[data-material="on"] #dots .mode-btn {
+  min-height: 34px;
+  padding: 0 20px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+html[data-material="on"] #dots .mode-btn + .mode-btn {
+  border-left: 0 !important;
+}
+
+html[data-material="on"] #dots .mode-btn.active {
+  background: var(--md-surface-container-lowest) !important;
+  color: var(--md-primary) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12) !important;
+}
+
+html[data-material="on"] #focus-chip {
+  border: 0 !important;
+  background: var(--md-secondary-container) !important;
+  color: var(--md-on-secondary-container) !important;
+  box-shadow: none;
+}
+
+html[data-material="on"] .focus-chip-time {
+  color: var(--md-on-secondary-container);
+}
+
+/* --------------------------------------------------------------- scrollbar */
+
+html[data-material="on"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-material="on"] ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: var(--md-outline);
+  background-color: color-mix(in srgb, var(--md-on-surface) 22%, transparent);
+}
+
+html[data-material="on"] ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--md-on-surface) 34%, transparent);
+}
+
+html[data-material="on"] ::-webkit-scrollbar-track,
+html[data-material="on"] ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ ripple */
+
+html[data-material="on"] .m3-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .18;
+  pointer-events: none;
+  transform: scale(0);
+  animation: m3-ripple 480ms var(--md-ease-out) forwards;
+}
+
+@keyframes m3-ripple {
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* ---------------------------------------------------------- Android chrome */
+
+html[data-material="on"].is-android #chrome {
+  height: calc(64px + var(--safe-top));
+  padding: var(--safe-top) calc(16px + var(--safe-right)) 0 calc(16px + var(--safe-left));
+}
+
+@media (max-width: 720px) {
+  /* The dock is the M3 navigation bar: icons over labels, and the open section
+     marked by a pill behind its icon only, exactly like the reference. */
+  html[data-material="on"] #tabs {
+    left: calc(8px + var(--safe-left));
+    right: calc(8px + var(--safe-right));
+    bottom: calc(8px + var(--safe-bottom));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding: 8px 6px;
+    border: 0 !important;
+    border-radius: var(--shape-xl) !important;
+    corner-shape: squircle;
+    background: var(--md-surface-container-lowest) !important;
+    box-shadow: var(--md-elev-2) !important;
+  }
+
+  html[data-material="on"] #tabs .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: auto;
+    min-height: 56px;
+    padding: 4px 2px;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--md-on-surface-variant) !important;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .2px;
+    text-align: center;
+  }
+
+  html[data-material="on"] #tabs .tab::after {
+    display: none;
+  }
+
+  /* The icon sits in its own pill, so the indicator hugs the glyph the way an
+     M3 navigation bar does. */
+  html[data-material="on"] #tabs .tab-icon {
+    width: 24px;
+    height: 24px;
+    box-sizing: content-box;
+    padding: 4px 15px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background var(--md-dur-med) var(--md-ease);
+  }
+
+  html[data-material="on"] #tabs .tab.active {
+    background: transparent !important;
+    color: var(--md-on-surface) !important;
+  }
+
+  html[data-material="on"] #tabs .tab.active .tab-icon {
+    background: var(--md-secondary-container);
+    background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  }
+
+  /* Room for the taller bar. */
+  html[data-material="on"] .view {
+    bottom: calc(88px + var(--safe-bottom)) !important;
+    padding: 8px calc(12px + var(--safe-right)) 20px calc(12px + var(--safe-left)) !important;
+  }
+
+  html[data-material="on"] #chrome {
+    height: 64px;
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  html[data-material="on"].is-android #chrome {
+    height: calc(64px + var(--safe-top));
+    padding: var(--safe-top) calc(12px + var(--safe-right)) 0 calc(12px + var(--safe-left));
+  }
+
+  html[data-material="on"] .brand {
+    font-size: 21px;
+  }
+
+  html[data-material="on"] .view-head h1,
+  html[data-material="on"] .view-title h1 {
+    font-size: 26px;
+  }
+
+  html[data-material="on"] #dash-greeting {
+    font-size: 29px;
+  }
+
+  html[data-material="on"] .head-actions {
+    gap: 8px;
+  }
+
+  html[data-material="on"] .widget {
+    min-height: 0;
+    padding: 14px;
+    gap: 8px;
+    border-radius: var(--shape-md) !important;
+  }
+
+  html[data-material="on"] .widget-stats .figure-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  html[data-material="on"] .modal {
+    border-radius: var(--shape-xl) !important;
+  }
+}
+
+/* Clip paths cut the box shadow off with the corner, so a clipped floating
+   surface carries its shadow as a filter instead: drop-shadow is painted from
+   the clipped result and follows the squircle. */
+html[data-material="on"][data-squircle="on"] .modal,
+html[data-material="on"][data-squircle="on"] .modal.canvas {
+  box-shadow: none !important;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .22)) drop-shadow(0 2px 4px rgba(0, 0, 0, .14));
+}
+
+html[data-material="on"][data-squircle="on"] .toast {
+  box-shadow: none !important;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .25));
+}
+
+html[data-material="on"][data-squircle="on"] .menu,
+html[data-material="on"][data-squircle="on"] .menu.popover {
+  box-shadow: none !important;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-ripple {
+    display: none;
+  }
+
+  html[data-material="on"] .tab-icon {
+    transition: none;
+  }
+}

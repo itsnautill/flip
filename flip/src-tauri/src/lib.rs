@@ -5,9 +5,12 @@ pub mod commands;
 pub mod discord;
 pub mod settings;
 pub mod state;
+pub mod sync;
 pub mod ticker;
 pub mod timer;
 pub mod update;
+#[cfg(desktop)]
+pub mod window_state;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -201,13 +204,34 @@ pub fn run() {
             #[cfg(not(desktop))]
             let _ = saved_zoom;
 
+            /* Size, place and pin survive a restart, like the zoom does. */
+            #[cfg(desktop)]
+            {
+                window_state::restore(app.handle(), &data_dir);
+                if let Some(window) = app.get_webview_window("main") {
+                    let handle = app.handle().clone();
+                    let window_dir = data_dir.clone();
+                    window.on_window_event(move |event| {
+                        if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                            window_state::save(&handle, &window_dir);
+                        }
+                    });
+                }
+            }
+
             let shared: SharedCore = Arc::new(Mutex::new(core));
-            app.manage(shared);
+            app.manage(Arc::clone(&shared));
             /* Discord lives on the desktop; phones have no such IPC socket. */
             #[cfg(desktop)]
             app.manage(discord::spawn());
 
             ticker::spawn(app.handle().clone());
+            /* Both devices host the same small endpoint, answer the same
+            code lookup and watch the other, so a sync works whichever way
+            round the two were set up. */
+            sync::spawn(app.handle().clone(), Arc::clone(&shared));
+            sync::spawn_finder(Arc::clone(&shared));
+            sync::watch(app.handle().clone(), Arc::clone(&shared));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -232,6 +256,7 @@ pub fn run() {
             commands::toggle_theme,
             commands::toggle_fullscreen,
             commands::exit_fullscreen,
+            commands::set_on_top,
             commands::set_orientation,
             commands::set_immersive,
             commands::get_board,
@@ -250,10 +275,14 @@ pub fn run() {
             commands::read_timetable_table,
             commands::open_folder,
             commands::set_theme,
+            commands::set_palette,
             commands::set_touch,
             commands::set_zoom,
             commands::set_wash,
             commands::set_discord,
+            commands::sync_info,
+            commands::set_pair_code,
+            commands::sync_now,
             update::download_update,
             update::install_update
         ])

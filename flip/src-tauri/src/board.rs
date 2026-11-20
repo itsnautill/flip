@@ -143,6 +143,13 @@ pub struct Board {
     /// True while the timetable is read-only: every editing control (paint,
     /// add, rename, delete, import) stays hidden until it is unlocked.
     pub locked: bool,
+    /// When this board last changed, in milliseconds since the epoch. A sync
+    /// keeps whichever copy carries the later stamp.
+    #[serde(default)]
+    pub updated_ms: u64,
+    /// The device that made that change, so an exact tie still has an answer.
+    #[serde(default)]
+    pub updated_by: String,
 }
 
 impl Default for Board {
@@ -165,6 +172,8 @@ impl Default for Board {
             break_minutes: DEFAULT_BREAK,
             day_labels: BTreeMap::new(),
             locked: false,
+            updated_ms: 0,
+            updated_by: String::new(),
         }
     }
 }

@@ -9,7 +9,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::board::{self, Board};
 use crate::state::{lock, SharedCore, Snapshot};
 
-const TICK_MS: u64 = 50;
+/* Ten wake-ups a second is enough for a display that counts seconds, and half
+   the work of the old twenty on a laptop or a phone. */
+const TICK_MS: u64 = 100;
 
 pub fn spawn(app: AppHandle) {
     thread::spawn(move || {

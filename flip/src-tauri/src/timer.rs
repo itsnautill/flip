@@ -175,6 +175,12 @@ impl Timer {
         secs.min(MAX_SECS)
     }
 
+    /// Whole seconds already run down. A focus session stopped early credits
+    /// this, so the minutes spent still count.
+    pub fn spent_secs(&self, now: Instant) -> u32 {
+        self.preset_secs.saturating_sub(self.display_secs(now))
+    }
+
     pub fn view(&self, now: Instant) -> TimerView {
         let secs = self.display_secs(now);
         let h = secs / 3600;
@@ -370,6 +376,20 @@ mod tests {
         assert_eq!(t.display_secs(t0 + Duration::from_millis(1000)), 299);
         assert_eq!(t.display_secs(t0 + Duration::from_millis(1500)), 299);
         assert_eq!(t.display_secs(t0 + Duration::from_millis(299_999)), 1);
+    }
+
+    #[test]
+    fn spent_time_grows_while_the_clock_runs() {
+        let mut t = Timer::new(1800);
+        let t0 = Instant::now();
+        assert_eq!(t.spent_secs(t0), 0);
+        assert_eq!(t.toggle(t0), ToggleResult::Started);
+        assert_eq!(t.spent_secs(t0 + Duration::from_secs(720)), 720);
+        /* A pause freezes what has been spent, not the remaining time. */
+        assert_eq!(t.toggle(t0 + Duration::from_secs(720)), ToggleResult::Paused);
+        assert_eq!(t.spent_secs(t0 + Duration::from_secs(900)), 720);
+        assert_eq!(t.toggle(t0 + Duration::from_secs(900)), ToggleResult::Resumed);
+        assert_eq!(t.spent_secs(t0 + Duration::from_secs(960)), 780);
     }
 
     #[test]

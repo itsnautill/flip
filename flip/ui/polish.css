@@ -16,7 +16,7 @@ html[data-theme="light"] {
   --panel-3: #EAE8E2;
   --ink: #1B1A17;
   --ink-soft: #45423C;
-  --muted: #6F6B63;
+  --muted: #67645C;
   --line: #E2E0D9;
   --line-2: #CFCCC3;
   --accent-soft: #F4E3D0;
@@ -164,6 +164,327 @@ html[data-theme="flat"] {
   --shadow: none;
   --radius: 7px;
   --radius-sm: 6px;
+}
+
+/* --------------------------------------------------- custom theme palettes */
+
+/* A palette paints over the chosen base. Every palette has a light and a dark
+   rendition, and data-theme stays the real base, so every dark-mode rule keeps
+   working whichever palette is on top. */
+
+html[data-palette="blossom"][data-theme="light"] {
+  --bg: #FBF3F5;
+  --bg-accent: linear-gradient(180deg, #FFF8FA 0%, #F9EDF0 100%);
+  --panel: #FFFFFF;
+  --panel-2: #FBF3F5;
+  --panel-3: #F6E8EC;
+  --ink: #2A1B22;
+  --ink-soft: #5C4550;
+  --muted: #765E67;
+  --line: #EFDFE4;
+  --line-2: #E0C9D0;
+  --accent-soft: #FBE4EA;
+  --danger: #B23F4A;
+  --danger-soft: #FCEAEC;
+  --red: #D9364F;
+  --focus: #A33A57;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #FFF6F8;
+  --card-bottom-a: #FFF6F8;
+  --card-bottom-b: #FBEFF2;
+  --digit: #2A1B22;
+  --split: rgba(96, 60, 74, .16);
+  --split-hi: rgba(255, 255, 255, .85);
+  --ring: rgba(160, 110, 130, .3);
+  --card-shadow: 0 1px 2px rgba(90, 40, 60, .07), 0 18px 40px rgba(90, 40, 60, .12);
+  --shadow-sm: 0 1px 2px rgba(90, 40, 60, .07);
+  --shadow: 0 2px 6px rgba(90, 40, 60, .06), 0 18px 40px rgba(90, 40, 60, .1);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+html[data-palette="paper"][data-theme="light"] {
+  --bg: #F6EFE0;
+  --bg-accent: linear-gradient(180deg, #FBF6EA 0%, #F3EADB 100%);
+  --panel: #FFFBF2;
+  --panel-2: #F4EBD9;
+  --panel-3: #EBDFC8;
+  --ink: #2F2519;
+  --ink-soft: #5B4A35;
+  --muted: #6C5B47;
+  --line: #E4D6BE;
+  --line-2: #D2BE9F;
+  --accent-soft: #F2E3C9;
+  --danger: #A8442F;
+  --danger-soft: #F9E5DD;
+  --red: #C6402C;
+  --focus: #8A5A22;
+  --card-top-a: #FFFCF4;
+  --card-top-b: #FAF2E2;
+  --card-bottom-a: #FAF2E2;
+  --card-bottom-b: #F3E9D4;
+  --digit: #2F2519;
+  --split: rgba(90, 70, 40, .2);
+  --split-hi: rgba(255, 255, 255, .8);
+  --ring: rgba(130, 100, 60, .3);
+  --card-shadow: 0 1px 2px rgba(80, 60, 30, .08), 0 18px 40px rgba(80, 60, 30, .13);
+  --shadow-sm: 0 1px 2px rgba(80, 60, 30, .08);
+  --shadow: 0 2px 6px rgba(80, 60, 30, .07), 0 18px 40px rgba(80, 60, 30, .11);
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+html[data-palette="mint"][data-theme="light"] {
+  --bg: #EDF5F0;
+  --bg-accent: linear-gradient(180deg, #F6FBF8 0%, #E9F3ED 100%);
+  --panel: #FFFFFF;
+  --panel-2: #EDF5F0;
+  --panel-3: #E1EEE6;
+  --ink: #16241D;
+  --ink-soft: #3B5348;
+  --muted: #54685E;
+  --line: #D8E7DE;
+  --line-2: #C1D7CB;
+  --accent-soft: #DDEFE4;
+  --danger: #B04A3A;
+  --danger-soft: #FAE7E3;
+  --red: #CC4A38;
+  --focus: #1F6B4A;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #F5FBF7;
+  --card-bottom-a: #F5FBF7;
+  --card-bottom-b: #ECF6F0;
+  --digit: #16241D;
+  --split: rgba(40, 80, 60, .18);
+  --split-hi: rgba(255, 255, 255, .8);
+  --ring: rgba(80, 130, 105, .28);
+  --card-shadow: 0 1px 2px rgba(30, 70, 50, .07), 0 18px 40px rgba(30, 70, 50, .12);
+  --shadow-sm: 0 1px 2px rgba(30, 70, 50, .07);
+  --shadow: 0 2px 6px rgba(30, 70, 50, .06), 0 18px 40px rgba(30, 70, 50, .1);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+html[data-palette="slate"][data-theme="light"] {
+  --bg: #F1F3F6;
+  --bg-accent: linear-gradient(180deg, #F7F9FC 0%, #EEF1F6 100%);
+  --panel: #FFFFFF;
+  --panel-2: #F3F5F8;
+  --panel-3: #E8ECF1;
+  --ink: #171C24;
+  --ink-soft: #3C4654;
+  --muted: #5C6673;
+  --line: #DFE5EC;
+  --line-2: #C9D3DE;
+  --accent-soft: #E6EDF6;
+  --danger: #B04034;
+  --danger-soft: #FBE9E6;
+  --red: #CC4136;
+  --focus: #2C5C8F;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #F6F8FB;
+  --card-bottom-a: #F6F8FB;
+  --card-bottom-b: #EEF2F7;
+  --digit: #171C24;
+  --split: rgba(30, 45, 65, .18);
+  --split-hi: rgba(255, 255, 255, .8);
+  --ring: rgba(90, 120, 155, .28);
+  --card-shadow: 0 1px 2px rgba(30, 45, 65, .07), 0 18px 40px rgba(30, 45, 65, .12);
+  --shadow-sm: 0 1px 2px rgba(30, 45, 65, .07);
+  --shadow: 0 2px 6px rgba(30, 45, 65, .06), 0 18px 40px rgba(30, 45, 65, .1);
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+html[data-palette="midnight"][data-theme="dark"] {
+  --bg: #0E1420;
+  --bg-accent: linear-gradient(180deg, #131B2A 0%, #0B111B 100%);
+  --panel: #151D2B;
+  --panel-2: #1B2436;
+  --panel-3: #222D42;
+  --ink: #E8EEF8;
+  --ink-soft: #C1CCDD;
+  --muted: #8E9CB2;
+  --line: #263146;
+  --line-2: #374560;
+  --accent-soft: #232E45;
+  --danger: #F0837A;
+  --danger-soft: #38222A;
+  --red: #FF6B6B;
+  --focus: #7FA6E0;
+  --card-top-a: #18202F;
+  --card-top-b: #141B28;
+  --card-bottom-a: #141B28;
+  --card-bottom-b: #101722;
+  --digit: #E8EEF8;
+  --split: rgba(0, 0, 0, .6);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(127, 166, 224, .35);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 18px 40px rgba(0, 0, 0, .55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .5);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+/* Every palette in its dark rendition. The same hues, dropped until the
+   surfaces read as evening without losing the theme's colour. */
+
+html[data-palette="blossom"][data-theme="dark"] {
+  --bg: #1A1317;
+  --bg-accent: linear-gradient(180deg, #211820 0%, #161013 100%);
+  --panel: #241B21;
+  --panel-2: #2B2128;
+  --panel-3: #34272F;
+  --ink: #F5E9EE;
+  --ink-soft: #D9C5CE;
+  --muted: #B9A2AC;
+  --line: #392C34;
+  --line-2: #4B3A45;
+  --accent-soft: #3B2832;
+  --danger: #F2939C;
+  --danger-soft: #3B2228;
+  --red: #FF7A8A;
+  --focus: #E78BA6;
+  --card-top-a: #281E25;
+  --card-top-b: #231A20;
+  --card-bottom-a: #231A20;
+  --card-bottom-b: #1E161B;
+  --digit: #F5E9EE;
+  --split: rgba(0, 0, 0, .6);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(231, 139, 166, .35);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 18px 40px rgba(0, 0, 0, .5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .5);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+html[data-palette="paper"][data-theme="dark"] {
+  --bg: #171310;
+  --bg-accent: linear-gradient(180deg, #1D1813 0%, #14100D 100%);
+  --panel: #231D16;
+  --panel-2: #2A231B;
+  --panel-3: #332B21;
+  --ink: #F5ECDD;
+  --ink-soft: #D9CAB5;
+  --muted: #BCAA92;
+  --line: #382F25;
+  --line-2: #4A3E31;
+  --accent-soft: #362B1F;
+  --danger: #F09D87;
+  --danger-soft: #38251F;
+  --red: #FF8264;
+  --focus: #E2B075;
+  --card-top-a: #26201A;
+  --card-top-b: #211B15;
+  --card-bottom-a: #211B15;
+  --card-bottom-b: #1C1710;
+  --digit: #F5ECDD;
+  --split: rgba(0, 0, 0, .6);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(226, 176, 117, .35);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 18px 40px rgba(0, 0, 0, .5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .5);
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+html[data-palette="mint"][data-theme="dark"] {
+  --bg: #0E1613;
+  --bg-accent: linear-gradient(180deg, #131E19 0%, #0B1210 100%);
+  --panel: #16211C;
+  --panel-2: #1C2823;
+  --panel-3: #233129;
+  --ink: #E5F3EC;
+  --ink-soft: #C2D7CC;
+  --muted: #A0B9AD;
+  --line: #26342D;
+  --line-2: #34463D;
+  --accent-soft: #20302A;
+  --danger: #F09580;
+  --danger-soft: #34231E;
+  --red: #FF7F6B;
+  --focus: #7FD8AF;
+  --card-top-a: #19241F;
+  --card-top-b: #151F1B;
+  --card-bottom-a: #151F1B;
+  --card-bottom-b: #111A16;
+  --digit: #E5F3EC;
+  --split: rgba(0, 0, 0, .6);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(127, 216, 175, .32);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 18px 40px rgba(0, 0, 0, .5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .5);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+html[data-palette="slate"][data-theme="dark"] {
+  --bg: #11151B;
+  --bg-accent: linear-gradient(180deg, #161B23 0%, #0E1217 100%);
+  --panel: #1A1F27;
+  --panel-2: #202630;
+  --panel-3: #272E39;
+  --ink: #E9EEF6;
+  --ink-soft: #C4CEDA;
+  --muted: #A1AEBD;
+  --line: #2B323D;
+  --line-2: #3A4351;
+  --accent-soft: #222B37;
+  --danger: #F0918A;
+  --danger-soft: #34222A;
+  --red: #FF7566;
+  --focus: #91B6E7;
+  --card-top-a: #1E242D;
+  --card-top-b: #191E25;
+  --card-bottom-a: #191E25;
+  --card-bottom-b: #151920;
+  --digit: #E9EEF6;
+  --split: rgba(0, 0, 0, .6);
+  --split-hi: rgba(255, 255, 255, .06);
+  --ring: rgba(145, 182, 231, .32);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 18px 40px rgba(0, 0, 0, .5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .5);
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+/* Midnight is the one palette that was born dark; in daylight it becomes a
+   moonlit pale blue rather than a washed-out navy. */
+html[data-palette="midnight"][data-theme="light"] {
+  --bg: #EDF1F8;
+  --bg-accent: linear-gradient(180deg, #F7FAFF 0%, #E8EEF7 100%);
+  --panel: #FFFFFF;
+  --panel-2: #F2F5FB;
+  --panel-3: #E5EBF4;
+  --ink: #101827;
+  --ink-soft: #3B4658;
+  --muted: #5A6678;
+  --line: #DAE2EE;
+  --line-2: #C3CFE0;
+  --accent-soft: #E5EDF9;
+  --danger: #B0403C;
+  --danger-soft: #FBE9E7;
+  --red: #CC4238;
+  --focus: #2F5B96;
+  --card-top-a: #FFFFFF;
+  --card-top-b: #F7FAFE;
+  --card-bottom-a: #F7FAFE;
+  --card-bottom-b: #EFF4FA;
+  --digit: #101827;
+  --split: rgba(25, 40, 65, .16);
+  --split-hi: rgba(255, 255, 255, .8);
+  --ring: rgba(90, 120, 160, .3);
+  --card-shadow: 0 1px 2px rgba(25, 40, 65, .07), 0 18px 40px rgba(25, 40, 65, .12);
+  --shadow-sm: 0 1px 2px rgba(25, 40, 65, .07);
+  --shadow: 0 2px 6px rgba(25, 40, 65, .06), 0 18px 40px rgba(25, 40, 65, .1);
+  --radius: 18px;
+  --radius-sm: 12px;
 }
 
 /* High contrast needs a heavier focus ring and clearer separators. */
@@ -348,6 +669,14 @@ body {
 
 .icon-btn:active {
   transform: scale(.96);
+}
+
+/* A pinned window says so: the header button takes the accent while it keeps
+   Flip above every other window. */
+#pin-btn[aria-pressed="true"] {
+  color: var(--accent-ink, #fff);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 /* ------------------------------------------------------- buttons and inputs */
@@ -760,6 +1089,54 @@ html[data-touch="on"] .switch[aria-checked="true"]::after {
   --tp-line: #C9C9C9;
   --tp-accent: #B4622D;
   --tp-accent-2: #DDD;
+}
+
+.theme-card[data-theme-preview="system"] .theme-preview {
+  --tp-bg: linear-gradient(135deg, #F4F3EF 0%, #F4F3EF 50%, #16181C 50%, #16181C 100%);
+  --tp-panel: #FFFFFF;
+  --tp-line: #A9A9A9;
+  --tp-accent: #B4622D;
+  --tp-accent-2: #E5D3BE;
+}
+
+.theme-card[data-theme-preview="blossom"] .theme-preview {
+  --tp-bg: #FBF3F5;
+  --tp-panel: #FFFFFF;
+  --tp-line: #E7D3DA;
+  --tp-accent: #C2517A;
+  --tp-accent-2: #F6DDE6;
+}
+
+.theme-card[data-theme-preview="paper"] .theme-preview {
+  --tp-bg: #F6EFE0;
+  --tp-panel: #FFFBF2;
+  --tp-line: #DECCB0;
+  --tp-accent: #A9762F;
+  --tp-accent-2: #EEDFC2;
+}
+
+.theme-card[data-theme-preview="mint"] .theme-preview {
+  --tp-bg: #EDF5F0;
+  --tp-panel: #FFFFFF;
+  --tp-line: #CFE1D6;
+  --tp-accent: #3F8C68;
+  --tp-accent-2: #D9EDE2;
+}
+
+.theme-card[data-theme-preview="slate"] .theme-preview {
+  --tp-bg: #F1F3F6;
+  --tp-panel: #FFFFFF;
+  --tp-line: #D3DBE4;
+  --tp-accent: #4C6F9C;
+  --tp-accent-2: #E2EAF3;
+}
+
+.theme-card[data-theme-preview="midnight"] .theme-preview {
+  --tp-bg: #0E1420;
+  --tp-panel: #1B2436;
+  --tp-line: #2D3A52;
+  --tp-accent: #7FA6E0;
+  --tp-accent-2: #2A3956;
 }
 
 .theme-name {
@@ -2838,6 +3215,238 @@ html.android-portrait #stage {
 }
 
 
+/* ==========================================================================
+   1.3 refresh: calmer chrome, softer cards, and a theme picker that shows what
+   each look actually is. Colour still comes from tokens, so every theme and
+   accent keeps working.
+   ========================================================================== */
+
+/* ---- type --------------------------------------------------------------- */
+
+h1 {
+  font-size: 26px;
+  letter-spacing: -.03em;
+}
+
+.view-head h1 {
+  font-size: 26px;
+  letter-spacing: -.03em;
+}
+
+.sub {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* ---- chrome ------------------------------------------------------------- */
+
+#chrome {
+  height: 58px;
+  padding: 0 20px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent) !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+#tabs {
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--panel-2) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.tab {
+  min-height: 32px;
+  padding: 0 15px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab.active {
+  color: var(--ink);
+  background: var(--panel) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08), inset 0 0 0 1px var(--line) !important;
+}
+
+.chrome-right {
+  gap: 4px;
+}
+
+/* The header buttons sit on the chrome itself; elsewhere a control keeps its
+   panel so it still reads as a button. */
+#chrome .icon-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+#chrome .icon-btn:hover {
+  color: var(--ink);
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+#chrome #pin-btn[aria-pressed="true"],
+#pin-btn[aria-pressed="true"] {
+  color: var(--accent-ink, #fff);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---- surfaces ----------------------------------------------------------- */
+
+.widget,
+.task,
+.suggestion,
+.data-block,
+.empty {
+  border: 1px solid var(--line);
+  border-radius: 18px !important;
+  background: var(--panel);
+}
+
+.widget:hover,
+.task:hover {
+  border-color: var(--line-2);
+}
+
+.btn {
+  border-radius: 11px;
+  font-weight: 600;
+}
+
+.btn.primary {
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 8px 20px color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--accent) 32%, transparent),
+    0 12px 26px color-mix(in srgb, var(--accent) 22%, transparent) !important;
+}
+
+/* ---- theme picker ------------------------------------------------------- */
+
+.theme-modes {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2) !important;
+}
+
+.theme-modes .seg-btn {
+  min-width: 92px;
+  min-height: 32px;
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.theme-modes .seg-btn.active {
+  background: var(--panel) !important;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1), inset 0 0 0 1px var(--line);
+}
+
+.theme-grid-custom {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.theme-card {
+  border-radius: 16px;
+  background: var(--panel) !important;
+}
+
+.theme-more {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* On a narrow window one card per row still shows the whole preview. */
+@media (max-width: 560px) {
+  .theme-grid-custom {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-modes .seg-btn {
+    min-width: 0;
+  }
+}
+
+/* A taller preview reads as a window rather than a swatch. */
+.theme-card .theme-preview {
+  grid-template-rows: auto auto 1fr;
+  min-height: 88px;
+}
+
+.theme-card .tp-card,
+.theme-card .tp-side {
+  height: auto;
+  min-height: 54px;
+}
+
+/* The dot is the palette itself, so a glance is enough to tell them apart. */
+.theme-card[data-theme-preview="blossom"] .theme-dot {
+  background: #C2517A;
+  border-color: #C2517A;
+}
+
+.theme-card[data-theme-preview="paper"] .theme-dot {
+  background: #A9762F;
+  border-color: #A9762F;
+}
+
+.theme-card[data-theme-preview="mint"] .theme-dot {
+  background: #3F8C68;
+  border-color: #3F8C68;
+}
+
+.theme-card[data-theme-preview="slate"] .theme-dot {
+  background: #4C6F9C;
+  border-color: #4C6F9C;
+}
+
+.theme-card[data-theme-preview="midnight"] .theme-dot {
+  background: #7FA6E0;
+  border-color: #7FA6E0;
+}
+
+.theme-card[data-theme-preview="system"] .theme-dot {
+  background: linear-gradient(135deg, #F4F3EF 0 50%, #16181C 50% 100%);
+  border-color: var(--line-2);
+}
+
+/* ---- settings ----------------------------------------------------------- */
+
+.settings-nav button {
+  border-radius: 11px;
+}
+
+.setting-row {
+  padding: 13px 2px;
+}
+
+@media (min-width: 700px) {
+  .modal {
+    border-radius: 22px !important;
+  }
+}
+
 /* ---- Android: the system bars are drawn over the page ------------------- */
 /* The Tauri activity is edge to edge and the WebView on Android answers 0 for
    every safe-area inset, so the status bar and the navigation bar used to sit
@@ -3059,4 +3668,556 @@ body.is-idle #dots {
 
 body.is-idle #stage {
   cursor: none;
+}
+
+/* ============================================================== 1.4 ======
+   The focus chip in the header and the note under the theme picker.
+   ======================================================================== */
+
+/* ---- focus chip -------------------------------------------------------- */
+/* A running focus session stays visible on every section, so the clock is
+   never lost behind another tab. The pill opens the timer; the cross stops
+   the session and keeps the minutes already spent. */
+
+#focus-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  margin-right: 6px;
+  padding: 0 5px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+#focus-chip[hidden] {
+  display: none;
+}
+
+.focus-chip-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  transition: background-color .2s ease, box-shadow .2s ease;
+}
+
+#focus-chip.paused .focus-chip-dot {
+  background: var(--muted);
+  box-shadow: 0 0 0 3px var(--panel-3);
+}
+
+.focus-chip-time {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+  cursor: pointer;
+}
+
+.focus-chip-time:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.focus-chip-stop {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.focus-chip-stop:hover,
+.focus-chip-stop:focus-visible {
+  background: var(--panel-3);
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  #focus-chip {
+    gap: 7px;
+    height: 30px;
+    padding: 0 3px 0 8px;
+  }
+
+  .focus-chip-time {
+    font-size: 12px;
+  }
+}
+
+/* ---- the note under the mode row --------------------------------------- */
+
+.mode-note {
+  margin: 8px 0 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* ============================================================== 1.5 ======
+   Wi-Fi sync: the same three steps a phone-linking app uses - check the
+   network, type the code, then watch the two devices connect and copy.
+   ======================================================================== */
+
+.sync-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 2px;
+}
+
+/* ---- the three segments above the steps ---- */
+
+.sync-rail {
+  display: flex;
+  gap: 6px;
+}
+
+.sync-rail-seg {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background-color .3s ease, transform .3s ease;
+}
+
+.sync-rail-seg.is-on {
+  background: var(--accent);
+}
+
+.sync-rail-seg.is-now {
+  transform: scaleY(2);
+}
+
+/* ---- one step at a time, sliding in from the side it came from ---- */
+
+.sync-step {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sync-step.is-active {
+  display: flex;
+  animation: sync-step-in .34s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.sync-sheet[data-dir="back"] .sync-step.is-active {
+  animation-name: sync-step-back;
+}
+
+@keyframes sync-step-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sync-step-back {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.sync-title {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.sync-lede {
+  margin: 0;
+  text-align: center;
+}
+
+/* ---- the Wi-Fi hint: rings, never an address ---- */
+
+.sync-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 96px;
+  margin-top: 2px;
+}
+
+.sync-art-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel-3);
+  color: var(--accent);
+}
+
+.sync-art-core svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.sync-art-ring {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  opacity: 0;
+  animation: sync-ripple 2.7s ease-out infinite;
+}
+
+.sync-art-ring:nth-child(2) {
+  animation-delay: .9s;
+}
+
+.sync-art-ring:nth-child(3) {
+  animation-delay: 1.8s;
+}
+
+@keyframes sync-ripple {
+  0% { opacity: .45; transform: scale(1); }
+  66% { opacity: 0; transform: scale(1.85); }
+  100% { opacity: 0; transform: scale(1.85); }
+}
+
+/* ---- the code this device shows ---- */
+
+.sync-code-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-3);
+  text-align: center;
+}
+
+.sync-code-label {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sync-code-value {
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .14em;
+  line-height: 1.1;
+  /* One tap selects the code, ready to type on the other device. */
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.sync-code-block .sub {
+  margin: 2px 0 0;
+}
+
+.sync-next {
+  width: 100%;
+}
+
+/* ---- the six digits ---- */
+
+.sync-otp {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+}
+
+.sync-otp-cell {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--panel-3);
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: border-color .16s ease, background-color .16s ease;
+}
+
+.sync-otp-cell:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--panel);
+}
+
+.sync-otp-cell.is-filled {
+  border-color: var(--accent);
+  animation: sync-pop .18s ease-out;
+}
+
+@keyframes sync-pop {
+  50% { transform: scale(1.08); }
+}
+
+.sync-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sync-actions .btn {
+  flex: 1;
+}
+
+.sync-otp-cell,
+.sync-actions .btn,
+.sync-next {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sync-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sync-line[hidden] {
+  display: none;
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background-color .18s ease;
+}
+
+.sync-line.busy .sync-dot {
+  background: var(--accent);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+.sync-line.ok .sync-dot {
+  background: var(--accent);
+}
+
+.sync-line.error .sync-dot {
+  background: var(--danger);
+}
+
+.sync-line.ok .sync-line-text {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---- verifying / syncing / done ---- */
+
+.sync-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 96px;
+  margin-top: 2px;
+}
+
+.sync-ring,
+.sync-check,
+.sync-fail {
+  display: none;
+}
+
+.sync-ring {
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: sync-spin .9s linear infinite;
+}
+
+.sync-stage::before {
+  content: "";
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.sync-step.is-verify .sync-ring {
+  display: block;
+}
+
+.sync-step.is-verify .sync-stage::before {
+  animation: sync-halo 1.6s ease-out infinite;
+}
+
+.sync-step.is-connected .sync-check,
+.sync-step.is-done .sync-check {
+  display: block;
+}
+
+.sync-step.is-error .sync-fail {
+  display: block;
+}
+
+.sync-check svg,
+.sync-fail svg {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.sync-check-ring,
+.sync-check-mark {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sync-check-ring {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 132;
+  stroke-dashoffset: 132;
+  animation: sync-draw .5s ease-out forwards;
+}
+
+.sync-check-mark {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: sync-draw .34s .28s ease-out forwards;
+}
+
+.sync-fail .sync-check-ring,
+.sync-fail .sync-check-mark {
+  stroke: var(--danger);
+}
+
+.sync-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.sync-step.is-sync .sync-progress,
+.sync-step.is-done .sync-progress {
+  opacity: 1;
+}
+
+.sync-progress-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width .85s cubic-bezier(.3, .7, .2, 1);
+}
+
+.sync-retry {
+  display: none;
+  width: 100%;
+}
+
+.sync-step.is-error .sync-retry {
+  display: block;
+}
+
+.sync-step.is-done .sync-title {
+  animation: sync-fade-up .36s ease-out both;
+}
+
+.sync-auto {
+  display: none;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sync-step.is-done .sync-auto {
+  display: flex;
+  animation: sync-fade-up .4s .1s ease-out both;
+}
+
+@keyframes sync-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sync-halo {
+  0% { opacity: .5; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.7); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes sync-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes sync-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.78); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-step.is-active,
+  .sync-step.is-done .sync-title,
+  .sync-step.is-done .sync-auto,
+  .sync-check-ring,
+  .sync-check-mark {
+    animation: none;
+  }
+
+  .sync-check-ring,
+  .sync-check-mark {
+    stroke-dashoffset: 0;
+  }
+
+  .sync-art-ring,
+  .sync-step.is-verify .sync-stage::before,
+  .sync-line.busy .sync-dot {
+    animation: none;
+    opacity: .3;
+  }
+
+  .sync-progress-fill {
+    transition: width .2s linear;
+  }
 }
