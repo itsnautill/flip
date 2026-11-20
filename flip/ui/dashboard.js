@@ -140,30 +140,44 @@
     return out;
   }
 
+  /** The first lesson on a day key, in period order, or null. */
+  function firstLesson(key) {
+    var first = null;
+    boardView.periods.forEach(function (period) {
+      if (period.break || first) return;
+      var cell = boardView.cells[key + "-" + period.id];
+      if (cell) first = { period: period, cell: cell };
+    });
+    return first;
+  }
+
+  function hasDay(key) {
+    return boardView.days.some(function (day) { return day.key === key; });
+  }
+
   function nextUp() {
     if (!boardView) return null;
     var key = dayKeyOf(boardView);
-    if (boardView.days.some(function (day) { return day.key === key; }) && hasClassOn(boardView, key)) {
+    var anyToday = hasDay(key) && hasClassOn(boardView, key);
+    if (anyToday) {
       var lessons = todayLessons().filter(function (lesson) { return lesson.state !== "break"; });
       var current = lessons.find(function (lesson) { return lesson.state === "now"; });
       if (current) return { kind: "now", lesson: current };
       var next = lessons.find(function (lesson) { return lesson.state === "later"; });
       if (next) return { kind: "next", lesson: next };
-      return { kind: "done" };
     }
-    /* Nothing today: offer tomorrow's first lesson instead. */
-    var tomorrow = Board.addDays(boardView.today, 1);
-    var tomorrowKey = Board.dayKeyOf(tomorrow);
-    if (!boardView.days.some(function (day) { return day.key === tomorrowKey; })) {
-      return { kind: "free" };
+    /* Nothing left today: the next day that has a class wins. */
+    for (var step = 1; step <= 7; step++) {
+      var date = Board.addDays(boardView.today, step);
+      var dayKey = Board.dayKeyOf(date);
+      if (!hasDay(dayKey)) continue;
+      var found = firstLesson(dayKey);
+      if (found) {
+        return { kind: step === 1 ? "tomorrow" : "later-day", step: step, date: date, lesson: found };
+      }
     }
-    var first = null;
-    boardView.periods.forEach(function (period) {
-      if (period.break || first) return;
-      var cell = boardView.cells[tomorrowKey + "-" + period.id];
-      if (cell) first = { period: period, cell: cell };
-    });
-    return first ? { kind: "tomorrow", lesson: first } : { kind: "free" };
+    /* A week with nothing in it at all says so; a finished day says it is done. */
+    return { kind: anyToday ? "done" : "free" };
   }
 
   /* ------------------------------------------------------------------ widgets */
@@ -201,14 +215,21 @@
       }
       if (info.kind === "done") {
         body.appendChild(el("p", "hero-eyebrow", "All done"));
-        body.appendChild(el("p", "hero-title", "No more classes today"));
+        body.appendChild(el("p", "hero-title", "No classes left this week"));
         body.appendChild(actionLink("See the timetable", "timetable"));
         return;
       }
 
       var lesson = info.lesson;
       var now = nowMinutes();
-      var eyebrow = info.kind === "now" ? "In progress" : info.kind === "tomorrow" ? "Tomorrow" : "Next class";
+      var eyebrow =
+        info.kind === "now"
+          ? "In progress"
+          : info.kind === "tomorrow"
+            ? "Tomorrow"
+            : info.kind === "later-day"
+              ? WEEKDAYS[info.date.getDay()]
+              : "Next class";
       body.appendChild(el("p", "hero-eyebrow", eyebrow));
 
       var title = el("div", "hero-title");
@@ -218,7 +239,6 @@
 
       var meta = el("div", "hero-meta");
       var time = lesson.period.start + " – " + lesson.period.end;
-      if (info.kind === "tomorrow") time = "Tomorrow, " + time;
       meta.appendChild(el("span", "", time));
       if (lesson.cell.room) meta.appendChild(el("span", "hero-room", lesson.cell.room));
       if (info.kind === "now") {
