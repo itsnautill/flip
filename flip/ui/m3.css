@@ -1159,12 +1159,10 @@ html[data-m3="on"] .progress > span {
   white-space: nowrap;
 }
 
-/* Summary strip above the board */
+/* Summary strip above the board: one plain sentence, no bold fragments. */
 html[data-m3="on"] .summary-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  padding: 12px 20px;
+  display: block;
+  padding: 11px 20px;
   margin-bottom: 12px;
   border-radius: var(--r-full);
   background: var(--glass-fill);
@@ -1173,9 +1171,9 @@ html[data-m3="on"] .summary-strip {
   color: var(--on-surface-variant);
 }
 
-html[data-m3="on"] .summary-strip b {
-  color: var(--on-surface);
-  font-weight: 600;
+/* The same count sat next to the bar; the strip keeps it now. */
+html[data-m3="on"] .week-bar .progress > #week-count {
+  display: none;
 }
 
 html[data-m3="on"] .suggestions {

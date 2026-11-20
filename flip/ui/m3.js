@@ -550,10 +550,14 @@
         board.parentNode.insertBefore(strip, board);
       }
       strip.hidden = !boardVisible;
-      var bits = [];
-      bits.push("Today: <b>" + todayLeft + "</b> left");
-      bits.push("<b>" + done + "</b> of " + total + " done this week");
-      strip.innerHTML = bits.join(" · ");
+      strip.textContent =
+        todayLeft +
+        (todayLeft === 1 ? " task left today" : " tasks left today") +
+        " · " +
+        done +
+        " of " +
+        total +
+        " done this week";
 
       /* Long titles get their full text on hover instead of a third line. */
       Array.prototype.forEach.call(board.querySelectorAll(".task-title"), function (title) {
