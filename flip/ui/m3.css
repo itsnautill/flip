@@ -307,33 +307,34 @@ html[data-m3="on"] .tab-label {
 }
 
 @media (min-width: 840px) {
+  /* A compact floating pill that hugs its items, not a full-height slab. */
   html[data-m3="on"] #tabs {
     position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
+    left: 10px;
+    top: 50%;
+    bottom: auto;
     width: var(--rail-width);
+    height: auto;
+    transform: translateY(-50%);
     z-index: 55;
     flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    padding: 18px 10px;
-    background: var(--glass-fill);
-    box-shadow: inset -1px 0 0 var(--glass-edge), var(--glass-shadow);
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 8px;
+    border-radius: var(--r-28);
+    background: color-mix(in srgb, var(--surface-container-lowest) 82%, transparent);
+    box-shadow: inset 0 1px 0 var(--glass-edge),
+      inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 6%, transparent),
+      var(--glass-shadow);
   }
 
   html[data-m3="on"] .tab {
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     width: 100%;
-    padding: 10px 6px;
+    padding: 11px 10px;
     border-radius: var(--r-22);
     justify-content: center;
-  }
-
-  /* The rail is glass, but the wash has to show through it. */
-  html[data-m3="on"] #tabs {
-    background: color-mix(in srgb, var(--surface-container-lowest) 46%, transparent);
   }
 
   html[data-m3="on"] .tab-icon {
@@ -343,11 +344,13 @@ html[data-m3="on"] .tab-label {
 
   html[data-m3="on"] .tab-label {
     font-size: 11.5px;
+    line-height: 14px;
   }
 
+  /* The pill floats: the layout keeps its column clear at every width. */
   html[data-m3="on"] #chrome,
   html[data-m3="on"] #app {
-    margin-left: var(--rail-width);
+    margin-left: calc(10px + var(--rail-width) + 10px);
   }
 
   html[data-m3="on"] #chrome {
@@ -2285,7 +2288,7 @@ html[data-theme="dark"][data-m3="on"] .widget-next {
 }
 
 html[data-theme="dark"][data-m3="on"] #tabs {
-  background: color-mix(in srgb, var(--surface-container) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-container) 84%, transparent);
 }
 
 /* The older sheets pin the active tab with !important, so this has to as well. */
