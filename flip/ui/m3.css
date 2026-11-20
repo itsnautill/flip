@@ -849,6 +849,34 @@ html[data-m3="on"] .tag {
   font: var(--type-label-sm);
 }
 
+/* A scalloped cookie for empty states: decorative, and cheap (a mask, not an
+   image request). */
+html[data-m3="on"] .day-empty,
+html[data-m3="on"] .dash-empty {
+  text-align: center;
+}
+
+html[data-m3="on"] .day-empty::before,
+html[data-m3="on"] .dash-empty::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 4px auto 8px;
+  background: var(--tertiary-container);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 2c3.3 0 6 2.7 6 6 3.3 0 6 2.7 6 6 3.3 0 6 2.7 6 6s-2.7 6-6 6c0 3.3-2.7 6-6 6-0 3.3-2.7 6-6 6s-6-2.7-6-6c-3.3 0-6-2.7-6-6-3.3 0-6-2.7-6-6s2.7-6 6-6c0-3.3 2.7-6 6-6 0-3.3 2.7-6 6-6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 2c3.3 0 6 2.7 6 6 3.3 0 6 2.7 6 6 3.3 0 6 2.7 6 6s-2.7 6-6 6c0 3.3-2.7 6-6 6-0 3.3-2.7 6-6 6s-6-2.7-6-6c-3.3 0-6-2.7-6-6-3.3 0-6-2.7-6-6s2.7-6 6-6c0-3.3 2.7-6 6-6 0-3.3 2.7-6 6-6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: .75;
+}
+
+/* Keep the last row clear of the extended FAB. */
+@media (min-width: 840px) {
+  html[data-m3="on"] .task-board,
+  html[data-m3="on"] .task-list {
+    padding-bottom: 88px;
+  }
+}
+
 /* The week board's add action: labelled, so it is never a mystery button. */
 html[data-m3="on"] .fab-extended {
   position: fixed;
