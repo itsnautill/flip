@@ -267,6 +267,29 @@
     },
   };
 
+  /* Finished lessons fold into one quiet row; the state survives re-renders. */
+  var doneOpen = false;
+
+  function scheduleRow(lesson) {
+    var row = el("li", "sched-row state-" + lesson.state);
+    row.appendChild(el("span", "sched-time", lesson.period.start));
+    var name = el("span", "sched-name");
+    name.appendChild(el("i", "sched-dot"));
+    name.firstChild.style.background = paintColour(lesson.cell.hue);
+    name.appendChild(el("span", "sched-label", lesson.cell.name));
+    row.appendChild(name);
+    if (lesson.cell.room) row.appendChild(el("span", "sched-room", lesson.cell.room));
+    if (lesson.state === "now") row.appendChild(el("span", "sched-flag", "now"));
+    else if (lesson.state === "break") row.appendChild(el("span", "sched-flag ghost", "break"));
+    if (lesson.cell.pending) {
+      var badge = el("span", "sched-count", String(lesson.cell.pending));
+      badge.title = lesson.cell.pending + " open task(s)";
+      row.appendChild(badge);
+    }
+    row.title = lesson.cell.name + " · " + lesson.period.start + "–" + lesson.period.end;
+    return row;
+  }
+
   WIDGETS.today = {
     title: "Today's schedule",
     render: function (body) {
@@ -277,27 +300,37 @@
         body.appendChild(actionLink("Add a subject", "timetable"));
         return;
       }
-      var list = el("ul", "sched-list");
-      lessons.forEach(function (lesson) {
-        var row = el("li", "sched-row state-" + lesson.state);
-        row.appendChild(el("span", "sched-time", lesson.period.start));
-        var name = el("span", "sched-name");
-        name.appendChild(el("i", "sched-dot"));
-        name.firstChild.style.background = paintColour(lesson.cell.hue);
-        name.appendChild(el("span", "", lesson.cell.name));
-        row.appendChild(name);
-        if (lesson.cell.room) row.appendChild(el("span", "sched-room", lesson.cell.room));
-        if (lesson.state === "now") row.appendChild(el("span", "sched-flag", "now"));
-        else if (lesson.state === "break") row.appendChild(el("span", "sched-flag ghost", "break"));
-        if (lesson.cell.pending) {
-          var badge = el("span", "sched-count", String(lesson.cell.pending));
-          badge.title = lesson.cell.pending + " open task(s)";
-          row.appendChild(badge);
-        }
-        row.title = lesson.cell.name + " · " + lesson.period.start + "–" + lesson.period.end;
-        list.appendChild(row);
-      });
-      body.appendChild(list);
+
+      var past = lessons.filter(function (lesson) { return lesson.state === "past"; });
+      var live = lessons.filter(function (lesson) { return lesson.state !== "past"; });
+
+      if (live.length) {
+        var list = el("ul", "sched-list");
+        live.forEach(function (lesson) { list.appendChild(scheduleRow(lesson)); });
+        body.appendChild(list);
+      } else if (!past.length) {
+        body.appendChild(el("p", "dash-hint", "Nothing else on the timetable today."));
+      }
+
+      if (past.length) {
+        var toggle = el(
+          "button",
+          "sched-done-toggle",
+          past.length + (past.length === 1 ? " class done" : " classes done")
+        );
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", String(doneOpen));
+        var doneList = el("ul", "sched-list sched-done-list");
+        doneList.hidden = !doneOpen;
+        past.forEach(function (lesson) { doneList.appendChild(scheduleRow(lesson)); });
+        toggle.addEventListener("click", function () {
+          doneOpen = !doneOpen;
+          doneList.hidden = !doneOpen;
+          toggle.setAttribute("aria-expanded", String(doneOpen));
+        });
+        body.appendChild(toggle);
+        body.appendChild(doneList);
+      }
     },
   };
 
