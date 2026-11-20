@@ -382,10 +382,6 @@ html[data-m3="on"] .tab-label {
     font-size: 10.5px;
   }
 
-  html[data-m3="on"] #app {
-    padding-bottom: calc(var(--dock-height) + 12px);
-  }
-
   html[data-m3="on"] .view {
     padding: 16px 16px 24px;
   }
@@ -1889,6 +1885,7 @@ html[data-m3="on"] .wave-track-line {
 html[data-m3="on"] .wave-clip {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   clip-path: inset(0 calc(100% - var(--wave-fill, 0px)) 0 0);
   transition: clip-path var(--wave-grow-duration) var(--wave-grow-ease);
 }
@@ -2064,4 +2061,31 @@ html[data-m3="on"] .waves-hidden .ring-flow {
 /* Scrollbar gutters should never shift the layout. */
 html[data-m3="on"] .view {
   scrollbar-gutter: stable;
+}
+
+/* --------------------------------------------------- shell clearance */
+/* The dock floats over the panes, so every scroller ends above it and its own
+   controls step up as well. Ids are used because the panes set their padding
+   by id in the older sheets. */
+
+@media (max-width: 839px) {
+  html[data-m3="on"] #dashboard,
+  html[data-m3="on"] #timetable,
+  html[data-m3="on"] #tasks,
+  html[data-m3="on"] #stage {
+    padding-bottom: calc(var(--dock-height) + 24px) !important;
+    scroll-padding-bottom: calc(var(--dock-height) + 18px);
+  }
+
+  html[data-m3="on"] #timer-tools {
+    bottom: calc(var(--dock-height) + 22px);
+  }
+
+  html[data-m3="on"] #timer-transport {
+    bottom: calc(var(--dock-height) + 84px);
+  }
+
+  html[data-m3="on"] #dots {
+    bottom: calc(var(--dock-height) + 32px);
+  }
 }
