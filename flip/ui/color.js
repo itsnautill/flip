@@ -244,8 +244,10 @@
     }
 
     var surface = at(dark ? 0.175 : 0.985, dark ? 0.012 : 0.012);
+    /* Dark surfaces need a wider ladder than light ones: on a near-black page a
+       3% step is invisible, so each container sits clearly above the last. */
     var levels = dark
-      ? [0.145, 0.205, 0.235, 0.27, 0.31]
+      ? [0.21, 0.245, 0.275, 0.31, 0.35]
       : [0.998, 0.972, 0.955, 0.936, 0.916];
     var levelChroma = dark ? [0.014, 0.016, 0.018, 0.02, 0.022] : [0.006, 0.012, 0.015, 0.018, 0.021];
 
@@ -299,8 +301,8 @@
       "--wash-b": at(dark ? 0.19 : 0.972, dark ? 0.032 : 0.028, 12),
       "--wash-c": at(dark ? 0.21 : 0.962, dark ? 0.03 : 0.03, 22),
 
-      "--glass-fill": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 56%" : " 62%") + ", transparent)",
-      "--glass-fill-strong": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 84%" : " 86%") + ", transparent)",
+      "--glass-fill": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 74%" : " 62%") + ", transparent)",
+      "--glass-fill-strong": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 92%" : " 86%") + ", transparent)",
       "--glass-edge": dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.66)",
       "--glass-inner": dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.34)",
       "--glass-shadow": dark

@@ -2063,6 +2063,60 @@ html[data-m3="on"] .view {
   scrollbar-gutter: stable;
 }
 
+/* ---------------------------------------------------------- dark mode */
+/* Panels need a real step above the page and a hairline of light, otherwise a
+   near-black card on a near-black wash disappears. */
+
+html[data-theme="dark"][data-m3="on"] .widget,
+html[data-theme="dark"][data-m3="on"] .day-col,
+html[data-theme="dark"][data-m3="on"] .suggestion,
+html[data-theme="dark"][data-m3="on"] .list-group,
+html[data-theme="dark"][data-m3="on"] .tt-dropzone,
+html[data-theme="dark"][data-m3="on"] .setting-row,
+html[data-theme="dark"][data-m3="on"] .week-bar,
+html[data-theme="dark"][data-m3="on"] .summary-strip {
+  background: color-mix(in srgb, var(--surface-container) 94%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--glass-shadow);
+}
+
+html[data-theme="dark"][data-m3="on"] .task {
+  background: color-mix(in srgb, var(--surface-container-highest) 96%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="dark"][data-m3="on"] .day-col.today {
+  background: color-mix(in srgb, var(--primary-container) 62%, var(--surface-container));
+}
+
+html[data-theme="dark"][data-m3="on"] .widget-next {
+  background: color-mix(in srgb, var(--primary-container) 58%, var(--surface-container));
+}
+
+html[data-theme="dark"][data-m3="on"] #tabs {
+  background: color-mix(in srgb, var(--surface-container) 90%, transparent);
+}
+
+/* The older sheets pin the active tab with !important, so this has to as well. */
+html[data-theme="dark"][data-m3="on"] .tab.active {
+  background: color-mix(in srgb, var(--accent) 30%, var(--surface-container-highest)) !important;
+  color: var(--on-surface);
+}
+
+/* Deadline titles are body text in both themes: readable ink, two lines, no
+   card-edge clipping. */
+html[data-m3="on"] .deadline-text .link-btn {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--on-surface);
+  font: var(--type-body);
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
 /* --------------------------------------------------- shell clearance */
 /* The dock floats over the panes, so every scroller ends above it and its own
    controls step up as well. Ids are used because the panes set their padding

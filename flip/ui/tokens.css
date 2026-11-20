@@ -235,11 +235,11 @@ html[data-theme="dark"] {
   --surface: #17120e;
   --surface-dim: #17120e;
   --surface-bright: #3a332c;
-  --surface-container-lowest: #120e0b;
-  --surface-container-low: #1e1813;
-  --surface-container: #221b16;
-  --surface-container-high: #2b231d;
-  --surface-container-highest: #352b24;
+  --surface-container-lowest: #241e19;
+  --surface-container-low: #2b241e;
+  --surface-container: #322a23;
+  --surface-container-high: #3a312a;
+  --surface-container-highest: #433930;
 
   --on-surface: #f1e5dc;
   --on-surface-variant: #d3c3b6;
@@ -265,8 +265,8 @@ html[data-theme="dark"] {
   --wash-b: #20170f;
   --wash-c: #1b1512;
 
-  --glass-fill: color-mix(in srgb, var(--surface-container-high) 52%, transparent);
-  --glass-fill-strong: color-mix(in srgb, var(--surface-container-high) 82%, transparent);
+  --glass-fill: color-mix(in srgb, var(--surface-container-lowest) 74%, transparent);
+  --glass-fill-strong: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
   --glass-edge: rgba(255, 255, 255, 0.1);
   --glass-inner: rgba(255, 255, 255, 0.05);
   --glass-shadow: 0 16px 34px -20px rgba(0, 0, 0, 0.7);
@@ -299,11 +299,11 @@ html[data-theme="dark"] {
     --surface: #17120e;
     --surface-dim: #17120e;
     --surface-bright: #3a332c;
-    --surface-container-lowest: #120e0b;
-    --surface-container-low: #1e1813;
-    --surface-container: #221b16;
-    --surface-container-high: #2b231d;
-    --surface-container-highest: #352b24;
+    --surface-container-lowest: #241e19;
+    --surface-container-low: #2b241e;
+    --surface-container: #322a23;
+    --surface-container-high: #3a312a;
+    --surface-container-highest: #433930;
     --on-surface: #f1e5dc;
     --on-surface-variant: #d3c3b6;
     --outline: #9d8c7f;
@@ -322,8 +322,8 @@ html[data-theme="dark"] {
     --wash-a: #2a1d14;
     --wash-b: #20170f;
     --wash-c: #1b1512;
-    --glass-fill: color-mix(in srgb, var(--surface-container-high) 52%, transparent);
-    --glass-fill-strong: color-mix(in srgb, var(--surface-container-high) 82%, transparent);
+    --glass-fill: color-mix(in srgb, var(--surface-container-lowest) 74%, transparent);
+    --glass-fill-strong: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
     --glass-edge: rgba(255, 255, 255, 0.1);
     --glass-inner: rgba(255, 255, 255, 0.05);
     --glass-shadow: 0 16px 34px -20px rgba(0, 0, 0, 0.7);
