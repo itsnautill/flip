@@ -1,26 +1,10 @@
-/* SF Pro only exists on macOS. Everything else - Android above all - gets
-   the bundled Inter Variable, so the design does not depend on the machine. */
-@font-face {
-  font-family: "Flip Sans";
-  src: url("fonts/Inter.woff2") format("woff2-variations"),
-    url("fonts/Inter.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "SF Pro Display";
-  font-weight: 600;
-  src: local("SF Pro Display Semibold"), local("SFProDisplay-Semibold");
-}
+/* Fonts live in tokens.css: Google Sans Flex for the UI, Inter for the clock. */
 
 /* Beige is the default. The dark palette is opted into with data-theme. */
 :root {
   /* macOS keeps SF Pro, Windows keeps Segoe UI, and anything without either
      - Android, Linux - falls through to the font we ship. */
-  --font: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Flip Sans",
-    "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font: var(--font-ui, "Segoe UI", system-ui, sans-serif);
   --flip-half: 300ms;
   --w: min(38vw, 52vh);
 

@@ -226,24 +226,109 @@
     };
   }
 
+  /* ------------------------------------------------------------ whole theme */
+
+  /**
+   * Every role the app needs, from one hue. Light and dark derive from the
+   * same angles: neutrals are very low-chroma tints of the accent, containers
+   * are softer steps of the same hue, and the only non-accent colours are the
+   * error/status tints.
+   */
+  function themeFor(hue, theme) {
+    var dark = isDark(theme);
+    var h = normaliseHue(hue);
+    var base = accentPalette(h, theme);
+
+    function at(l, c, shift) {
+      return oklch(l, c, h + (shift || 0));
+    }
+
+    var surface = at(dark ? 0.175 : 0.985, dark ? 0.012 : 0.012);
+    var levels = dark
+      ? [0.145, 0.205, 0.235, 0.27, 0.31]
+      : [0.998, 0.972, 0.955, 0.936, 0.916];
+    var levelChroma = dark ? [0.014, 0.016, 0.018, 0.02, 0.022] : [0.006, 0.012, 0.015, 0.018, 0.021];
+
+    /* Accent-coloured text has to clear AA against the surface it sits on and
+       the soft container behind chips, whatever hue was chosen. */
+    var textWeight = dark ? 0.84 : 0.46;
+    var textChroma = dark ? 0.1 : 0.12;
+    var text = oklch(textWeight, textChroma, h);
+    for (var step = 0; step < 24 && contrast(text, surface) < 4.6; step++) {
+      textWeight = clamp(textWeight + (dark ? 0.015 : -0.015), 0.16, 0.96);
+      text = oklch(textWeight, textChroma, h);
+    }
+
+    var roles = {
+      "--accent": base.accent,
+      "--accent-ink": base.ink,
+      "--accent-hover": base.hover,
+      "--accent-active": base.active,
+      "--accent-soft": base.soft,
+      "--accent-line": base.line,
+      "--accent-text": text,
+      "--focus": text,
+
+      "--primary": base.accent,
+      "--on-primary": base.ink,
+      "--primary-container": at(dark ? 0.32 : 0.945, dark ? 0.05 : 0.05),
+      "--on-primary-container": at(dark ? 0.9 : 0.28, dark ? 0.045 : 0.055),
+      "--secondary-container": at(dark ? 0.245 : 0.968, dark ? 0.032 : 0.032),
+      "--on-secondary-container": dark ? at(0.9, 0.03) : at(0.33, 0.035),
+      "--tertiary-container": at(dark ? 0.215 : 0.98, dark ? 0.02 : 0.02),
+      "--on-tertiary-container": dark ? at(0.88, 0.02) : at(0.38, 0.025),
+
+      "--surface": surface,
+      "--surface-dim": at(dark ? 0.145 : 0.925, dark ? 0.012 : 0.015),
+      "--surface-bright": at(dark ? 0.33 : 0.997, dark ? 0.02 : 0.006),
+      "--surface-container-lowest": at(levels[0], levelChroma[0]),
+      "--surface-container-low": at(levels[1], levelChroma[1]),
+      "--surface-container": at(levels[2], levelChroma[2]),
+      "--surface-container-high": at(levels[3], levelChroma[3]),
+      "--surface-container-highest": at(levels[4], levelChroma[4]),
+
+      "--on-surface": at(dark ? 0.93 : 0.235, dark ? 0.015 : 0.018),
+      "--on-surface-variant": at(dark ? 0.76 : 0.44, dark ? 0.02 : 0.02),
+      "--outline": at(dark ? 0.56 : 0.66, 0.018),
+      "--outline-variant": at(dark ? 0.33 : 0.885, 0.014),
+      "--inverse-surface": at(dark ? 0.93 : 0.24, 0.018),
+      "--inverse-on-surface": at(dark ? 0.22 : 0.96, 0.012),
+
+      "--wash-base": at(dark ? 0.16 : 0.982, dark ? 0.018 : 0.02),
+      "--wash-a": at(dark ? 0.225 : 0.955, dark ? 0.04 : 0.036, -8),
+      "--wash-b": at(dark ? 0.19 : 0.972, dark ? 0.032 : 0.028, 12),
+      "--wash-c": at(dark ? 0.21 : 0.962, dark ? 0.03 : 0.03, 22),
+
+      "--glass-fill": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 56%" : " 62%") + ", transparent)",
+      "--glass-fill-strong": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 84%" : " 86%") + ", transparent)",
+      "--glass-edge": dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.66)",
+      "--glass-inner": dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.34)",
+      "--glass-shadow": dark
+        ? "0 18px 36px -22px rgba(0,0,0,0.75)"
+        : "0 14px 32px -20px " + oklch(0.32, 0.06, h),
+    };
+
+    return { hue: h, roles: roles, base: base };
+  }
+
   /** Paints the palette on <html>; the stylesheet does the rest. */
   function applyAccent(hue) {
-    var palette = accentPalette(hue);
+    var theme = themeFor(hue);
     var style = document.documentElement.style;
-    style.setProperty("--accent", palette.accent);
-    style.setProperty("--accent-ink", palette.ink);
-    style.setProperty("--accent-hover", palette.hover);
-    style.setProperty("--accent-active", palette.active);
-    style.setProperty("--accent-soft", palette.soft);
-    style.setProperty("--accent-line", palette.line);
-    style.setProperty("--accent-text", palette.text);
-    style.setProperty("--focus", palette.focus);
-    style.setProperty("--wash-a", palette.washA);
-    style.setProperty("--wash-b", palette.washB);
-    style.setProperty("--wash-c", palette.washC);
-    style.setProperty("--wash-base", palette.base);
-    document.documentElement.setAttribute("data-accent-hue", String(Math.round(palette.hue)));
-    return palette;
+    Object.keys(theme.roles).forEach(function (name) {
+      style.setProperty(name, theme.roles[name]);
+    });
+    window.__flipHue = theme.hue;
+    document.documentElement.setAttribute("data-accent-hue", String(Math.round(theme.hue)));
+    return theme.base;
+  }
+
+  /* A theme flip (system or the Settings switch) has to regenerate the roles
+     too, otherwise dark keeps the light neutrals. */
+  if (typeof MutationObserver !== "undefined") {
+    new MutationObserver(function () {
+      if (window.__flipHue != null) applyAccent(window.__flipHue);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   /* ----------------------------------------------------------- hue slider */
@@ -343,6 +428,7 @@
     subjectColorFromHue: subjectColorFromHue,
     nextHue: nextHue,
     accentPalette: accentPalette,
+    themeFor: themeFor,
     applyAccent: applyAccent,
     hueSlider: hueSlider,
     presets: ACCENT_PRESETS,

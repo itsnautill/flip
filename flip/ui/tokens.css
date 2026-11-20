@@ -1,294 +1,332 @@
-/* Material 3 Expressive — design tokens.
+/* Flip — design tokens.
 
-   One seed, one palette. The primary roles are anchored to the seed colour
-   (#4A5CC5, a calm indigo for a study app); the app's accent picker re-seeds
-   them at runtime because FlipColor writes --accent / --accent-soft / --accent-
-   ink / --accent-text, so Material You still follows the user's hue.
-   Secondary and tertiary stay neutral and teal so any accent hue harmonises.
+   ONE hue. Every colour in this file is a neutral or a tint of the accent hue;
+   color.js rewrites the whole set at runtime from the saved accent (light and
+   dark), so changing the swatch in Settings recolours the app instantly.
 
-   Nothing here draws a component. m3.css reads these; style.css and polish.css
-   keep their old variables, which are bridged at the bottom of this file so the
-   screens that predate the rebuild inherit the new palette too. */
+   The values below are the apricot default, painted before scripts run. */
 
+/* --------------------------------------------------------------- fonts */
+/* Google Sans Flex: the whole UI. Three subsets, WOFF2 only, local. */
 @font-face {
-  font-family: "Roboto Flex";
-  src: url("fonts/RobotoFlex.woff2") format("woff2-variations"),
-    url("fonts/RobotoFlex.woff2") format("woff2");
-  font-weight: 100 1000;
+  font-family: "Google Sans Flex";
   font-style: normal;
   font-display: swap;
+  font-weight: 100 1000;
+  src: url("fonts/google-sans-flex-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Google Sans Flex";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 1000;
+  src: url("fonts/google-sans-flex-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Google Sans Flex";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 1000;
+  src: url("fonts/google-sans-flex-vietnamese-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329,
+    U+1EA0-1EF9, U+20AB;
+}
+
+/* Inter: the flip clock digits only. */
+@font-face {
+  font-family: "Inter Clock";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter Clock";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter Clock";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("fonts/inter-vietnamese-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1,
+    U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329,
+    U+1EA0-1EF9, U+20AB;
 }
 
 :root {
-  /* ------------------------------------------------------------- palette */
-  --seed: #4a5cc5;
+  /* -------------------------------------------------------- one-hue palette
+     Default accent: soft apricot (hue 42 in OKLCH). color.js replaces every
+     value below from the saved accent and the current light/dark mode. */
+  --accent: #e8a87c;
+  --accent-ink: #3a2213;
+  --accent-hover: #eda87a;
+  --accent-active: #d99367;
+  --accent-soft: #f8e6da;
+  --accent-line: #e5b898;
+  --accent-text: #8a4f2c;
+  --focus: #b96a3d;
 
-  --primary: var(--accent, #4a5cc5);
-  --on-primary: var(--accent-ink, #ffffff);
-  /* Reseeded from the accent, but pushed further than the neutral accent-soft
-     so containers actually read as tonal against the surface. */
-  --primary-container: var(--accent-soft, #dee0ff);
-  --primary-container: color-mix(in srgb, var(--accent, #4a5cc5) 22%, var(--surface, #fbf8ff));
-  --on-primary-container: var(--accent-text, #00105c);
+  --primary: var(--accent);
+  --on-primary: var(--accent-ink);
+  --primary-container: #f8e6da;
+  --on-primary-container: #3a2213;
+  --secondary-container: #f8efe8;
+  --on-secondary-container: #4a3526;
+  --tertiary-container: #fbf4ee;
+  --on-tertiary-container: #4a3526;
 
-  --secondary: #5b5f71;
-  --on-secondary: #ffffff;
-  --secondary-container: #e0e1f3;
-  --secondary-container: color-mix(in srgb, var(--accent, #4a5cc5) 10%, var(--surface, #fbf8ff));
-  --on-secondary-container: #181b2b;
-  --on-secondary-container: var(--accent-text, #181b2b);
+  --surface: #fdfaf7;
+  --surface-dim: #eee7e1;
+  --surface-bright: #fffdfb;
+  --surface-container-lowest: #fffefd;
+  --surface-container-low: #faf5f1;
+  --surface-container: #f6efea;
+  --surface-container-high: #f1e9e2;
+  --surface-container-highest: #ece3db;
 
-  --tertiary: #00696b;
-  --on-tertiary: #ffffff;
-  --tertiary-container: #9cf1f0;
-  --on-tertiary-container: #002020;
+  --on-surface: #211a15;
+  --on-surface-variant: #5a4c42;
+  --outline: #8e8178;
+  --outline-variant: #e2d8d0;
 
-  --error: #ba1a1a;
-  --on-error: #ffffff;
-  --error-container: #ffdad6;
-  --on-error-container: #410002;
-
-  --surface: #fbf8ff;
-  --surface-dim: #dbd9e0;
-  --surface-bright: #fbf8ff;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #f5f2fa;
-  --surface-container: #efedf4;
-  --surface-container-high: #e9e7ef;
-  --surface-container-highest: #e3e1e9;
-
-  --on-surface: #1b1b1f;
-  --on-surface-variant: #45464f;
-  --outline: #76777f;
-  --outline-variant: #c6c6d0;
-
-  --inverse-surface: #303036;
-  --inverse-on-surface: #f2f0f7;
-  --inverse-primary: #b8c4ff;
+  --inverse-surface: #362e28;
+  --inverse-on-surface: #fbf2ec;
+  --inverse-primary: #f6c3a2;
   --scrim: #000000;
 
-  /* M3 tonal tone stops, for surfaces that need a numbered step. */
-  --tone-0: #000000;
-  --tone-10: #1b1b1f;
-  --tone-20: #303036;
-  --tone-30: #47464f;
-  --tone-40: #5e5e67;
-  --tone-50: #777680;
-  --tone-60: #91909a;
-  --tone-70: #acaab4;
-  --tone-80: #c8c5d0;
-  --tone-90: #e4e1ec;
-  --tone-95: #f2effa;
-  --tone-99: #fbf8ff;
-  --tone-100: #ffffff;
+  --error: #b3261e;
+  --on-error: #ffffff;
+  --error-container: #fde7e5;
+  --on-error-container: #6b1a15;
 
-  /* --------------------------------------------------------------- shape */
-  --r-4: 4px;
+  /* Small status tints only. Overdue = warm red, due soon = amber. */
+  --status-overdue: #b4453a;
+  --status-overdue-container: #fbe9e6;
+  --status-soon: #96651a;
+  --status-soon-container: #fbf0dc;
+
+  /* Background wash: static, tinted by the accent, no animation. */
+  --wash-base: #fdf8f4;
+  --wash-a: #f7e3d5;
+  --wash-b: #fcf0e6;
+  --wash-c: #f4e7df;
+
+  /* --------------------------------------------------------------- shape
+     One rounded family. No mixed corners anywhere. */
   --r-8: 8px;
   --r-12: 12px;
   --r-16: 16px;
-  --r-20: 20px;
+  --r-22: 22px;
   --r-28: 28px;
   --r-32: 32px;
   --r-48: 48px;
   --r-full: 999px;
 
-  /* Deliberate mixes: one straight corner against three round ones is the
-     "tension" the shape guidance asks for, so it is a token, not a one-off. */
-  --shape-card: var(--r-28);
-  --shape-card-tension: var(--r-28) var(--r-8) var(--r-28) var(--r-28);
-  --shape-hero: var(--r-48) var(--r-48) var(--r-20) var(--r-48);
-  --shape-panel: var(--r-32);
+  --shape-column: var(--r-28);
+  --shape-card: var(--r-22);
+  --shape-hero: var(--r-32);
+  --shape-panel: var(--r-28);
   --shape-control: var(--r-full);
   --shape-small: var(--r-12);
-  --shape-button-press: var(--r-8);
+  --shape-button-press: var(--r-22);
 
   /* ---------------------------------------------------------------- type */
-  --font-sans: "Roboto Flex", "Flip Sans", "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-ui: "Google Sans Flex", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-clock: "Inter Clock", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-ui);
+  --font: var(--font-ui);
 
-  --type-display-lg: 500 57px/64px var(--font-sans);
-  --type-display-md: 500 45px/52px var(--font-sans);
-  --type-display-sm: 500 36px/44px var(--font-sans);
+  --type-page: 600 26px/32px var(--font-ui);
+  --type-section: 600 17px/24px var(--font-ui);
+  --type-body: 400 14px/21px var(--font-ui);
+  --type-small: 400 12.5px/18px var(--font-ui);
+  --type-label: 500 12px/16px var(--font-ui);
+  --type-number: 500 30px/34px var(--font-ui);
+  --type-emphasized: 600 15px/20px var(--font-ui);
 
-  --type-headline-lg: 600 32px/40px var(--font-sans);
-  --type-headline-md: 600 28px/36px var(--font-sans);
-  --type-headline-sm: 600 24px/32px var(--font-sans);
+  --tracking-page: -0.02em;
+  --tracking-number: -0.03em;
 
-  --type-title-lg: 500 22px/28px var(--font-sans);
-  --type-title-md: 500 16px/24px var(--font-sans);
-  --type-title-sm: 500 14px/20px var(--font-sans);
+  /* -------------------------------------------------------------- motion
+     Gently underdamped: a ~3% overshoot reads soft rather than bouncy. */
+  --spring-spatial-fast: linear(0, 0.13, 0.36, 0.63, 0.85, 0.98, 1.035, 1.03, 1.01, 1, 0.997, 0.998, 1);
+  --spring-spatial-default: linear(0, 0.09, 0.27, 0.51, 0.73, 0.9, 1.005, 1.04, 1.033, 1.015, 1.003, 0.998, 0.997, 0.998, 0.999, 1);
+  --spring-spatial-slow: linear(0, 0.06, 0.19, 0.38, 0.58, 0.76, 0.9, 0.99, 1.03, 1.038, 1.028, 1.012, 1.002, 0.998, 0.997, 0.998, 0.999, 1);
+  --spring-effects-fast: linear(0, 0.16, 0.39, 0.62, 0.8, 0.92, 0.98, 1, 1.005, 1.003, 1, 1);
+  --spring-effects-default: linear(0, 0.12, 0.33, 0.55, 0.74, 0.88, 0.96, 1.005, 1.01, 1.005, 1.001, 1);
+  --spring-effects-slow: linear(0, 0.1, 0.28, 0.48, 0.66, 0.81, 0.91, 0.97, 1.005, 1.008, 1.005, 1.001, 1);
 
-  --type-body-lg: 400 16px/24px var(--font-sans);
-  --type-body-md: 400 14px/20px var(--font-sans);
-  --type-body-sm: 400 12px/16px var(--font-sans);
+  --dur-spatial-fast: 220ms;
+  --dur-spatial-default: 340ms;
+  --dur-spatial-slow: 520ms;
+  --dur-effects-fast: 160ms;
+  --dur-effects-default: 260ms;
+  --dur-effects-slow: 420ms;
 
-  --type-label-lg: 500 14px/20px var(--font-sans);
-  --type-label-md: 500 12px/16px var(--font-sans);
-  --type-label-sm: 500 11px/16px var(--font-sans);
-
-  /* Emphasized: heavier and tighter, for the clock, the timer and the one
-     primary action on a screen. */
-  --type-emphasized-display: 700 96px/100px var(--font-sans);
-  --type-emphasized-headline: 700 36px/42px var(--font-sans);
-  --type-emphasized-title: 600 18px/24px var(--font-sans);
-  --type-emphasized-label: 600 14px/20px var(--font-sans);
-
-  --tracking-display: -0.02em;
-  --tracking-headline: -0.01em;
-  --tracking-title: 0.006em;
-  --tracking-body: 0.01em;
-
-  /* -------------------------------------------------------------- motion */
-  /* linear() easings generated from damped-spring equations: spatial springs
-     overshoot by ~8%, effects springs are critically damped and never do. */
-  --spring-spatial-fast: linear(0, 0.068, 0.227, 0.421, 0.612, 0.776, 0.904, 0.994, 1.049, 1.077, 1.084, 1.077, 1.064, 1.047, 1.031, 1.018, 1.007, 1, 0.996, 0.994, 0.993, 0.994, 0.995, 0.996, 0.997, 0.999, 1);
-  --spring-spatial-default: linear(0, 0.075, 0.246, 0.451, 0.648, 0.812, 0.936, 1.017, 1.063, 1.082, 1.082, 1.07, 1.054, 1.037, 1.022, 1.01, 1.001, 0.996, 0.994, 0.993, 0.994, 0.995, 0.996, 0.998, 0.999, 1, 1, 1, 1.001, 1.001, 1);
-  --spring-spatial-slow: linear(0, 0.063, 0.213, 0.398, 0.583, 0.747, 0.878, 0.973, 1.035, 1.07, 1.083, 1.081, 1.071, 1.056, 1.04, 1.026, 1.014, 1.005, 0.999, 0.995, 0.993, 0.993, 0.994, 0.995, 0.996, 0.997, 0.999, 0.999, 1, 1, 1.001, 1.001, 1.001, 1, 1);
-  --spring-effects-fast: linear(0, 0.107, 0.304, 0.496, 0.65, 0.764, 0.845, 0.9, 0.936, 0.959, 0.974, 0.984, 0.99, 0.994, 0.996, 0.998, 0.999, 0.999, 0.999, 1, 1);
-  --spring-effects-default: linear(0, 0.1, 0.289, 0.475, 0.629, 0.745, 0.829, 0.887, 0.926, 0.952, 0.969, 0.981, 0.988, 0.992, 0.995, 0.997, 0.998, 0.999, 0.999, 1, 1, 1, 1, 1, 1);
-  --spring-effects-slow: linear(0, 0.118, 0.328, 0.526, 0.68, 0.791, 0.867, 0.916, 0.948, 0.968, 0.981, 0.988, 0.993, 0.996, 0.998, 0.999, 0.999, 0.999, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-
-  --dur-spatial-fast: 280ms;
-  --dur-spatial-default: 480ms;
-  --dur-spatial-slow: 760ms;
-  --dur-effects-fast: 180ms;
-  --dur-effects-default: 320ms;
-  --dur-effects-slow: 540ms;
-
-  /* ------------------------------------------------------- state layers */
+  /* --------------------------------------------------------- state layers */
   --state-hover: color-mix(in srgb, var(--on-surface) 8%, transparent);
   --state-focus: color-mix(in srgb, var(--on-surface) 10%, transparent);
   --state-press: color-mix(in srgb, var(--on-surface) 10%, transparent);
 
-  /* ----------------------------------------------------------- elevation */
-  --elev-1: 0 1px 2px rgba(0, 0, 0, .14), 0 1px 3px 1px rgba(0, 0, 0, .08);
-  --elev-2: 0 1px 2px rgba(0, 0, 0, .16), 0 2px 6px 2px rgba(0, 0, 0, .1);
-  --elev-3: 0 4px 8px 3px rgba(0, 0, 0, .12), 0 1px 3px rgba(0, 0, 0, .16);
-  --elev-4: 0 6px 10px 4px rgba(0, 0, 0, .13), 0 2px 3px rgba(0, 0, 0, .18);
-  --elev-5: 0 8px 12px 6px rgba(0, 0, 0, .14), 0 4px 4px rgba(0, 0, 0, .2);
+  /* ---------------------------------------------------- frosted surfaces */
+  /* Fake frost: a translucent tint, a light top-left edge, one soft shadow. */
+  --glass-fill: color-mix(in srgb, var(--surface-container-lowest) 64%, transparent);
+  --glass-fill-strong: color-mix(in srgb, var(--surface-container-lowest) 84%, transparent);
+  --glass-edge: rgba(255, 255, 255, 0.62);
+  --glass-inner: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 10px 30px -18px rgba(58, 34, 19, 0.28);
+  --glass-blur: 16px;
 
-  /* ------------------------------------------------------------- layout */
-  --rail-width: 96px;
-  --bar-height: 64px;
-  --page-gutter: 24px;
-  --page-max: 1180px;
+  /* ------------------------------------------------------------ layout */
+  --rail-width: 92px;
+  --bar-height: 60px;
+  --page-gutter: 26px;
+  --page-max: 1200px;
+  --dock-height: 66px;
 
   color-scheme: light;
 }
 
-/* Dark theme. `data-theme="dark"` is Flip's own switch; the media query is the
-   system default for anyone who has never picked one. */
+/* Apricot, dark. color.js overwrites these from the accent at runtime. */
 html[data-theme="dark"] {
-  --primary: var(--accent, #b8c4ff);
-  --on-primary: var(--accent-ink, #1a2c76);
-  --primary-container: var(--accent-soft, #33469b);
-  --primary-container: color-mix(in srgb, var(--accent, #b8c4ff) 30%, var(--surface, #121318));
-  --on-primary-container: var(--accent-text, #dde1ff);
+  --accent: #f2b58c;
+  --accent-ink: #33190a;
+  --accent-hover: #ffc39a;
+  --accent-active: #dda077;
+  --accent-soft: #3a2a20;
+  --accent-line: #6b5140;
+  --accent-text: #ffcbaa;
+  --focus: #ffcbaa;
 
-  --secondary: #c4c5dd;
-  --on-secondary: #2d2f42;
-  --secondary-container: #434659;
-  --secondary-container: color-mix(in srgb, var(--accent, #b8c4ff) 18%, var(--surface, #121318));
-  --on-secondary-container: #e0e1f3;
+  --primary: var(--accent);
+  --on-primary: var(--accent-ink);
+  --primary-container: #3a2a20;
+  --on-primary-container: #ffdcc4;
+  --secondary-container: #2a211b;
+  --on-secondary-container: #f2dfd1;
+  --tertiary-container: #241d18;
+  --on-tertiary-container: #f2dfd1;
 
-  --tertiary: #4fd8d7;
-  --on-tertiary: #003737;
-  --tertiary-container: #00504f;
-  --on-tertiary-container: #9cf1f0;
+  --surface: #17120e;
+  --surface-dim: #17120e;
+  --surface-bright: #3a332c;
+  --surface-container-lowest: #120e0b;
+  --surface-container-low: #1e1813;
+  --surface-container: #221b16;
+  --surface-container-high: #2b231d;
+  --surface-container-highest: #352b24;
+
+  --on-surface: #f1e5dc;
+  --on-surface-variant: #d3c3b6;
+  --outline: #9d8c7f;
+  --outline-variant: #4a3d33;
+
+  --inverse-surface: #f1e5dc;
+  --inverse-on-surface: #231c16;
+  --inverse-primary: #a0502a;
 
   --error: #ffb4ab;
   --on-error: #690005;
-  --error-container: #93000a;
-  --on-error-container: #ffdad6;
+  --error-container: #4a1613;
+  --on-error-container: #ffdad5;
 
-  --surface: #121318;
-  --surface-dim: #121318;
-  --surface-bright: #38393f;
-  --surface-container-lowest: #0d0e13;
-  --surface-container-low: #1a1b21;
-  --surface-container: #1e1f25;
-  --surface-container-high: #28292f;
-  --surface-container-highest: #33343a;
+  --status-overdue: #ff9c92;
+  --status-overdue-container: #3c1a16;
+  --status-soon: #f0c386;
+  --status-soon-container: #33260f;
 
-  --on-surface: #e4e1e9;
-  --on-surface-variant: #c6c6d0;
-  --outline: #90909a;
-  --outline-variant: #45464f;
+  --wash-base: #16110d;
+  --wash-a: #2a1d14;
+  --wash-b: #20170f;
+  --wash-c: #1b1512;
 
-  --inverse-surface: #e4e1e9;
-  --inverse-on-surface: #1b1b1f;
-  --inverse-primary: #4a5cc5;
-  --scrim: #000000;
-
-  --tone-0: #ffffff;
-  --tone-10: #e4e1e9;
-  --tone-20: #c8c5d0;
-  --tone-30: #acaab4;
-  --tone-40: #91909a;
-  --tone-50: #777680;
-  --tone-60: #5e5e67;
-  --tone-70: #47464f;
-  --tone-80: #33343a;
-  --tone-90: #28292f;
-  --tone-95: #1e1f25;
-  --tone-99: #121318;
-  --tone-100: #000000;
+  --glass-fill: color-mix(in srgb, var(--surface-container-high) 52%, transparent);
+  --glass-fill-strong: color-mix(in srgb, var(--surface-container-high) 82%, transparent);
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-inner: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 16px 34px -20px rgba(0, 0, 0, 0.7);
 
   --state-hover: color-mix(in srgb, var(--on-surface) 8%, transparent);
   --state-focus: color-mix(in srgb, var(--on-surface) 10%, transparent);
   --state-press: color-mix(in srgb, var(--on-surface) 10%, transparent);
-
-  --elev-1: 0 1px 2px rgba(0, 0, 0, .5), 0 1px 3px 1px rgba(0, 0, 0, .35);
-  --elev-2: 0 1px 2px rgba(0, 0, 0, .55), 0 2px 6px 2px rgba(0, 0, 0, .4);
-  --elev-3: 0 4px 8px 3px rgba(0, 0, 0, .45), 0 1px 3px rgba(0, 0, 0, .5);
-  --elev-4: 0 6px 10px 4px rgba(0, 0, 0, .5), 0 2px 3px rgba(0, 0, 0, .55);
-  --elev-5: 0 8px 12px 6px rgba(0, 0, 0, .55), 0 4px 4px rgba(0, 0, 0, .6);
 
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --primary: var(--accent, #b8c4ff);
-    --on-primary: var(--accent-ink, #1a2c76);
-    --primary-container: var(--accent-soft, #33469b);
-    --primary-container: color-mix(in srgb, var(--accent, #b8c4ff) 30%, var(--surface, #121318));
-    --on-primary-container: var(--accent-text, #dde1ff);
-    --secondary: #c4c5dd;
-    --on-secondary: #2d2f42;
-    --secondary-container: #434659;
-    --secondary-container: color-mix(in srgb, var(--accent, #b8c4ff) 18%, var(--surface, #121318));
-    --on-secondary-container: #e0e1f3;
-    --tertiary: #4fd8d7;
-    --on-tertiary: #003737;
-    --tertiary-container: #00504f;
-    --on-tertiary-container: #9cf1f0;
+    --accent: #f2b58c;
+    --accent-ink: #33190a;
+    --accent-hover: #ffc39a;
+    --accent-active: #dda077;
+    --accent-soft: #3a2a20;
+    --accent-line: #6b5140;
+    --accent-text: #ffcbaa;
+    --focus: #ffcbaa;
+    --primary: var(--accent);
+    --on-primary: var(--accent-ink);
+    --primary-container: #3a2a20;
+    --on-primary-container: #ffdcc4;
+    --secondary-container: #2a211b;
+    --on-secondary-container: #f2dfd1;
+    --tertiary-container: #241d18;
+    --on-tertiary-container: #f2dfd1;
+    --surface: #17120e;
+    --surface-dim: #17120e;
+    --surface-bright: #3a332c;
+    --surface-container-lowest: #120e0b;
+    --surface-container-low: #1e1813;
+    --surface-container: #221b16;
+    --surface-container-high: #2b231d;
+    --surface-container-highest: #352b24;
+    --on-surface: #f1e5dc;
+    --on-surface-variant: #d3c3b6;
+    --outline: #9d8c7f;
+    --outline-variant: #4a3d33;
+    --inverse-surface: #f1e5dc;
+    --inverse-on-surface: #231c16;
     --error: #ffb4ab;
     --on-error: #690005;
-    --error-container: #93000a;
-    --on-error-container: #ffdad6;
-    --surface: #121318;
-    --surface-dim: #121318;
-    --surface-bright: #38393f;
-    --surface-container-lowest: #0d0e13;
-    --surface-container-low: #1a1b21;
-    --surface-container: #1e1f25;
-    --surface-container-high: #28292f;
-    --surface-container-highest: #33343a;
-    --on-surface: #e4e1e9;
-    --on-surface-variant: #c6c6d0;
-    --outline: #90909a;
-    --outline-variant: #45464f;
-    --inverse-surface: #e4e1e9;
-    --inverse-on-surface: #1b1b1f;
+    --error-container: #4a1613;
+    --on-error-container: #ffdad5;
+    --status-overdue: #ff9c92;
+    --status-overdue-container: #3c1a16;
+    --status-soon: #f0c386;
+    --status-soon-container: #33260f;
+    --wash-base: #16110d;
+    --wash-a: #2a1d14;
+    --wash-b: #20170f;
+    --wash-c: #1b1512;
+    --glass-fill: color-mix(in srgb, var(--surface-container-high) 52%, transparent);
+    --glass-fill-strong: color-mix(in srgb, var(--surface-container-high) 82%, transparent);
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --glass-inner: rgba(255, 255, 255, 0.05);
+    --glass-shadow: 0 16px 34px -20px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
 }
 
 /* ------------------------------------------------- legacy variable bridge */
-
-/* The older sheets and the SVGs still ask for --ink, --panel, --line and
-   friends; point them at the new roles instead of keeping two palettes. */
+/* style.css and polish.css predate this file; point their names at the roles
+   instead of keeping a second palette alive. */
 html[data-m3="on"] {
   --bg: var(--surface);
   --bg-accent: var(--surface);
@@ -302,15 +340,14 @@ html[data-m3="on"] {
   --line-2: var(--outline);
   --danger: var(--error);
   --danger-soft: var(--error-container);
-  --focus: var(--primary);
+  --focus: var(--accent-text);
   --radius: var(--r-28);
   --radius-sm: var(--r-16);
-  --r-card: var(--r-28);
+  --r-card: var(--r-22);
   --r-control: var(--r-full);
-  --font: var(--font-sans);
 }
 
-/* Readable motion defaults for anyone who asks for less. */
+/* Less motion, less transparency: solid tints and no scrolling waves. */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-spatial-fast: 1ms;
