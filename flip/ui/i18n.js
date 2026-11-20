@@ -313,6 +313,12 @@
     "You're all set": "Đã xong",
     "Everything stays on this computer.": "Mọi thứ lưu trên máy này.",
     "Timetable is ready. Click any slot to add a subject.": "Thời khóa biểu đã sẵn sàng. Bấm vào ô trống để thêm môn.",
+    "Drop an .xlsx timetable here": "Kéo tệp thời khóa biểu .xlsx vào đây",
+    "or pick one from this computer. Columns become days, rows become periods.":
+      "hoặc chọn tệp từ máy này. Cột là ngày, hàng là tiết.",
+    "Choose file": "Chọn tệp",
+    "Start timer": "Bắt đầu hẹn giờ",
+    "Pause timer": "Tạm dừng hẹn giờ",
     "Import a timetable from an .xlsx file": "Nhập thời khóa biểu từ tệp .xlsx",
     "Save an empty timetable you can fill in": "Lưu thời khóa biểu trống để điền dần",
     "Accent colour": "Màu nhấn",

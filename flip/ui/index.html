@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-motion="normal" data-material="on">
+<html lang="en" data-theme="light" data-motion="normal" data-m3="on">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -28,7 +28,8 @@
   </script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="polish.css">
-  <link rel="stylesheet" href="material.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="m3.css">
   <script src="i18n.js" defer></script>
   <script src="flipcard.js" defer></script>
   <script src="board.js" defer></script>
@@ -41,8 +42,8 @@
   <script src="telemetry.js" defer></script>
   <script src="setup.js" defer></script>
   <script src="about.js" defer></script>
-  <script src="material.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="m3.js" defer></script>
 </head>
 <body>
   <header id="chrome" data-tauri-drag-region>
@@ -118,7 +119,14 @@
     <!-- Timer: the original flip display -->
     <main id="stage" class="view" data-view="timer" role="tabpanel" aria-labelledby="tab-timer" hidden>
       <div id="clock-group" class="group l2 active"></div>
-      <div id="timer-group" class="group l2"></div>
+      <div id="timer-group" class="group l2">
+        <svg id="timer-ring" viewBox="0 0 400 400" aria-hidden="true" focusable="false"></svg>
+      </div>
+      <div id="timer-transport">
+        <button id="timer-toggle" type="button" aria-label="Start timer" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor"><path d="M8 5.2v13.6L19 12z"></path></svg>
+        </button>
+      </div>
       <div id="timer-tools">
         <button id="timer-set" class="icon-btn" type="button" aria-label="Set timer duration" title="Set timer (S)">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -168,6 +176,17 @@
           <input type="file" id="tt-file" accept=".xlsx" hidden>
         </div>
       </div>
+      <div id="tt-dropzone" class="tt-dropzone">
+        <span class="tt-dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5"></path><path d="M7.5 9.5 12 5l4.5 4.5"></path><path d="M5 15v3.2A1.8 1.8 0 0 0 6.8 20h10.4a1.8 1.8 0 0 0 1.8-1.8V15"></path></svg>
+        </span>
+        <span class="tt-dropzone-text">
+          <strong>Drop an .xlsx timetable here</strong>
+          <span>or pick one from this computer. Columns become days, rows become periods.</span>
+        </span>
+        <button class="btn primary" type="button" id="tt-dropzone-import">Choose file</button>
+      </div>
+      <div id="tt-wave" class="wave-host" hidden></div>
       <div id="tt-brush" class="tt-brush" role="group" aria-label="Subjects" hidden></div>
       <div class="tt-scroll">
         <div id="tt-grid" class="tt-grid" role="grid" aria-label="Weekly timetable"></div>
@@ -209,6 +228,10 @@
       <div id="suggestions" class="suggestions"></div>
       <div id="task-board" class="task-board"></div>
       <div id="task-list" class="task-list" hidden></div>
+      <button class="fab-extended" type="button" id="tasks-fab">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+        <span>New task</span>
+      </button>
     </section>
   </div>
 
