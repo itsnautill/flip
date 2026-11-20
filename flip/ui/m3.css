@@ -1584,6 +1584,72 @@ html[data-m3="on"] .tt-corner {
   border-radius: var(--r-full);
 }
 
+/* Subject names get two lines instead of "Geograp…". The tint already says
+   which subject it is, so the corner dot is gone. */
+html[data-m3="on"] .tt-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  line-height: 17px;
+  /* Room for the hover menu in the corner. */
+  padding-right: 14px;
+}
+
+html[data-m3="on"] .tt-dot {
+  display: none;
+}
+
+/* One soft text-button style for the whole timetable toolbar. */
+html[data-m3="on"] #timetable .head-actions .btn.danger {
+  background: transparent;
+  color: var(--accent-text);
+}
+
+html[data-m3="on"] #timetable .head-actions .btn.danger:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+html[data-m3="on"] #timetable .head-actions .btn.danger:active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Adding structure: a soft tonal tile, no dashed box. */
+html[data-m3="on"] .tt-add-col,
+html[data-m3="on"] .tt-add-row {
+  border: 0;
+  border-radius: var(--r-16);
+  background: color-mix(in srgb, var(--surface-container-high) 60%, transparent);
+  color: var(--on-surface-variant);
+  font: var(--type-label);
+  cursor: pointer;
+  transition: background var(--dur-effects-fast) var(--spring-effects-fast),
+    color var(--dur-effects-fast) var(--spring-effects-fast);
+}
+
+html[data-m3="on"] .tt-add-col:hover,
+html[data-m3="on"] .tt-add-row:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* Break rows: a quiet tinted band, not hatching. */
+html[data-m3="on"] .tt-break {
+  border: 0 !important;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--surface-container-high) 55%, transparent) !important;
+  color: var(--on-surface-variant);
+  font: var(--type-label);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 4px 14px;
+  display: flex;
+  align-items: center;
+}
+
 /* ------------------------------------------------------- timer / clock */
 
 html[data-m3="on"] #stage {
