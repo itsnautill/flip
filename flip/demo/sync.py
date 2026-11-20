@@ -16,9 +16,18 @@ ui = here.parent / "ui"
 
 html = (ui / "index.html").read_text(encoding="utf-8")
 html = re.sub(r'(href|src)="([\w.-]+\.(?:css|js))"', r'\1="../ui/\2"', html)
-html = html.replace(
-    '<script src="../ui/i18n.js" defer></script>',
-    '<script src="mock.js" defer></script>\n  <script src="../ui/i18n.js" defer></script>',
+html = re.sub(r'href="(fonts/[\w.-]+\.woff2)"', r'href="../ui/\1"', html)
+
+# Cache bust the demo's CSS/JS: the browser revalidates these lazily and a stale
+# skin looks like a bug.
+stamp = str(int(max((ui / name).stat().st_mtime for name in ["m3.css", "m3.js", "tokens.css", "color.js", "tasks.js"])))
+html = re.sub(r'(\.\./ui/[\w.-]+\.(?:css|js))"', rf'\1?v={stamp}"', html)
+html = re.sub(
+    r'<script src="\.\./ui/i18n\.js(\?v=\d+)?" defer></script>',
+    lambda m: '<script src="mock.js" defer></script>\n  <script src="../ui/i18n.js'
+    + (m.group(1) or "")
+    + '" defer></script>',
+    html,
 )
 
 (here / "index.html").write_text(html, encoding="utf-8")
