@@ -581,6 +581,33 @@
     paint();
   }
 
+  /* ------------------------------------------- today in view on the board */
+
+  /* The columns stay in calendar order, so on a narrow window today can sit in
+     a later row; bring it into view instead of moving it to the front. */
+  function wireTodayScroll() {
+    var board = document.getElementById("task-board");
+    var view = document.getElementById("tasks");
+    if (!board || !view) return;
+
+    function focus() {
+      var column = board.querySelector(".day-col.today");
+      if (!column || board.hidden) return;
+      var head = column.querySelector(".day-head") || column;
+      var viewBox = view.getBoundingClientRect();
+      var headBox = head.getBoundingClientRect();
+      var inset = 76;
+      if (headBox.top < viewBox.top + 8 || headBox.top > viewBox.bottom - 120) {
+        view.scrollTop += headBox.top - viewBox.top - inset;
+      }
+    }
+
+    var tab = document.getElementById("tab-tasks");
+    if (tab) tab.addEventListener("click", function () { setTimeout(focus, 90); });
+    window.addEventListener("resize", function () { if (!view.hidden) setTimeout(focus, 120); });
+    focus();
+  }
+
   /* ------------------------------------------------ app bar scroll state */
 
   function wireScrollFill() {
@@ -616,6 +643,7 @@
     wireImportWave();
     wireDropzone();
     wireTasksExtras();
+    wireTodayScroll();
     wireScrollFill();
   }
 

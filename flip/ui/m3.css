@@ -1218,13 +1218,6 @@ html[data-m3="on"] .task-board {
   }
 }
 
-@media (max-width: 1119px) {
-  /* Wrapped layout: today leads. */
-  html[data-m3="on"] .day-col.today {
-    order: -1;
-  }
-}
-
 html[data-m3="on"] .day-col {
   flex: 1 1 0;
   min-width: 0;
@@ -2091,10 +2084,6 @@ html[data-m3="on"] .waves-hidden .ring-flow {
   html[data-m3="on"] .task-board {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  html[data-m3="on"] .day-col.today {
-    order: -1;
   }
 }
 
