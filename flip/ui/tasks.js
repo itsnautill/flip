@@ -347,19 +347,21 @@
       }
     }
     if (task.time) meta.appendChild(Board.el("span", "pill", task.time));
-    if (task.due) {
-      var late = !task.done && task.due < Board.todayKey();
-      meta.appendChild(
-        Board.el(
-          "span",
-          "pill" + (late ? " late" : ""),
-          (late ? "overdue " : "due ") + Board.shortDate(task.due)
-        )
-      );
+    /* Only due dates that need attention (today, tomorrow, overdue) earn a
+       badge; anything further out stays in the editor. */
+    if (task.due && !task.done) {
+      var today = Board.todayKey();
+      var late = task.due < today;
+      var soon = task.due <= Board.addDays(today, 1);
+      if (late || soon) {
+        meta.appendChild(
+          Board.el("span", "pill" + (late ? " late" : " soon"), (late ? "overdue " : "due ") + Board.shortDate(task.due))
+        );
+      }
     }
-    if (task.priority) {
-      var priority = Board.el("span", "pill" + (task.priority === "high" ? " high" : ""), task.priority);
-      meta.appendChild(priority);
+    /* Default/low priority is noise; only high is worth a badge. */
+    if (task.priority === "high") {
+      meta.appendChild(Board.el("span", "pill high", "high"));
     }
 
     /* The buttons live in the meta row so a narrow day column still leaves
