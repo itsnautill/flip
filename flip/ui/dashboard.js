@@ -228,7 +228,7 @@
           : info.kind === "tomorrow"
             ? "Tomorrow"
             : info.kind === "later-day"
-              ? WEEKDAYS[info.date.getDay()]
+              ? WEEKDAYS[Board.parseKey(info.date).getDay()]
               : "Next class";
       body.appendChild(el("p", "hero-eyebrow", eyebrow));
 

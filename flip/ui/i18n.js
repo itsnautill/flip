@@ -602,6 +602,13 @@
     [/^Version ([\d.]+)$/, "Phiên bản $1"],
     [/^(\d+) of (\d+) done$/, "$1/$2 đã xong"],
     [/^(\d+) of (\d+) done this week$/, "$1/$2 việc đã xong tuần này"],
+    [
+      /^(\d+) tasks? left today · (\d+) of (\d+) done this week$/,
+      "$1 việc còn lại hôm nay · $2/$3 việc đã xong tuần này"
+    ],
+    [/^(\d+) classes? done$/, "$1 tiết đã xong"],
+    [/^(\d+) done$/, "$1 xong"],
+    [/^done$/, "xong"],
     [/^(\d+) tasks? waiting for this subject$/, "$1 việc đang chờ môn này"],
     [/^(\d+) more in Tasks$/, "thêm $1 việc trong mục Công việc"],
     [/^\+(\d+) more in Tasks$/, "+$1 việc nữa trong Công việc"],
