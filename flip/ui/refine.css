@@ -1839,3 +1839,28 @@ html[data-motion="extra"] .settings-nav.pill-ready .settings-nav-pill {
   align-items: center;
   gap: 7px;
 }
+
+/* ================================ 29. the tiles never move on arrival */
+
+/* Switching tabs used to replay the page entrance, which lifted the whole
+   stage 6px, and switching clock/timer slid the incoming pair in from a 0.96
+   scale. Both read as the clock jumping. Here the stage only fades, and the
+   pair only cross-fades: no transform is ever applied to it. */
+
+html[data-m3="on"] #stage.view.active {
+  animation: stage-fade var(--dur-200) var(--ease-standard);
+}
+
+@keyframes stage-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+html[data-m3="on"] #stage > .group {
+  transition: opacity var(--dur-200) var(--ease-standard), visibility 0s;
+}
+
+html[data-m3="on"] #stage > .group:not(.active) {
+  transform: none;
+}
