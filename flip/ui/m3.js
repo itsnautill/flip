@@ -580,6 +580,40 @@
     apply(button.classList.contains("is-busy"));
   }
 
+  /* A timetable that already has classes does not need the big drop card: it
+     folds to a 52px strip with its file button, and opens up again only while a
+     file is being dragged over the window. */
+  function wireDropzoneCollapse() {
+    var zone = document.getElementById("tt-dropzone");
+    var grid = document.getElementById("tt-grid");
+    if (!zone || !grid) return;
+
+    function paint() {
+      var filled = grid.querySelectorAll(".tt-cell.filled").length > 0;
+      zone.classList.toggle("is-slim", filled);
+    }
+
+    new MutationObserver(function () {
+      requestAnimationFrame(paint);
+    }).observe(grid, { childList: true, subtree: true });
+
+    var dragging = 0;
+    window.addEventListener("dragenter", function (event) {
+      if (!event.dataTransfer || Array.prototype.indexOf.call(event.dataTransfer.types || [], "Files") < 0) return;
+      dragging += 1;
+      document.body.classList.add("is-file-drag");
+    });
+    window.addEventListener("dragleave", function () {
+      dragging = Math.max(0, dragging - 1);
+      if (!dragging) document.body.classList.remove("is-file-drag");
+    });
+    window.addEventListener("drop", function () {
+      dragging = 0;
+      document.body.classList.remove("is-file-drag");
+    });
+    paint();
+  }
+
   function wireDropzone() {
     var zone = document.getElementById("tt-dropzone");
     var pick = document.getElementById("tt-dropzone-import");
@@ -733,6 +767,7 @@
     wireBars();
     wireImportWave();
     wireDropzone();
+    wireDropzoneCollapse();
     wireTasksExtras();
     wireTodayScroll();
     wireScrollFill();
