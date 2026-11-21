@@ -978,3 +978,34 @@ html[data-m3="on"] #task-board .quick-add input::placeholder {
   color: var(--on-surface-variant);
   opacity: 1;
 }
+
+/* ================================================= 22. done tasks stay readable */
+
+/* Lower emphasis comes from the ink, not from fading the whole card: the title
+   keeps a 1px strike and a >= 4.5:1 on-surface-variant, the tonal fill stays,
+   and there is no shadow. */
+html[data-m3="on"] #task-board .task.done {
+  opacity: 1 !important;
+  background: var(--surface-container-low) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 7%, transparent) !important;
+}
+
+html[data-m3="on"] #task-board .task.done .task-title {
+  color: var(--on-surface-variant) !important;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--on-surface-variant) 70%, transparent);
+}
+
+html[data-m3="on"] #task-board .task.done .task-meta,
+html[data-m3="on"] #task-board .task.done .task-subject,
+html[data-m3="on"] #task-board .task.done .task-time,
+html[data-m3="on"] #task-board .task.done .due,
+html[data-m3="on"] #task-board .task.done .task-note {
+  color: var(--on-surface-variant);
+  opacity: 1;
+}
+
+html[data-m3="on"] #task-board .task.done .check {
+  opacity: 1;
+}
