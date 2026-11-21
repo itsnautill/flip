@@ -1045,22 +1045,53 @@ html[data-m3="on"] #tasks .week-bar > .progress .track {
   }
 }
 
+/* Every bar keeps a fixed slot at its right end for the end marker. The wave
+   and the flat track stop 6px before it, so a finished bar never draws its
+   check on top of the wave. */
+html[data-m3="on"] .wave-track-line {
+  right: calc(var(--wave-end, 16px) + var(--wave-gap, 6px));
+}
+
+html[data-m3="on"] .wave-clip {
+  inset: 0 calc(var(--wave-end, 16px) + var(--wave-gap, 6px)) 0 0;
+}
+
+/* 16px circle, 11px check (2px stroke, round caps), centred on the baseline. */
+html[data-m3="on"] .wave-check {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: var(--wave-end, 16px);
+  height: var(--wave-end, 16px);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--accent-text);
+  opacity: 0;
+  transform: translateY(-50%) scale(0.72);
+  transition: opacity var(--dur-100) var(--ease-standard),
+    transform var(--dur-200) var(--ease-enter);
+}
+
+html[data-m3="on"] .wave-check svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* A finished bar keeps its wave and ends on a check instead of a dot. */
 html[data-m3="on"] .wave-host.is-complete .wave-dot {
   opacity: 0 !important;
 }
 
-html[data-m3="on"] .wave-host.is-complete::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 14px;
-  height: 14px;
-  transform: translateY(-50%);
-  background: var(--accent-text);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3 8.6l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3 8.6l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center / contain no-repeat;
+html[data-m3="on"] .wave-host.is-complete .wave-check {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
 }
 
 /* ================================================== 21. task lanes */

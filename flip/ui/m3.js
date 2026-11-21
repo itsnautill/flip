@@ -67,9 +67,16 @@
     this.shown = -1;
     this.pathAmp = -1;
 
+    /* Every bar keeps a fixed slot at its right end for the end marker, and
+       the wave stops `endGap` before it, so 100% cannot draw over the check. */
+    this.endSlot = opts.endSlot == null ? 16 : opts.endSlot;
+    this.endGap = opts.endGap == null ? 6 : opts.endGap;
+
     host.classList.add("wave-host");
     host.style.setProperty("--wave-h", this.height + "px");
     host.style.setProperty("--wave-stroke", this.stroke + "px");
+    host.style.setProperty("--wave-end", this.endSlot + "px");
+    host.style.setProperty("--wave-gap", this.endGap + "px");
 
     var rail = document.createElement("div");
     rail.className = "wave-rail";
@@ -88,9 +95,27 @@
     var dot = document.createElement("span");
     dot.className = "wave-dot";
 
+    /* The end marker at 100%: a 2px check inside a small tonal circle, in the
+       reserved slot, centred on the wave's baseline. */
+    var check = document.createElement("span");
+    check.className = "wave-check";
+    var checkSvg = svgEl("svg", { viewBox: "0 0 12 12", "aria-hidden": "true", focusable: "false" });
+    checkSvg.appendChild(
+      svgEl("path", {
+        d: "M2.4 6.3 4.9 8.7 9.6 3.4",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      })
+    );
+    check.appendChild(checkSvg);
+
     rail.appendChild(track);
     rail.appendChild(clip);
     rail.appendChild(dot);
+    rail.appendChild(check);
     host.appendChild(rail);
 
     this.rail = rail;
@@ -102,7 +127,9 @@
 
     var self = this;
     this.resize = function () {
-      self.width = rail.clientWidth || 0;
+      var railWidth = rail.clientWidth || 0;
+      /* The geometry stops where the wave stops: before the end slot. */
+      self.width = Math.max(0, railWidth - self.endSlot - self.endGap);
       self.build();
     };
     if (window.ResizeObserver) {
