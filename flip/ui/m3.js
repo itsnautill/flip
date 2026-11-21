@@ -1027,6 +1027,70 @@
     focus();
   }
 
+  /* ------------------------------------------------ idle clock glide */
+
+  /* After ten quiet seconds in Timer view the chrome fades and the tiles glide
+     to the centre of the window. The layout is untouched: the offset is
+     measured once on entering idle and applied as a transform. A resize while
+     idle recomputes it from wherever the tiles currently are, so there is no
+     jump and no drift. */
+  function wireIdleGlide() {
+    var stage = document.getElementById("stage");
+    var group = document.getElementById("timer-group");
+    if (!stage || !group) return;
+
+    function tiles() {
+      return Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
+        return card.getClientRects().length > 0;
+      });
+    }
+
+    function centre() {
+      var box = null;
+      tiles().forEach(function (card) {
+        var rect = card.getBoundingClientRect();
+        if (!box) box = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+        box.left = Math.min(box.left, rect.left);
+        box.right = Math.max(box.right, rect.right);
+        box.top = Math.min(box.top, rect.top);
+        box.bottom = Math.max(box.bottom, rect.bottom);
+      });
+      return box;
+    }
+
+    function measure() {
+      var box = centre();
+      if (!box) return;
+      /* The current offset is already applied, so add the remaining distance
+         rather than starting from zero. */
+      var x = parseFloat(stage.style.getPropertyValue("--idle-dx")) || 0;
+      var y = parseFloat(stage.style.getPropertyValue("--idle-dy")) || 0;
+      x += window.innerWidth / 2 - (box.left + box.right) / 2;
+      y += window.innerHeight / 2 - (box.top + box.bottom) / 2;
+      stage.style.setProperty("--idle-dx", x.toFixed(2) + "px");
+      stage.style.setProperty("--idle-dy", y.toFixed(2) + "px");
+    }
+
+    function sync() {
+      if (!document.body.classList.contains("is-idle")) {
+        stage.style.removeProperty("--idle-dx");
+        stage.style.removeProperty("--idle-dy");
+        return;
+      }
+      /* Measure after the class lands, while the tiles are still where they
+         were before the glide starts. */
+      requestAnimationFrame(measure);
+    }
+
+    new MutationObserver(sync).observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    window.addEventListener("resize", function () {
+      if (document.body.classList.contains("is-idle")) measure();
+    });
+  }
+
   /* ------------------------------------------------ app bar scroll state */
 
   function wireScrollFill() {

@@ -1494,3 +1494,32 @@ html[data-m3="on"] .tt-break.now {
 html[data-m3="on"] .tt-time.now {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+/* ============================================= 24. idle clock glide */
+
+/* When the chrome fades out the tiles glide to the centre of the WINDOW.
+   Only a transform moves: the layout is measured once on entering idle, so
+   nothing reflows and no tile changes size. */
+html[data-m3="on"] #stage {
+  transition: transform var(--dur-500) var(--ease-standard);
+}
+
+html[data-m3="on"] body.is-idle #stage {
+  transform: translate3d(var(--idle-dx, 0px), var(--idle-dy, 0px), 0);
+}
+
+/* The chrome fade and the glide are one motion: same duration, one curve. */
+html[data-m3="on"] #chrome,
+html[data-m3="on"] #timer-tools,
+html[data-m3="on"] #dots {
+  transition: opacity var(--dur-500) var(--ease-standard), visibility 0s;
+}
+
+html[data-m3="on"] body.is-idle #chrome,
+html[data-m3="on"] body.is-idle #timer-tools,
+html[data-m3="on"] body.is-idle #dots {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur-exit-500) var(--ease-exit), visibility 0s var(--dur-exit-500);
+}
