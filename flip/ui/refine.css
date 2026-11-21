@@ -524,7 +524,14 @@ html[data-m3="on"][data-stage="clock"] #timer-progress {
   display: none;
 }
 
-html[data-m3="on"] #timer-progress .wave-track-line,
+/* In Timer mode the thin track is the empty state: an untouched countdown
+   still shows where it is going to fill, so the line is a clear neutral rule
+   rather than an 11% whisper. */
+html[data-m3="on"] #timer-progress .wave-track-line {
+  display: block;
+  background: color-mix(in srgb, var(--on-surface-variant) 34%, transparent);
+}
+
 /* The dashboard widget bars are a 12px strip at the very bottom of a card: an
    empty grey rule there reads as a stray divider, so an idle bar shows nothing. */
 html[data-m3="on"] #dash-grid .wave-host .wave-track-line {
@@ -1470,4 +1477,20 @@ html[data-m3="on"] #dashboard .widget .figure {
   html[data-m3="on"] .tt-time-range {
     font-size: 12.5px;
   }
+}
+
+/* ================================================= 23. current period */
+
+/* "Now" is a soft tonal ring, not a bright accent outline: at 16% of the hue
+   it marks the running period without shouting across the grid. */
+html[data-m3="on"] .tt-time.now,
+html[data-m3="on"] .tt-cell.now,
+html[data-m3="on"] .tt-break.now {
+  outline: 2px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  outline-offset: -2px;
+}
+
+/* The flag still carries the meaning in text, so the mark can stay quiet. */
+html[data-m3="on"] .tt-time.now {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
