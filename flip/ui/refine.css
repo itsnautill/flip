@@ -73,3 +73,72 @@ html[data-m3="on"] .view {
 html[data-m3="on"] .view > * {
   max-width: var(--content-max);
 }
+
+/* =============================================================== 3. rail */
+
+html[data-m3="on"] {
+  --rail-width: 104px;
+  --rail-inset: 16px;
+  --rail-gap: 16px;
+}
+
+@media (min-width: 840px) {
+  /* Top aligned with the page title, not floating in the middle of nowhere. */
+  html[data-m3="on"] #tabs {
+    left: var(--rail-inset);
+    top: calc(var(--bar-height) + 16px);
+    bottom: auto;
+    transform: none;
+    width: var(--rail-width);
+    height: auto;
+    max-height: calc(100vh - var(--bar-height) - 32px);
+    padding: 12px;
+    gap: 6px;
+    border: 0 !important;
+    border-radius: 26px;
+    background: color-mix(in srgb, var(--surface-container-lowest) 84%, transparent) !important;
+    box-shadow: inset 0 1px 0 var(--glass-edge),
+      inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 7%, transparent),
+      var(--glass-shadow) !important;
+  }
+
+  html[data-m3="on"] .tab {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 6px;
+    border-radius: 20px;
+    justify-content: center;
+  }
+
+  html[data-m3="on"] .tab-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  html[data-m3="on"] .tab-label {
+    font-size: 13px;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+
+  html[data-m3="on"] .tab.active {
+    background: var(--primary-container) !important;
+    color: var(--on-primary-container);
+    font-weight: 600;
+    box-shadow: none !important;
+  }
+
+  /* Reserve the rail column plus the gap on both sides. */
+  html[data-m3="on"] #chrome,
+  html[data-m3="on"] #app {
+    margin-left: calc(var(--rail-inset) + var(--rail-width) + var(--rail-gap));
+  }
+
+  html[data-m3="on"] #chrome {
+    padding-left: var(--page-gutter);
+  }
+}
