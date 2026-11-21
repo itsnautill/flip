@@ -536,3 +536,39 @@ html[data-m3="on"][data-stage="timer"] #stage #dots {
 html[data-m3="on"] #dots .mode-btn {
   font-size: 14px;
 }
+
+/* ==================================================== 14. timetable times */
+
+html[data-m3="on"] .tt-time {
+  min-width: 120px;
+  width: 132px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+html[data-m3="on"] .tt-time-label {
+  font: 600 13px/1.4 var(--font-ui);
+  color: var(--on-surface);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+html[data-m3="on"] .tt-time-range {
+  font: 400 12px/1.4 var(--font-ui);
+  color: var(--on-surface-variant);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The grid's first column follows the same width, so the headers line up. */
+html[data-m3="on"] .tt-grid {
+  grid-template-columns: 132px repeat(var(--day-count, 5), minmax(0, 1fr));
+}
