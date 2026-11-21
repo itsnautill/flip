@@ -56,3 +56,20 @@ html[data-m3="on"] #chrome .icon-btn svg {
 html[data-m3="on"] #chrome .icon-btn:hover {
   background: var(--state-hover);
 }
+
+/* ============================================================= 2. content */
+
+/* One content width for every screen: 1400px inside 32px gutters, centred in
+   the area right of the rail. */
+html[data-m3="on"] {
+  --page-gutter: 32px;
+  --content-max: 1400px;
+}
+
+html[data-m3="on"] .view {
+  padding: var(--page-gutter) var(--page-gutter) 40px;
+}
+
+html[data-m3="on"] .view > * {
+  max-width: var(--content-max);
+}

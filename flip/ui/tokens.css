@@ -205,8 +205,9 @@
   /* ------------------------------------------------------------ layout */
   --rail-width: 92px;
   --bar-height: 48px;
-  --page-gutter: 26px;
-  --page-max: 1200px;
+  --page-gutter: 32px;
+  --content-max: 1400px;
+  --page-max: var(--content-max);
   --dock-height: 66px;
 
   color-scheme: light;
