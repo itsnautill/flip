@@ -481,7 +481,7 @@
           count.className = "day-count";
           head.appendChild(count);
         }
-        if (count) count.textContent = total - done > 0 ? total - done + " left" : total ? "done" : "";
+        if (count) count.textContent = total ? done + " done" : "";
 
         /* Past days fade; today stays full. */
         var date = column.getAttribute("data-date");
@@ -506,6 +506,29 @@
       attributes: true,
       attributeFilter: ["class"],
     });
+    paint();
+  }
+
+  /* The lanes should reach the bottom of the window instead of leaving 60% of
+     the screen blank. Measured from the board's own top, so the summary card
+     and toolbar above it are respected. */
+  function wireLaneHeight() {
+    var board = document.getElementById("task-board");
+    var view = document.getElementById("tasks");
+    if (!board || !view) return;
+
+    function paint() {
+      if (board.hidden) return;
+      var top = board.getBoundingClientRect().top - view.getBoundingClientRect().top;
+      var height = view.clientHeight - top - 24;
+      board.style.minHeight = Math.max(360, Math.round(height)) + "px";
+    }
+
+    window.addEventListener("resize", paint);
+    if (window.ResizeObserver) new ResizeObserver(paint).observe(view);
+    new MutationObserver(function () {
+      requestAnimationFrame(paint);
+    }).observe(board, { attributes: true, attributeFilter: ["hidden"] });
     paint();
   }
 
@@ -774,6 +797,7 @@
     wireDropzone();
     wireDropzoneCollapse();
     wireTasksExtras();
+    wireLaneHeight();
     wireTodayScroll();
     wireScrollFill();
   }
