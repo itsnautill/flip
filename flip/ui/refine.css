@@ -419,3 +419,50 @@ html[data-m3="on"] .card.flipping .flap-top {
 html[data-m3="on"] .card.flipping .flap-bottom {
   animation: flip-bottom var(--flip-half) var(--flip-bottom-ease) var(--flip-half) both;
 }
+
+/* ======================================================== 11. timer bar */
+
+/* The stage is one centred column: tiles, bar, controls, mode switch. */
+html[data-m3="on"] #stage[data-stage="timer"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+html[data-m3="on"] #stage[data-stage="timer"] #timer-group {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  width: auto;
+  height: auto;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+html[data-m3="on"] #timer-ring {
+  display: none !important;
+}
+
+html[data-m3="on"] #timer-progress {
+  position: static;
+  flex: 0 0 auto;
+  width: 320px;
+  max-width: 100%;
+  display: none;
+}
+
+html[data-m3="on"] #stage[data-stage="timer"] #timer-progress {
+  display: block;
+}
+
+html[data-m3="on"] #stage[data-stage="clock"] #timer-progress {
+  display: none;
+}

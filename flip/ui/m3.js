@@ -337,11 +337,39 @@
     });
   }
 
-  function wireTimerRing() {
-    var svg = document.getElementById("timer-ring");
-    if (!svg || !window.Flip) return;
-    var ring = new WavyRing(svg, { amplitude: 4, waves: 12 });
-    watchWave(svg);
+  function wireTimerProgress() {
+    var stage = document.getElementById("stage");
+    var group = document.getElementById("timer-group");
+    if (!stage || !group || !window.Flip) return;
+
+    /* The ring was clipped by the tiles and read as a stray stroke. The timer
+       now shows a wavy bar under the pair instead. */
+    var ring = document.getElementById("timer-ring");
+    if (ring) ring.style.display = "none";
+
+    var host = document.getElementById("timer-progress");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "timer-progress";
+      host.className = "wave-host";
+      stage.appendChild(host);
+    }
+    var wave = new WavyLinear(host, { amplitude: 2.6, wavelength: 36, height: 16, stroke: 4 });
+    watchWave(host);
+
+    /* Same width as the tile pair, measured rather than guessed. */
+    function fit() {
+      var cards = group.querySelectorAll(".card");
+      if (cards.length < 2) return;
+      var first = cards[0].getBoundingClientRect();
+      var last = cards[cards.length - 1].getBoundingClientRect();
+      var width = Math.round(last.right - first.left);
+      if (width > 0) host.style.width = width + "px";
+      wave.resize();
+    }
+    window.addEventListener("resize", fit);
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(group);
+
     /* The snapshot carries the remaining time, not the duration. An idle timer
        shows its preset, so that is where the total comes from; a running
        countdown keeps the last total it saw start. */
@@ -359,7 +387,8 @@
       }
       var progress = total > 0 ? 1 - remaining / total : 0;
       if (timer.state === "idle" || timer.state === "finished") progress = 0;
-      ring.set(progress);
+      wave.set(progress);
+      fit();
     });
   }
 
@@ -641,7 +670,7 @@
     watchVisibility();
     wireStageMode();
     wireTimerTransport();
-    wireTimerRing();
+    wireTimerProgress();
     wireDayWaves();
     wireBars();
     wireImportWave();
