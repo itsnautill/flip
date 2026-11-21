@@ -795,3 +795,94 @@ html[data-m3="on"] #tt-brush .brush-stop {
   align-items: center;
   white-space: nowrap;
 }
+
+/* ============================================= 20. tasks week bar */
+
+/* One card, two rows: the date navigation and the summary on top, the wave
+   across the full width beneath. */
+html[data-m3="on"] #tasks .week-bar {
+  display: grid;
+  grid-template-columns: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 10px 8px;
+  padding: 14px 18px 16px;
+}
+
+html[data-m3="on"] #tasks .week-bar > #week-prev {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+html[data-m3="on"] #tasks .week-bar > #week-range {
+  grid-column: 2;
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+html[data-m3="on"] #tasks .week-bar > #week-today {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+html[data-m3="on"] #tasks .week-bar > #week-next {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+html[data-m3="on"] #tasks .week-bar > .summary-strip {
+  grid-column: 5;
+  grid-row: 1;
+  justify-self: end;
+  text-align: right;
+  background: none !important;
+  box-shadow: none !important;
+  padding: 0;
+  color: var(--on-surface-variant);
+  font: 500 13px/1.4 var(--font-ui);
+}
+
+html[data-m3="on"] #tasks .week-bar > .progress {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+}
+
+html[data-m3="on"] #tasks .week-bar > .progress .track {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 760px) {
+  html[data-m3="on"] #tasks .week-bar {
+    grid-template-columns: auto auto auto auto;
+  }
+
+  html[data-m3="on"] #tasks .week-bar > .summary-strip {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+    text-align: left;
+  }
+
+  html[data-m3="on"] #tasks .week-bar > .progress {
+    grid-row: 3;
+  }
+}
+
+/* A finished bar keeps its wave and ends on a check instead of a dot. */
+html[data-m3="on"] .wave-host.is-complete .wave-dot {
+  opacity: 0 !important;
+}
+
+html[data-m3="on"] .wave-host.is-complete::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  background: var(--accent-text);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3 8.6l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3 8.6l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center / contain no-repeat;
+}

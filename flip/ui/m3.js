@@ -144,16 +144,19 @@
     var w = this.width;
     var stroke = this.stroke;
 
-    /* Amplitude eases to flat at 0% and 100%. */
-    var ease = this.indeterminate ? 1 : Math.sin(Math.PI * Math.min(1, Math.max(0, shown)));
+    /* Flat only at 0%: a finished bar keeps its wave and swaps the end dot for
+       a check, so 100% does not read as an empty track. */
+    var ease = this.indeterminate ? 1 : Math.min(1, Math.max(0, shown) / 0.08);
     var amp = reduced() ? 0 : this.amp * Math.pow(ease, 0.55);
     var fill = w * shown;
-    var dotGap = shown > 0.01 && shown < 0.99 ? stroke + 4 : 0;
+    var complete = !this.indeterminate && shown >= 0.995;
+    var dotGap = shown > 0.01 && !complete ? stroke + 4 : 0;
 
     this.host.style.setProperty("--wave-fill", Math.max(0, fill - dotGap) + "px");
     this.host.style.setProperty("--wave-dot-x", fill + "px");
+    this.host.classList.toggle("is-complete", complete);
     this.clip.style.visibility = shown <= 0 ? "hidden" : "";
-    this.dot.style.opacity = shown > 0.01 && shown < 0.99 ? "1" : "0";
+    this.dot.style.opacity = shown > 0.01 && !complete ? "1" : "0";
 
     /* Rebuild the path only when its shape actually changed; the CSS transform
        animation keeps running through it, so the wave never restarts. */
@@ -663,11 +666,13 @@
       var todayCol = board.querySelector(".day-col.today");
       var todayLeft = todayCol ? todayCol.querySelectorAll(".task:not(.done)").length : 0;
 
+      var weekBar = tasks.querySelector(".week-bar");
       var strip = tasks.querySelector(".summary-strip");
       if (!strip) {
         strip = document.createElement("div");
         strip.className = "summary-strip";
-        board.parentNode.insertBefore(strip, board);
+        if (weekBar) weekBar.appendChild(strip);
+        else board.parentNode.insertBefore(strip, board);
       }
       strip.hidden = !boardVisible;
       strip.textContent =
