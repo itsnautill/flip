@@ -89,6 +89,10 @@
     "Today": "Hôm nay",
     "focused": "đã tập trung",
     "day streak": "ngày liên tiếp",
+    "overdue": "quá hạn",
+    "now": "bây giờ",
+    "break": "nghỉ",
+    "high": "cao",
     "tasks done": "việc đã xong",
     "open tasks": "việc còn mở",
     "sessions": "phiên",
@@ -602,6 +606,7 @@
     [/^Version ([\d.]+)$/, "Phiên bản $1"],
     [/^(\d+) of (\d+) done$/, "$1/$2 đã xong"],
     [/^(\d+) of (\d+) done this week$/, "$1/$2 việc đã xong tuần này"],
+    [/^(?:Period|Tiết) (\d+)$/, "Tiết $1"],
     [
       /^(\d+) tasks? left today · (\d+) of (\d+) done this week$/,
       "$1 việc còn lại hôm nay · $2/$3 việc đã xong tuần này"
