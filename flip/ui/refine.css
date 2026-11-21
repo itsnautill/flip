@@ -95,7 +95,7 @@ html[data-m3="on"] .view > * {
 /* =============================================================== 3. rail */
 
 html[data-m3="on"] {
-  --rail-width: 104px;
+  --rail-width: 112px;
   --rail-inset: 16px;
   --rail-gap: 16px;
 }
@@ -1266,3 +1266,58 @@ html[data-m3="on"] .head-actions .check:has(input:checked) .tick {
   opacity: 1;
 }
 
+/* ================================================= 7. small polish */
+
+/* The label keeps 10px of air on each side, so it never touches the active
+   pill's edge even when it wraps to two lines. */
+html[data-m3="on"] .tab-label {
+  padding: 0 10px;
+  max-width: 100%;
+}
+
+/* The week card: the body takes the card's height and the four figures fill
+   it, so there is no dead band under the tiles at any card size. */
+html[data-m3="on"] #dashboard .widget .widget-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+html[data-m3="on"] #dashboard .widget .figure-grid {
+  flex: 1 1 auto;
+  min-height: 78px;
+}
+
+html[data-m3="on"] #dashboard .widget .figure {
+  height: 100%;
+}
+
+/* Large windows get one step more type, so the app does not feel small and
+   top-heavy at 1920. Every size here is a token or the one hardcoded label
+   that carries body text. */
+@media (min-width: 1600px) {
+  html[data-m3="on"] {
+    --type-page: 600 28px/34px var(--font-ui);
+    --type-section: 600 18px/25px var(--font-ui);
+    --type-body: 400 15px/22px var(--font-ui);
+    --type-small: 400 13.5px/19px var(--font-ui);
+    --type-label: 500 13px/18px var(--font-ui);
+    --type-emphasized: 600 16px/21px var(--font-ui);
+    --type-number: 500 32px/36px var(--font-ui);
+  }
+
+  html[data-m3="on"] .task-title {
+    font-size: 14px;
+  }
+
+  html[data-m3="on"] .tt-cell .tt-name {
+    font-size: 15px;
+  }
+
+  html[data-m3="on"] .tt-time-label {
+    font-size: 13.5px;
+  }
+
+  html[data-m3="on"] .tt-time-range {
+    font-size: 12.5px;
+  }
+}
