@@ -331,7 +331,20 @@
         pendingBacks++;
         window.history.back();
       }
-      clear(root);
+      /* Dialogs leave the way they came: Normal and Extra get a short exit,
+         Fast and Snappy swap instantly (as does reduced motion). */
+      var motion = document.documentElement.getAttribute("data-motion") || "normal";
+      var animated =
+        (motion === "normal" || motion === "extra") &&
+        !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (animated && overlay.parentNode) {
+        overlay.classList.add("is-closing");
+        setTimeout(function () {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }, 220);
+      } else {
+        clear(root);
+      }
       if (previousFocus && previousFocus.focus) {
         try {
           previousFocus.focus();

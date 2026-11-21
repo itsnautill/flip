@@ -584,7 +584,8 @@ html[data-m3="on"] .chip-btn.active {
   font-weight: 600;
 }
 
-/* Filters are chips, not form controls: tonal fill, a tick when on, no box. */
+/* Filters are chips, not form controls: tonal fill, a leading tick when
+   on, no box. The tick is the inline .tick styled in refine.css. */
 html[data-m3="on"] .head-actions .check {
   position: relative;
   display: inline-flex;
@@ -627,24 +628,6 @@ html[data-m3="on"] .head-actions .check:has(input:checked) {
   background: var(--primary-container) !important;
   color: var(--on-primary-container);
   font-weight: 600;
-}
-
-html[data-m3="on"] .head-actions .check::after {
-  content: "";
-  width: 0;
-  height: 13px;
-  flex: 0 0 auto;
-  opacity: 0;
-  background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.8 8.7 9.7 3.4' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px 13px no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.8 8.7 9.7 3.4' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px 13px no-repeat;
-  transition: width var(--dur-effects-fast) var(--spring-effects-fast),
-    opacity var(--dur-effects-fast) linear;
-}
-
-html[data-m3="on"] .head-actions .check:has(input:checked)::after {
-  width: 13px;
-  opacity: 1;
 }
 
 /* The subject filter is a tonal pill too, with the visible label beside it. */
@@ -2000,13 +1983,20 @@ html[data-m3="on"] .setting-title {
   color: var(--on-surface);
 }
 
+/* Only the chosen mode is filled. Filling every segment made the row read as
+   three separate buttons instead of one choice. */
 html[data-m3="on"] .theme-modes .seg-btn {
   border: 0;
   border-radius: var(--r-full);
-  background: var(--surface-container);
+  background: transparent;
   color: var(--on-surface-variant);
   padding: 7px 14px;
   font: var(--type-label);
+}
+
+html[data-m3="on"] .theme-modes .seg-btn:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
 }
 
 html[data-m3="on"] .theme-modes .seg-btn.active {

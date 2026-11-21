@@ -1201,11 +1201,15 @@ html[data-touch="on"] .switch[aria-checked="true"]::after {
 .timer-total {
   margin: 0;
   text-align: center;
-  font-size: 46px;
+  /* The sheet sets a fixed 21px line box, which a 46px summary would draw
+     its two wrapped lines into, one on top of the other. */
+  font-size: 40px;
+  line-height: 1.15;
   font-weight: 600;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+  text-wrap: balance;
 }
 
 .timer-total.empty-total {
@@ -3653,12 +3657,14 @@ html.is-android:not(.android-portrait) #stage > .group {
 
 #chrome,
 #timer-tools,
+#timer-transport,
 #dots {
   transition: opacity .35s ease, visibility 0s;
 }
 
 body.is-idle #chrome,
 body.is-idle #timer-tools,
+body.is-idle #timer-transport,
 body.is-idle #dots {
   opacity: 0;
   visibility: hidden;

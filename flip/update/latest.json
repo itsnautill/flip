@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
-  "notes": "Build a timetable from scratch instead of drawing it by hand: paste a grid, import an .xlsx, or add days and periods, then lock it. Plus undo and redo, dashboard widgets you can reorder, custom accent hues, and a bundled font so the design looks the same on every machine.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.2.0/Flip_1.2.0_x64-setup.exe"
+  "version": "1.3.0",
+  "notes": "Flip is rebuilt on a Material 3 Expressive design: softer surfaces, one motion system with four speeds, and a calmer dark theme. Settings now shares one design across Appearance, General and Data, with dialogs that animate in and out and a highlight that slides between sections. Clock and Timer use the same stage layout, and the timetable, tasks and dashboard were reworked for larger windows.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.3.0/Flip_1.3.0_x64-setup.exe"
 }

@@ -82,6 +82,13 @@ html[data-m3="on"] #chrome .icon-btn:hover {
   background: var(--state-hover);
 }
 
+/* Every body child sits in one shared stacking context (m3.css gives them
+   z-index 1), so the rail and the header painted over an open sheet. The
+   modal root has to outrank both. */
+html[data-m3="on"] body > #modal-root {
+  z-index: 210;
+}
+
 /* ============================================================= 2. content */
 
 /* One content width for every screen: 1400px inside 32px gutters, centred in
@@ -459,11 +466,15 @@ html[data-m3="on"] #stage .card .flap-bottom {
   border-radius: 0 0 26px 26px;
 }
 
-/* ======================================================== 11. timer bar */
+/* ===================================================== 11. timer column */
 
-/* One centred column, one vertical axis: tiles, bar, controls, mode switch.
-   Nothing here is absolutely positioned, so the stack cannot drift sideways. */
-html[data-m3="on"][data-stage="timer"] #stage {
+/* One centred column, one vertical axis: tiles, controls, mode switch.
+   Nothing here is absolutely positioned, so the stack cannot drift sideways.
+   Clock and Timer share the column, the tile size and the anchor; the clock
+   only keeps the control row's space empty, so the pair never jumps between
+   modes. */
+html[data-m3="on"][data-stage="timer"] #stage,
+html[data-m3="on"][data-stage="clock"] #stage {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -472,7 +483,8 @@ html[data-m3="on"][data-stage="timer"] #stage {
   padding: 24px;
 }
 
-html[data-m3="on"][data-stage="timer"] #stage > #timer-group {
+html[data-m3="on"][data-stage="timer"] #stage > #timer-group,
+html[data-m3="on"][data-stage="clock"] #stage > #clock-group {
   position: static;
   inset: auto;
   left: auto;
@@ -501,35 +513,10 @@ html[data-m3="on"] #timer-ring {
   display: none !important;
 }
 
-/* The bar is measured from the tile pair by m3.js: same width, 24px below,
-   and no grey rail behind it, so an idle timer shows nothing at all. */
+/* The progress bar under the pair is gone: the timer screen is the tiles,
+   the transport row and the mode switch, with no rule drawn between them. */
 html[data-m3="on"] #timer-progress {
-  /* relative, not static: the rail inside it is absolutely positioned, and
-     with a static host it escaped to #stage and covered the play button. */
-  position: relative;
-  inset: auto;
-  flex: 0 0 auto;
-  width: 320px;
-  max-width: 100%;
-  height: 12px;
-  margin: 24px auto 0;
-  display: none;
-}
-
-html[data-m3="on"][data-stage="timer"] #stage #timer-progress {
-  display: block;
-}
-
-html[data-m3="on"][data-stage="clock"] #timer-progress {
-  display: none;
-}
-
-/* In Timer mode the thin track is the empty state: an untouched countdown
-   still shows where it is going to fill, so the line is a clear neutral rule
-   rather than an 11% whisper. */
-html[data-m3="on"] #timer-progress .wave-track-line {
-  display: block;
-  background: color-mix(in srgb, var(--on-surface-variant) 34%, transparent);
+  display: none !important;
 }
 
 /* The dashboard widget bars are a 12px strip at the very bottom of a card: an
@@ -595,12 +582,17 @@ html[data-m3="on"] #timer-tools .icon-btn svg {
   height: 20px;
 }
 
+/* The clock hides the controls but keeps their height, so the tiles sit in
+   exactly the same place in both modes. */
 html[data-m3="on"][data-stage="clock"] #timer-controls {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* The mode switch closes the column, 24px under the controls, at 14px. */
-html[data-m3="on"][data-stage="timer"] #stage #dots {
+html[data-m3="on"][data-stage="timer"] #stage #dots,
+html[data-m3="on"][data-stage="clock"] #stage #dots {
   position: static;
   left: auto;
   right: auto;
@@ -1649,4 +1641,201 @@ html[data-motion="snappy"] .toast {
     transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ================================= 27. dialogs, sync and settings motion */
+
+/* Settings and Wi-Fi sync open the same way every dialog does: Normal and
+   Extra rise in, Fast and Snappy are instant. */
+html[data-motion="normal"] .overlay,
+html[data-motion="extra"] .overlay {
+  animation: overlay-in var(--dur-200) var(--ease-enter) !important;
+}
+
+html[data-motion="normal"] .modal,
+html[data-motion="extra"] .modal {
+  animation: modal-in var(--dur-300) var(--ease-enter) !important;
+}
+
+/* Settings settles down into place; the sync sheet rises a little further,
+   because it reads as a sheet. Extra once switched every dialog animation
+   off, so these deliberately outrank that older rule. */
+html[data-motion="normal"] .overlay .modal.modal-settings,
+html[data-motion="extra"] .overlay .modal.modal-settings {
+  animation: settings-in var(--dur-300) var(--ease-enter) !important;
+}
+
+html[data-motion="normal"] .overlay .modal.modal-sync,
+html[data-motion="extra"] .overlay .modal.modal-sync {
+  animation: sync-sheet-in var(--dur-300) var(--ease-enter) !important;
+}
+
+@keyframes settings-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(.97);
+  }
+}
+
+@keyframes sync-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(.98);
+  }
+}
+
+/* Closing is the reverse, and board.js holds the layer for the exit. */
+html[data-motion="normal"] .overlay.is-closing,
+html[data-motion="extra"] .overlay.is-closing {
+  animation: overlay-out var(--dur-exit-200) var(--ease-exit) forwards !important;
+  pointer-events: none;
+}
+
+html[data-motion="normal"] .overlay.is-closing .modal,
+html[data-motion="extra"] .overlay.is-closing .modal {
+  animation: modal-out var(--dur-exit-200) var(--ease-exit) forwards !important;
+}
+
+html[data-motion="normal"] .overlay.is-closing .modal.modal-settings,
+html[data-motion="extra"] .overlay.is-closing .modal.modal-settings {
+  animation-name: settings-out !important;
+}
+
+html[data-motion="normal"] .overlay.is-closing .modal.modal-sync,
+html[data-motion="extra"] .overlay.is-closing .modal.modal-sync {
+  animation-name: sync-sheet-out !important;
+}
+
+@keyframes overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(.99);
+  }
+}
+
+@keyframes settings-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+  }
+}
+
+@keyframes sync-sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(18px) scale(.99);
+  }
+}
+
+/* Fast and Snappy keep every dialog swap instant. */
+html[data-motion="fast"] .overlay,
+html[data-motion="fast"] .modal,
+html[data-motion="snappy"] .overlay,
+html[data-motion="snappy"] .modal {
+  animation: none !important;
+}
+
+/* Extra only: the incoming settings pane fades up under the pill. */
+html[data-motion="extra"] .settings-pane.pane-enter {
+  animation: pane-in var(--dur-300) var(--ease-enter);
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* The settings highlight is one element that travels, not a background that
+   jumps from row to row. It sits under the buttons, which stay transparent. */
+.settings-nav-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 0;
+  height: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+html[data-m3="on"] .settings-nav-pill {
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--primary-container);
+}
+
+.settings-nav button {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-nav button.active,
+html[data-m3="on"] .settings-nav button.active {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Extra slides the pill; Normal, Fast and Snappy place it at once. */
+html[data-motion="extra"] .settings-nav.pill-ready .settings-nav-pill {
+  transition: transform var(--dur-300) var(--ease-enter),
+    width var(--dur-300) var(--ease-enter),
+    height var(--dur-300) var(--ease-enter),
+    opacity var(--dur-100) var(--ease-standard);
+}
+
+/* On a phone the tabs are a row, so the pill needs a positioned parent. */
+@media (max-width: 720px) {
+  .settings-nav {
+    position: relative;
+  }
+}
+
+/* ================================== 28. settings > data: the same row cards */
+
+/* The Data pane used to be its own design: labelled boxes holding stacks of
+   buttons. It now uses the group heading and row cards of Appearance and
+   General, so one dialog has one shape. */
+
+.data-pane {
+  gap: 4px;
+}
+
+/* Rows whose body is a line of buttons instead of a control on the right. */
+.data-pane .setting-row.column .setting-text .sub {
+  max-width: 58ch;
+  text-wrap: pretty;
+}
+
+.data-pane .setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Backup rows are a list, not a group: the gap comes from the card margins. */
+.data-pane .backup-list {
+  gap: 0;
+}
+
+.data-pane .backup-text {
+  gap: 2px;
+}
+
+.data-pane .backup-text .setting-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }

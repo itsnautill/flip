@@ -16,13 +16,35 @@
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 
-  function block(title, note) {
-    var wrap = el("section", "data-block");
-    var head = el("div", "data-head");
-    head.appendChild(el("h3", "", title));
-    wrap.appendChild(head);
-    if (note) wrap.appendChild(el("p", "data-note", note));
-    return wrap;
+  /* The Data pane is built from the same pieces as Appearance and General:
+     a small group heading, then a row card per setting. Nothing here invents a
+     second visual language for the one modal. */
+  function row(title, sub, controls) {
+    var node = el("div", "setting-row");
+    var text = el("div", "setting-text");
+    if (title) text.appendChild(el("div", "setting-title", title));
+    if (sub) text.appendChild(el("div", "sub", sub));
+    node.appendChild(text);
+    if (controls) node.appendChild(controls);
+    return node;
+  }
+
+  /* A setting whose body is a line of buttons under its explanation. */
+  function rowWithActions(sub, controls) {
+    var node = el("div", "setting-row column");
+    var text = el("div", "setting-text");
+    text.appendChild(el("div", "sub", sub));
+    node.appendChild(text);
+    node.appendChild(actions(controls));
+    return node;
+  }
+
+  function actions(controls) {
+    var box = el("div", "setting-actions");
+    controls.forEach(function (control) {
+      box.appendChild(control);
+    });
+    return box;
   }
 
   function describe(path) {
@@ -33,13 +55,20 @@
   function section() {
     var pane = el("div", "data-pane");
 
-    /* ---------------------------------------------------------- full backup */
-    var backup = block(
-      "Backups",
-      "A backup holds your timetable, tasks, subjects and settings in one file, so Flip can be put back exactly as it was. :D"
+    /* ------------------------------------------------------------ wi-fi sync */
+    pane.appendChild(el("h3", "", "Wi-Fi sync"));
+    var syncButton = el("button", "btn primary small", "Sync now");
+    syncButton.type = "button";
+    syncButton.addEventListener("click", function () {
+      if (window.FlipSync) window.FlipSync.open();
+    });
+    pane.appendChild(
+      row("", "Both devices need the same Wi-Fi. No internet, no account.", syncButton)
     );
 
-    var backupActions = el("div", "data-actions");
+    /* ---------------------------------------------------------- full backup */
+    pane.appendChild(el("h3", "", "Backups"));
+
     var makeButton = el("button", "btn primary small", "Back up now");
     makeButton.type = "button";
     var folderButton = el("button", "btn small", "Show backups folder");
@@ -49,39 +78,44 @@
         Board.toast(String((err && err.message) || err));
       });
     });
-    backupActions.appendChild(makeButton);
-    backupActions.appendChild(folderButton);
-    backup.appendChild(backupActions);
+    pane.appendChild(
+      rowWithActions(
+        "A backup holds your timetable, tasks, subjects and settings in one file, so Flip can be put back exactly as it was. :D",
+        [makeButton, folderButton]
+      )
+    );
 
     var list = el("div", "backup-list");
-    var empty = el("p", "dash-hint", "No backups yet. The first one takes a second.");
-    list.appendChild(empty);
-    backup.appendChild(list);
-    pane.appendChild(backup);
+    list.appendChild(emptyRow());
+    pane.appendChild(list);
+
+    function emptyRow() {
+      return row("", "No backups yet. The first one takes a second.", null);
+    }
 
     async function refresh() {
       try {
         var backups = await invoke("list_backups");
         Board.clear(list);
         if (!backups.length) {
-          list.appendChild(el("p", "dash-hint", "No backups yet. The first one takes a second."));
+          list.appendChild(emptyRow());
           return;
         }
         backups.forEach(function (info) {
-          var row = el("div", "backup-row");
-          var text = el("div", "backup-text");
-          var title = el("strong", "", info.createdAt);
+          var node = el("div", "setting-row");
+          var text = el("div", "setting-text backup-text");
+          var title = el("div", "setting-title", info.createdAt);
           if (info.automatic) title.appendChild(el("span", "tag", "safety copy"));
           text.appendChild(title);
           text.appendChild(el("span", "backup-meta", sizeText(info.sizeBytes) + " · " + info.name));
-          row.appendChild(text);
+          node.appendChild(text);
 
           var restore = el("button", "btn small", "Restore");
           restore.type = "button";
           restore.addEventListener("click", function () {
             restoreBackup(info);
           });
-          row.appendChild(restore);
+          node.appendChild(restore);
 
           var remove = Board.icon("Delete backup from " + info.createdAt, "✕");
           remove.addEventListener("click", function () {
@@ -101,12 +135,12 @@
               },
             });
           });
-          row.appendChild(remove);
-          list.appendChild(row);
+          node.appendChild(remove);
+          list.appendChild(node);
         });
       } catch (err) {
         Board.clear(list);
-        list.appendChild(el("p", "dash-hint", "Backups could not be listed right now."));
+        list.appendChild(row("", "Backups could not be listed right now.", null));
       }
     }
 
@@ -149,25 +183,16 @@
     });
 
     /* -------------------------------------------------------------- exports */
-    var exports = block(
-      "Export",
-      "Spreadsheets open in Excel, Numbers or Google Sheets. Exports are written to your Downloads folder. :3"
-    );
+    pane.appendChild(el("h3", "", "Export"));
 
     /* Excel first: it stores Unicode itself, so no encoding or list separator
        can ever turn a Vietnamese subject name into rubbish. */
+    var separator = ",";
     var excelButton = el("button", "btn small primary", "Timetable to Excel (.xlsx)");
     excelButton.type = "button";
     excelButton.addEventListener("click", function () {
       exportTimetableXlsx(excelButton);
     });
-    var excelRow = el("div", "data-actions");
-    excelRow.appendChild(excelButton);
-    exports.appendChild(excelRow);
-
-    var separator = ",";
-    var csvBlock = el("div", "export-csv");
-    var csvRow = el("div", "data-actions");
     var csvButton = el("button", "btn small", "Timetable as CSV (for other apps)");
     csvButton.type = "button";
     csvButton.addEventListener("click", function () {
@@ -177,12 +202,16 @@
           Board.toast(String((err && err.message) || err));
         });
     });
-    csvRow.appendChild(csvButton);
-    csvBlock.appendChild(csvRow);
+    pane.appendChild(
+      rowWithActions(
+        "Spreadsheets open in Excel, Numbers or Google Sheets. Exports are written to your Downloads folder. :3",
+        [excelButton, csvButton]
+      )
+    );
 
-    var separatorRow = el("div", "export-separator");
-    separatorRow.appendChild(el("span", "export-label", "CSV separator"));
     var seg = el("div", "seg");
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", "CSV separator");
     [
       [",", "Comma"],
       [";", "Semicolon"],
@@ -200,22 +229,18 @@
       });
       seg.appendChild(button);
     });
-    separatorRow.appendChild(seg);
-    csvBlock.appendChild(separatorRow);
-    csvBlock.appendChild(
-      el(
-        "p",
-        "hint",
-        "Excel with Vietnamese regional settings usually wants Semicolon; most other apps want Comma. The .xlsx export never has this problem."
+    pane.appendChild(
+      row(
+        "CSV separator",
+        "Excel with Vietnamese regional settings usually wants Semicolon; most other apps want Comma. The .xlsx export never has this problem.",
+        seg
       )
     );
-    exports.appendChild(csvBlock);
 
-    var moreRow = el("div", "data-actions");
-    [
+    var moreButtons = [
       ["tasks", "Tasks as CSV"],
       ["settings", "Settings as JSON"],
-    ].forEach(function (pair) {
+    ].map(function (pair) {
       var button = el("button", "btn small", pair[1]);
       button.type = "button";
       button.addEventListener("click", function () {
@@ -225,10 +250,9 @@
             Board.toast(String((err && err.message) || err));
           });
       });
-      moreRow.appendChild(button);
+      return button;
     });
-    exports.appendChild(moreRow);
-    pane.appendChild(exports);
+    pane.appendChild(row("Other formats", "", actions(moreButtons)));
 
     function exportTimetableXlsx(button) {
       var view = window.Board && window.Board.view();
@@ -272,11 +296,7 @@
     }
 
     /* --------------------------------------------------------------- storage */
-    var storage = block(
-      "Data folder",
-      "Flip keeps settings.json and board.json here. Nothing leaves your computer. :)"
-    );
-    var storageActions = el("div", "data-actions");
+    pane.appendChild(el("h3", "", "Data folder"));
     var openData = el("button", "btn small", "Show data folder");
     openData.type = "button";
     openData.addEventListener("click", function () {
@@ -284,9 +304,9 @@
         Board.toast(String((err && err.message) || err));
       });
     });
-    storageActions.appendChild(openData);
-    storage.appendChild(storageActions);
-    pane.appendChild(storage);
+    pane.appendChild(
+      row("", "Flip keeps settings.json and board.json here. Nothing leaves your computer. :)", openData)
+    );
 
     refresh();
     return pane;

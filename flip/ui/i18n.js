@@ -353,6 +353,7 @@
     "Backup restored": "Đã khôi phục bản sao lưu",
     "Backup saved": "Đã sao lưu",
     "Export": "Xuất",
+    "Other formats": "Định dạng khác",
     "Spreadsheets open in Excel, Numbers or Google Sheets. Exports are written to your Downloads folder. :3": "Bảng tính mở được bằng Excel, Numbers hoặc Google Sheets. Tệp xuất được lưu vào thư mục Downloads. :3",
     "Tasks as CSV": "Công việc dạng CSV",
     "Timetable as CSV": "Thời khóa biểu dạng CSV",

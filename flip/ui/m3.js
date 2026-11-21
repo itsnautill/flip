@@ -372,85 +372,63 @@
     var group = document.getElementById("timer-group");
     if (!stage || !group || !window.Flip) return;
 
-    /* The ring was clipped by the tiles and read as a stray stroke. The timer
-       now shows a wavy bar under the pair instead. */
+    /* The ring was clipped by the tiles and read as a stray stroke, and the
+       wavy bar that replaced it read as a rule under the timer. */
     var ring = document.getElementById("timer-ring");
     if (ring) ring.style.display = "none";
 
-    var host = document.getElementById("timer-progress");
-    if (!host) {
-      host = document.createElement("div");
-      host.id = "timer-progress";
-      host.className = "wave-host";
-      stage.appendChild(host);
-    }
-    var wave = new WavyLinear(host, { amplitude: 2.6, wavelength: 36, height: 16, stroke: 4 });
-    watchWave(host);
-
     /* Everything on the timer screen has to fit without scrolling: the pair
-       is sized from what is left after the bar, the control row and the mode
-       switch, and the bar is measured from the pair so they always match. */
-    /* The pair is what the bar has to match and what has to sit on the axis.
-       Any zero-width leftover slot in the group shifts the flex centring, so
-       measure the tiles that are really there and place them on the bar's
-       centre line instead of trusting the group box. */
-    function syncBar() {
-      var shown = Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
-        return card.getClientRects().length > 0;
-      });
-      if (!shown.length) return;
-      group.style.transform = "none";
-      var first = shown[0].getBoundingClientRect();
-      var last = shown[shown.length - 1].getBoundingClientRect();
-      var width = Math.round(last.right - first.left);
-      if (width > 0) host.style.width = width + "px";
-      if (document.documentElement.dataset.stage === "timer") {
-        var bar = host.getBoundingClientRect();
-        var pairCentre = (first.left + last.right) / 2;
-        var barCentre = bar.left + bar.width / 2;
-        var dx = Math.round(barCentre - pairCentre);
-        if (dx) group.style.transform = "translateX(" + dx + "px)";
-      }
-      wave.resize();
-    }
-
+       is sized from what is left after the control row and the mode switch. */
     function fit() {
-      var timerMode = document.documentElement.dataset.stage === "timer";
-      if (timerMode) {
-        var controls = document.getElementById("timer-controls");
-        var dots = document.getElementById("dots");
-        var pad = 48;
-        var barHeight = host.getBoundingClientRect().height || 12;
-        var controlsHeight = controls ? controls.offsetHeight : 0;
-        var dotsHeight = dots ? dots.offsetHeight : 0;
-        var gaps = 24 * 3;
-        var fixed = pad + gaps + barHeight + controlsHeight + dotsHeight;
-        var availW = stage.clientWidth - pad;
-        var availH = stage.clientHeight - fixed;
-        var pairGap = 32;
-        /* An hours tile reading 00 is not part of the pair: the old sheet kept
-           it as a zero-width slot with a negative margin, which tilted the
-           whole column. Take it out of the flow instead. */
-        Array.prototype.forEach.call(group.querySelectorAll(".card.hours"), function (card) {
-          var digit = card.querySelector(".d");
-          var text = digit ? digit.textContent.trim() : "";
-          card.style.display = !text || /^0+$/.test(text) ? "none" : "";
-        });
+      /* A hidden view reports no box, and measuring it would shrink the pair
+         to its floor; the width transition then played that back as a zoom
+         when the tab came back. Leave the last real size alone instead. */
+      if (!stage.clientWidth || !stage.clientHeight) return;
+      /* Clock and Timer are the same column and the same two tiles. The clock
+         keeps the control row's height even while it hides the controls, so
+         both modes fit to the same box and the pair does not jump or change
+         size when the mode changes. */
+      var controls = document.getElementById("timer-controls");
+      var dots = document.getElementById("dots");
+      var pad = 48;
+      var controlsHeight = controls ? controls.offsetHeight : 0;
+      var dotsHeight = dots ? dots.offsetHeight : 0;
+      var gaps = 24 * 2;
+      var fixed = pad + gaps + controlsHeight + dotsHeight;
+      var availW = stage.clientWidth - pad;
+      var availH = stage.clientHeight - fixed;
+      var pairGap = 32;
+
+      /* An hours tile reading 00 is not part of the pair: the old sheet kept
+         it as a zero-width slot with a negative margin, which tilted the
+         whole column. Take it out of the flow instead. */
+      Array.prototype.forEach.call(group.querySelectorAll(".card.hours"), function (card) {
+        var digit = card.querySelector(".d");
+        var text = digit ? digit.textContent.trim() : "";
+        card.style.display = !text || /^0+$/.test(text) ? "none" : "";
+      });
+
+      [document.getElementById("clock-group"), group].forEach(function (box) {
+        if (!box) return;
         /* Only the tiles that are actually on screen count. */
-        var shown = Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
+        var shown = Array.prototype.filter.call(box.querySelectorAll(".card"), function (card) {
           return card.getClientRects().length > 0;
         });
         var count = Math.max(2, shown.length);
         var width = Math.min((availW - pairGap * (count - 1)) / count, availH / 1.2);
         width = Math.max(110, Math.min(width, 520));
         width = Math.floor(width);
-        group.style.setProperty("--w", width + "px");
+        box.style.setProperty("--w", width + "px");
         /* max-content rounds the pair against the gap; set it outright so the
            group is exactly as wide as its tiles. */
-        group.style.width = count * width + pairGap * (count - 1) + "px";
-      }
-      syncBar();
+        box.style.width = count * width + pairGap * (count - 1) + "px";
+      });
     }
+
+    /* The first pass runs before the tab has a box, so ask again once it does. */
+    fit();
+    requestAnimationFrame(fit);
+    setTimeout(fit, 120);
 
     window.addEventListener("resize", fit);
     if (window.ResizeObserver) {
@@ -466,29 +444,14 @@
       setTimeout(fit, 80);
     }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-stage"] });
 
-    /* The snapshot carries the remaining time, not the duration. An idle timer
-       shows its preset, so that is where the total comes from; a running
-       countdown keeps the last total it saw start. */
-    var total = 0;
-    window.Flip.subscribe(function (snap) {
-      var timer = (snap && snap.timer) || {};
-      var remaining =
-        Number(timer.h || 0) * 3600 + Number(timer.m || 0) * 60 + Number(timer.s || 0);
-      if (timer.state === "idle") {
-        total = remaining;
-      } else if (remaining > total) {
-        total = remaining;
-      } else if (total === 0 && snap && snap.focusSecs) {
-        total = Number(snap.focusSecs) || 0;
-      }
-      var progress = total > 0 ? 1 - remaining / total : 0;
-      if (timer.state === "idle" || timer.state === "finished") progress = 0;
-      wave.set(progress);
+    /* The hour tile comes and goes with the value, so the pair is measured
+       again on every snapshot. */
+    window.Flip.subscribe(function () {
       fit();
     });
   }
 
-  /* Play/pause and the two small tools become one centred row under the bar;
+  /* Play/pause and the two small tools become one centred row under the pair;
      the mode switch stays at the bottom, 24px further down. */
   function wireTimerControls() {
     var stage = document.getElementById("stage");
@@ -507,9 +470,7 @@
       if (node && node.parentNode !== row) row.appendChild(node);
     });
 
-    /* Order: tiles, bar, controls, mode switch. */
-    var bar = document.getElementById("timer-progress");
-    if (bar && bar.nextElementSibling !== row) stage.insertBefore(bar, row);
+    /* Order: tiles, controls, mode switch. */
     if (window.__fitTimer) requestAnimationFrame(window.__fitTimer);
   }
 
@@ -1036,11 +997,19 @@
      jump and no drift. */
   function wireIdleGlide() {
     var stage = document.getElementById("stage");
-    var group = document.getElementById("timer-group");
-    if (!stage || !group) return;
+    var timerGroup = document.getElementById("timer-group");
+    var clockGroup = document.getElementById("clock-group");
+    if (!stage || !timerGroup || !clockGroup) return;
+
+    /* Only the group on screen is in the column; the other one is absolutely
+       positioned over the stage. Measuring the timer while the clock shows
+       centred the wrong pair, which read as the clock jumping up on idle. */
+    function shown() {
+      return document.documentElement.dataset.stage === "timer" ? timerGroup : clockGroup;
+    }
 
     function tiles() {
-      return Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
+      return Array.prototype.filter.call(shown().querySelectorAll(".card"), function (card) {
         return card.getClientRects().length > 0;
       });
     }
@@ -1085,6 +1054,13 @@
     new MutationObserver(sync).observe(document.body, {
       attributes: true,
       attributeFilter: ["class"],
+    });
+    /* Switching modes while idle glides the pair that is now on screen. */
+    new MutationObserver(function () {
+      if (document.body.classList.contains("is-idle")) measure();
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-stage"],
     });
     window.addEventListener("resize", function () {
       if (document.body.classList.contains("is-idle")) measure();

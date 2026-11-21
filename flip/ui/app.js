@@ -554,6 +554,11 @@
     nav.setAttribute("role", "tablist");
     nav.setAttribute("aria-label", "Settings sections");
 
+    /* One pill glides between the tabs; the buttons only carry their colour. */
+    var navPill = Board.el("span", "settings-nav-pill");
+    navPill.setAttribute("aria-hidden", "true");
+    nav.appendChild(navPill);
+
     var appearancePane = Board.el("div", "settings-pane");
     var generalPane = Board.el("div", "settings-pane");
     var dataPane = Board.el("div", "settings-pane");
@@ -577,6 +582,21 @@
       navButtons.push({ name: entry[0], button: button });
     });
 
+    /* The highlight slides between tabs (Extra animates it; the other modes
+       simply place it), so it is measured from the tab that is active now. */
+    function movePill() {
+      var active = null;
+      navButtons.forEach(function (entry) {
+        if (entry.button.classList.contains("active")) active = entry.button;
+      });
+      if (!active) return;
+      navPill.style.width = active.offsetWidth + "px";
+      navPill.style.height = active.offsetHeight + "px";
+      navPill.style.transform =
+        "translate(" + active.offsetLeft + "px, " + active.offsetTop + "px)";
+      navPill.style.opacity = "1";
+    }
+
     function showPane(which) {
       appearancePane.hidden = which !== "appearance";
       generalPane.hidden = which !== "general";
@@ -586,9 +606,16 @@
         entry.button.classList.toggle("active", on);
         entry.button.setAttribute("aria-selected", String(on));
       });
+      movePill();
       /* Only the pane scrolls, so this is the one and only scroll reset. */
       var pane = { appearance: appearancePane, general: generalPane, data: dataPane }[which];
-      if (pane) pane.scrollTop = 0;
+      if (pane) {
+        pane.scrollTop = 0;
+        /* Extra replays a short entrance; every other mode swaps instantly. */
+        pane.classList.remove("pane-enter");
+        void pane.offsetWidth;
+        pane.classList.add("pane-enter");
+      }
     }
 
     /* ---- appearance ---- */
@@ -978,6 +1005,15 @@
       onClose: function () {
         if (pendingAccent !== null) commitAccent(pendingAccent);
       },
+    });
+
+    /* Place the highlight once, before transitions exist, so the dialog opens
+       with the pill already sitting on Appearance. */
+    movePill();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        nav.classList.add("pill-ready");
+      });
     });
 
     /* The dialog is built at the top; focusing the first tab must not move it. */
@@ -1401,8 +1437,8 @@
     });
   }
 
-  var syncButton = document.getElementById("sync-btn");
-  if (syncButton) syncButton.addEventListener("click", openSync);
+  /* The toolbar icon read as refresh, so sync lives in Settings > Data now. */
+  window.FlipSync = { open: openSync };
 
   if (settingsButton) {
     settingsButton.addEventListener("click", openSettings);
