@@ -118,7 +118,8 @@ html[data-m3="on"] {
 
   html[data-m3="on"] .tab-label {
     font-size: 13px;
-    line-height: 1.25;
+    /* 1.4 keeps the stacked accents in "Thời khóa biểu" and "Hẹn giờ" clear. */
+    line-height: 1.4;
     white-space: normal;
     text-align: center;
     overflow-wrap: break-word;
