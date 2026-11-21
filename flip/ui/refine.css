@@ -1523,3 +1523,130 @@ html[data-m3="on"] body.is-idle #dots {
   pointer-events: none;
   transition: opacity var(--dur-exit-500) var(--ease-exit), visibility 0s var(--dur-exit-500);
 }
+
+/* ============================================== 25. one motion system */
+
+/* Every value below comes from tokens.css. Hover, press and focus share one
+   duration; small components use --dur-200; cards, dialogs, the rail pill and
+   progress length use --dur-300; page-level changes use --dur-500. Entrances
+   fade and rise 8px; the only spring is a shape morph. */
+
+html[data-m3="on"] .btn,
+html[data-m3="on"] .icon-btn,
+html[data-m3="on"] #chrome .icon-btn,
+html[data-m3="on"] #timer-tools .icon-btn,
+html[data-m3="on"] .week-bar .icon-btn,
+html[data-m3="on"] .tab,
+html[data-m3="on"] .seg-btn,
+html[data-m3="on"] .chip-btn,
+html[data-m3="on"] .filter-btn,
+html[data-m3="on"] .brush-chip,
+html[data-m3="on"] .tt-cell,
+html[data-m3="on"] .tt-time,
+html[data-m3="on"] .task,
+html[data-m3="on"] .suggestion,
+html[data-m3="on"] .widget,
+html[data-m3="on"] .day-col,
+html[data-m3="on"] .setting-row,
+html[data-m3="on"] .menu-row,
+html[data-m3="on"] .filter-opt {
+  transition: background var(--dur-100) var(--ease-standard),
+    color var(--dur-100) var(--ease-standard),
+    box-shadow var(--dur-100) var(--ease-standard),
+    border-color var(--dur-100) var(--ease-standard),
+    opacity var(--dur-100) var(--ease-standard),
+    transform var(--dur-100) var(--ease-standard);
+}
+
+/* The play/pause button and the two tools keep their shape morph, which is the
+   one place a spring belongs. */
+html[data-m3="on"] #timer-toggle {
+  transition: border-radius var(--dur-300) var(--ease-morph),
+    background var(--dur-100) var(--ease-standard),
+    transform var(--dur-100) var(--ease-standard);
+}
+
+html[data-m3="on"] .btn {
+  transition: background var(--dur-100) var(--ease-standard),
+    color var(--dur-100) var(--ease-standard),
+    box-shadow var(--dur-100) var(--ease-standard),
+    transform var(--dur-100) var(--ease-standard),
+    border-radius var(--dur-300) var(--ease-morph);
+}
+
+/* Menus, dialogs and toasts: enter with --ease-enter, leave 30% quicker. */
+html[data-m3="on"] .overlay {
+  animation: overlay-in var(--dur-200) var(--ease-enter);
+}
+
+html[data-m3="on"] .modal {
+  animation: modal-in var(--dur-300) var(--ease-enter);
+}
+
+html[data-m3="on"] .toast {
+  animation: toast-in var(--dur-200) var(--ease-enter);
+}
+
+html[data-m3="on"] .tooltip {
+  transition: opacity var(--dur-100) var(--ease-standard);
+}
+
+html[data-m3="on"] .tt-check,
+html[data-m3="on"] .head-actions .check .tick {
+  transition: opacity var(--dur-100) var(--ease-standard),
+    transform var(--dur-200) var(--ease-enter);
+}
+
+/* View changes are page-level. */
+html[data-m3="on"] .view.active {
+  animation: view-in var(--dur-500) var(--ease-enter);
+}
+
+/* The rail pill moves at the card duration, not with a spring. */
+html[data-m3="on"] .rail-pill {
+  transition: transform var(--dur-300) var(--ease-standard),
+    opacity var(--dur-200) var(--ease-standard);
+}
+
+/* Progress length, the fill dot and the wave growth share one timing. */
+html[data-m3="on"] .wave-clip {
+  transition: clip-path var(--dur-300) var(--ease-standard);
+}
+
+html[data-m3="on"] .wave-dot {
+  transition: transform var(--dur-300) var(--ease-standard),
+    opacity var(--dur-100) var(--ease-standard);
+}
+
+/* Text fields: focus is a state layer, so it keeps the state duration. */
+html[data-m3="on"] input,
+html[data-m3="on"] textarea,
+html[data-m3="on"] select {
+  transition: background var(--dur-100) var(--ease-standard),
+    border-color var(--dur-100) var(--ease-standard),
+    box-shadow var(--dur-100) var(--ease-standard);
+}
+
+/* The app's own speed setting still wins: Snappy means none of this. */
+html[data-motion="snappy"] .view.active,
+html[data-motion="snappy"] .overlay,
+html[data-motion="snappy"] .modal,
+html[data-motion="snappy"] .toast {
+  animation: none !important;
+}
+
+/* ==================================== 26. one reduced-motion rule */
+
+/* Nothing is removed for good (a toast still dismisses itself, the idle fade
+   still ends in position); the system only takes the travel time away. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-m3="on"] *,
+  html[data-m3="on"] *::before,
+  html[data-m3="on"] *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

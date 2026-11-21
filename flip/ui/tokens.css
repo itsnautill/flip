@@ -184,9 +184,30 @@
   /* Waves: one wavelength flows per --wave-flow-duration, and the fill grows
      (or shrinks) over --wave-grow-duration. Tune both here. */
   --wave-flow-duration: 1.5s;
-  --wave-grow-duration: 380ms;
-  --wave-grow-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wave-grow-duration: var(--dur-300);
+  --wave-grow-ease: var(--ease-standard);
   --ring-flow-duration: 3.2s;
+
+  /* ------------------------------------------------------ motion system
+     Four durations, three curves, one spring, for the whole app:
+       --dur-100  hover, press and focus state layers
+       --dur-200  small components: chips, toggles, tooltips, menus, toasts
+       --dur-300  cards, dialogs, the rail pill, progress length, shape morphs
+       --dur-500  page level: view changes, idle fade, the clock glide
+     Exits run at 70% of the duration with --ease-exit. */
+  --dur-100: 120ms;
+  --dur-200: 200ms;
+  --dur-300: 300ms;
+  --dur-500: 500ms;
+  --dur-exit-200: 140ms;
+  --dur-exit-300: 210ms;
+  --dur-exit-500: 350ms;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* The only spring in the app, for shape morphs: ~3% overshoot, no bounce. */
+  --ease-morph: linear(0, 0.13, 0.36, 0.63, 0.85, 0.98, 1.035, 1.03, 1.01, 1, 0.997, 0.998, 1);
 
   /* --------------------------------------------------------- state layers */
   --state-hover: color-mix(in srgb, var(--on-surface) 8%, transparent);
@@ -358,6 +379,13 @@ html[data-m3="on"] {
 /* Less motion, less transparency: solid tints and no scrolling waves. */
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dur-100: 1ms;
+    --dur-200: 1ms;
+    --dur-300: 1ms;
+    --dur-500: 1ms;
+    --dur-exit-200: 1ms;
+    --dur-exit-300: 1ms;
+    --dur-exit-500: 1ms;
     --dur-spatial-fast: 1ms;
     --dur-spatial-default: 1ms;
     --dur-spatial-slow: 1ms;
