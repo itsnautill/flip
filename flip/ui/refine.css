@@ -12,7 +12,7 @@ html[data-m3="on"] {
 html[data-m3="on"] #chrome {
   height: var(--bar-height);
   min-height: var(--bar-height);
-  padding: 0 var(--page-gutter);
+  padding: 0 var(--content-right) 0 var(--page-gutter);
   gap: 12px;
   border: 0 !important;
   background: transparent !important;
@@ -25,19 +25,32 @@ html[data-m3="on"] #chrome .brand {
   display: none;
 }
 
+/* At rest the header is part of the page: no fill, no hairline. The glass
+   only appears once a screen has scrolled under it. */
 html[data-m3="on"] #chrome::after {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-m3="on"][data-scrolled="on"] #chrome::after {
   background: var(--glass-fill-strong);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--outline) 26%, transparent);
 }
 
-/* The four utilities are one tonal group, not four loose glyphs. */
+/* The four utilities are one tonal group, not four loose glyphs. It hugs its
+   four 40px buttons and its right edge sits on the content column's edge. */
 html[data-m3="on"] .chrome-right {
   display: flex;
+  flex: 0 0 auto;
+  width: max-content;
   align-items: center;
   gap: 8px;
   padding: 4px;
+  margin-left: auto;
   border-radius: var(--r-full);
   background: color-mix(in srgb, var(--surface-container-low) 66%, transparent);
   box-shadow: inset 0 0 0 1px var(--glass-inner);
@@ -64,6 +77,11 @@ html[data-m3="on"] #chrome .icon-btn:hover {
 html[data-m3="on"] {
   --page-gutter: 32px;
   --content-max: 1400px;
+  /* Where the 1400px column ends, so the header can end there too. */
+  --content-right: max(
+    var(--page-gutter),
+    calc((100vw - var(--content-max)) / 2 - (var(--rail-width) + 32px) / 2 + 5px)
+  );
 }
 
 html[data-m3="on"] .view {
