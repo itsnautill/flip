@@ -204,7 +204,7 @@
 
   /* ------------------------------------------------------------ layout */
   --rail-width: 92px;
-  --bar-height: 60px;
+  --bar-height: 48px;
   --page-gutter: 26px;
   --page-max: 1200px;
   --dock-height: 66px;

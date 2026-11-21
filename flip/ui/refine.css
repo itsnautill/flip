@@ -1,0 +1,58 @@
+/* Flip — second design pass.
+
+   Loaded last so it can tighten the shell without rewriting the older sheets.
+   One accent hue, theme tokens only, transform/opacity animations only. */
+
+/* ============================================================ 1. header */
+
+html[data-m3="on"] {
+  --bar-height: 48px;
+}
+
+html[data-m3="on"] #chrome {
+  height: var(--bar-height);
+  min-height: var(--bar-height);
+  padding: 0 var(--page-gutter);
+  gap: 12px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+/* The native title bar already says Flip; a second one inside the page is
+   just noise. */
+html[data-m3="on"] #chrome .brand {
+  display: none;
+}
+
+html[data-m3="on"] #chrome::after {
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--outline) 26%, transparent);
+}
+
+/* The four utilities are one tonal group, not four loose glyphs. */
+html[data-m3="on"] .chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--surface-container-low) 66%, transparent);
+  box-shadow: inset 0 0 0 1px var(--glass-inner);
+}
+
+html[data-m3="on"] #chrome .icon-btn {
+  width: 40px;
+  height: 40px;
+}
+
+html[data-m3="on"] #chrome .icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+html[data-m3="on"] #chrome .icon-btn:hover {
+  background: var(--state-hover);
+}
