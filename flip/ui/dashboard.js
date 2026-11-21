@@ -698,6 +698,33 @@
     subEl.textContent = bits.join(" · ");
   }
 
+  /* The grid is as wide as the content column, so the number of columns comes
+     from the measured width, not from the window. Every card is one column;
+     the last card of an incomplete row takes what is left, which is what keeps
+     the default five-card order from leaving a lonely card under four others. */
+  function columnsFor(width) {
+    if (width >= 1200) return 4;
+    if (width >= 860) return 3;
+    if (width >= 560) return 2;
+    return 1;
+  }
+
+  function applySpans() {
+    if (!grid) return;
+    var cols = columnsFor(grid.clientWidth || 0);
+    grid.style.setProperty("--dash-cols", String(cols));
+    var cards = Array.prototype.filter.call(grid.children, function (child) {
+      return child.classList && child.classList.contains("widget");
+    });
+    var cursor = 0;
+    cards.forEach(function (node, index) {
+      var left = cols - (cursor % cols);
+      var span = index === cards.length - 1 && left > 0 ? left : 1;
+      node.style.setProperty("--col-span", "span " + span);
+      cursor += span;
+    });
+  }
+
   function render() {
     if (!grid) return;
     var order = currentOrder();
@@ -714,6 +741,7 @@
     } else {
       shown.forEach(function (id) { grid.appendChild(card(id)); });
     }
+    applySpans();
     fillHeader();
   }
 
@@ -749,6 +777,16 @@
       boardView = view;
       render();
     });
+
+    if (window.ResizeObserver) {
+      var lastWidth = 0;
+      new ResizeObserver(function () {
+        if (grid.clientWidth === lastWidth) return;
+        lastWidth = grid.clientWidth;
+        applySpans();
+      }).observe(grid);
+    }
+    window.addEventListener("resize", applySpans);
 
     if (window.Flip) window.Flip.subscribe(onSnapshot);
   }
