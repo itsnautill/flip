@@ -7,11 +7,23 @@
 
 html[data-m3="on"] {
   --bar-height: 48px;
+  /* Air between the native title bar and the tool pill. The rail and the page
+     content shift down with it, so their relative alignment never changes. */
+  --header-gap: 16px;
+  --header-top: calc(var(--header-gap) + var(--bar-height));
+}
+
+/* A short window gets a smaller gap so nothing is squeezed. */
+@media (max-width: 1100px) {
+  html[data-m3="on"] {
+    --header-gap: 12px;
+  }
 }
 
 html[data-m3="on"] #chrome {
   height: var(--bar-height);
   min-height: var(--bar-height);
+  margin-top: var(--header-gap);
   padding: 0 var(--content-right) 0 var(--page-gutter);
   gap: 12px;
   border: 0 !important;
@@ -104,12 +116,12 @@ html[data-m3="on"] {
   /* Top aligned with the page title, not floating in the middle of nowhere. */
   html[data-m3="on"] #tabs {
     left: var(--rail-inset);
-    top: calc(var(--bar-height) + 16px);
+    top: calc(var(--header-top) + 16px);
     bottom: auto;
     transform: none;
     width: var(--rail-width);
     height: auto;
-    max-height: calc(100vh - var(--bar-height) - 32px);
+    max-height: calc(100vh - var(--header-top) - 32px);
     padding: 12px;
     gap: 6px;
     border: 0 !important;
