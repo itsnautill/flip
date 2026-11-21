@@ -220,3 +220,54 @@ html[data-m3="on"] .figure {
   justify-content: center;
   min-height: 78px;
 }
+
+/* ====================================================== 7. focus session */
+
+/* The card decides, not the window: four equal chips when the card is wide
+   enough, otherwise a clean 2x2. Nothing can orphan on its own line. */
+html[data-m3="on"] .widget-focus {
+  container-type: inline-size;
+}
+
+html[data-m3="on"] .focus-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@container (min-width: 268px) {
+  html[data-m3="on"] .focus-chips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+html[data-m3="on"] .chip-btn {
+  height: 36px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  font: 500 12.5px/1 var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* One tidy row on a shared baseline: a quiet label, then two values that are
+   the same size and weight. */
+html[data-m3="on"] .focus-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+html[data-m3="on"] .focus-total > span:first-child {
+  color: var(--on-surface-variant);
+}
+
+html[data-m3="on"] .focus-total > strong,
+html[data-m3="on"] .focus-total > span:last-child {
+  font: 600 13px/18px var(--font-ui);
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+}
