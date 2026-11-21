@@ -689,6 +689,15 @@
       );
     }
 
+    /* "Title · due Nov 24": translate the tail, keep the title as it is. */
+    var tail = trimmed.match(/^(.*) · (due|overdue) ([A-Z][a-z]{2} \d+)$/);
+    if (tail) {
+      return text.replace(
+        trimmed,
+        tail[1] + " · " + (tail[2] === "due" ? "hạn " : "quá hạn ") + translate(tail[3])
+      );
+    }
+
     var suggestion = trimmed.match(/^(.*) has work with no day planned$/);
     if (suggestion) {
       return text.replace(trimmed, suggestion[1] + " có việc chưa xếp ngày");
