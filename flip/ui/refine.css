@@ -572,3 +572,20 @@ html[data-m3="on"] .tt-time-range {
 html[data-m3="on"] .tt-grid {
   grid-template-columns: 132px repeat(var(--day-count, 5), minmax(0, 1fr));
 }
+
+/* =================================================== 15. banner rows */
+
+/* The time already sits in the left column, so a banner says only its name:
+   a 40px tonal band, no hatching, no repeat. */
+html[data-m3="on"] .tt-break {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: var(--r-full) !important;
+  background: color-mix(in srgb, var(--surface-container-high) 62%, transparent) !important;
+  color: var(--on-surface-variant);
+  font: 500 13px/1.3 var(--font-ui);
+  display: flex;
+  align-items: center;
+  letter-spacing: 0;
+  background-image: none !important;
+}
