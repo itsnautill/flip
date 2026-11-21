@@ -309,3 +309,30 @@ html[data-m3="on"] .dash-progress-count {
   color: var(--on-surface-variant);
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================ 9. arrange */
+
+/* Secondary, but clearly a button: two tonal steps up from the page, the same
+   40px height as "Việc mới", and ink that clears 4.5:1 on its own fill. */
+html[data-m3="on"] #dash-arrange,
+html[data-m3="on"] #dash-reset {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: 600 13px/1 var(--font-ui);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
+}
+
+html[data-m3="on"] #dash-arrange:hover,
+html[data-m3="on"] #dash-reset:hover {
+  background: color-mix(in srgb, var(--on-secondary-container) 8%, var(--secondary-container));
+}
+
+html[data-m3="on"] #dash-new-task {
+  height: 40px;
+  min-height: 40px;
+}
