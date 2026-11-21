@@ -456,6 +456,184 @@
     if (window.__fitTimer) requestAnimationFrame(window.__fitTimer);
   }
 
+  /* ------------------------------------------------------ subject filter */
+
+  /* A native <select> brings the system arrow, the outline and a popup in the
+     platform's own style. The select stays in the DOM as the state holder (the
+     tasks screen reads its value), and this paints a tonal pill with a menu in
+     the app's own style on top of it. */
+  function wireSubjectFilter() {
+    var select = document.getElementById("filter-subject");
+    var btn = document.getElementById("filter-subject-btn");
+    var menu = document.getElementById("filter-subject-menu");
+    if (!select || !btn || !menu) return;
+
+    var label = btn.querySelector(".filter-btn-label");
+    var open = false;
+    var active = 0;
+    var typeahead = "";
+    var typeTimer = 0;
+
+    function options() {
+      return Array.prototype.slice.call(select.options);
+    }
+
+    function paintLabel() {
+      var option = select.options[select.selectedIndex];
+      if (label) label.textContent = option ? option.text : "";
+    }
+
+    function build() {
+      menu.innerHTML = "";
+      options().forEach(function (option) {
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "filter-opt";
+        item.setAttribute("role", "option");
+        item.dataset.value = option.value;
+        item.setAttribute("aria-selected", String(option.value === select.value));
+        var text = document.createElement("span");
+        text.textContent = option.text;
+        item.appendChild(text);
+        var tick = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        tick.setAttribute("class", "opt-tick");
+        tick.setAttribute("viewBox", "0 0 24 24");
+        tick.setAttribute("aria-hidden", "true");
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "m5 12.5 4.5 4.5L19 7.5");
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", "currentColor");
+        path.setAttribute("stroke-width", "2");
+        path.setAttribute("stroke-linecap", "round");
+        path.setAttribute("stroke-linejoin", "round");
+        tick.appendChild(path);
+        item.appendChild(tick);
+        item.addEventListener("click", function () {
+          choose(option.value);
+        });
+        menu.appendChild(item);
+      });
+    }
+
+    function items() {
+      return Array.prototype.slice.call(menu.querySelectorAll(".filter-opt"));
+    }
+
+    function highlight(index) {
+      var list = items();
+      if (!list.length) return;
+      active = (index + list.length) % list.length;
+      list.forEach(function (item, i) {
+        item.classList.toggle("is-active", i === active);
+      });
+      var item = list[active];
+      if (item && item.scrollIntoView) item.scrollIntoView({ block: "nearest" });
+    }
+
+    function choose(value) {
+      select.value = value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      paintLabel();
+      close(true);
+    }
+
+    function openMenu() {
+      build();
+      menu.hidden = false;
+      btn.setAttribute("aria-expanded", "true");
+      open = true;
+      var list = items();
+      var selected = list.findIndex(function (item) {
+        return item.getAttribute("aria-selected") === "true";
+      });
+      highlight(selected < 0 ? 0 : selected);
+      if (list[active]) list[active].focus();
+    }
+
+    function close(returnFocus) {
+      if (!open) return;
+      open = false;
+      menu.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+      if (returnFocus) btn.focus();
+    }
+
+    btn.addEventListener("click", function () {
+      if (open) close(true);
+      else openMenu();
+    });
+
+    btn.addEventListener("keydown", function (event) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        openMenu();
+        if (event.key === "ArrowUp") highlight(active - 2);
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (open) choose(select.value);
+        else openMenu();
+      }
+    });
+
+    menu.addEventListener("keydown", function (event) {
+      var list = items();
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        highlight(active + 1);
+        if (list[active]) list[active].focus();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        highlight(active - 1);
+        if (list[active]) list[active].focus();
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        highlight(0);
+        if (list[0]) list[0].focus();
+      } else if (event.key === "End") {
+        event.preventDefault();
+        highlight(list.length - 1);
+        if (list[list.length - 1]) list[list.length - 1].focus();
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (list[active]) choose(list[active].dataset.value);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        close(true);
+      } else if (event.key === "Tab") {
+        close(false);
+      } else if (event.key.length === 1 && /\S/.test(event.key)) {
+        /* Typeahead: keep typing within a second to narrow by first letters. */
+        typeahead += event.key.toLowerCase();
+        window.clearTimeout(typeTimer);
+        typeTimer = window.setTimeout(function () {
+          typeahead = "";
+        }, 900);
+        var hit = list.findIndex(function (item) {
+          return item.textContent.trim().toLowerCase().indexOf(typeahead) === 0;
+        });
+        if (hit >= 0) {
+          highlight(hit);
+          list[hit].focus();
+        }
+      }
+    });
+
+    document.addEventListener("mousedown", function (event) {
+      if (open && !menu.contains(event.target) && !btn.contains(event.target)) close(false);
+    });
+
+    /* The tasks screen rebuilds the options on every render. */
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        paintLabel();
+        if (open) build();
+      }).observe(select, { childList: true });
+    }
+
+    select.addEventListener("change", paintLabel);
+    paintLabel();
+  }
+
   /* --------------------------------------------------------- week board */
 
   function wireDayWaves() {
@@ -793,6 +971,7 @@
     watchVisibility();
     wireStageMode();
     wireTimerTransport();
+    wireSubjectFilter();
     wireTimerProgress();
     wireTimerControls();
     wireDayWaves();

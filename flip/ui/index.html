@@ -201,12 +201,16 @@
           <h1>Tasks</h1>
         </div>
         <div class="head-actions">
-          <label class="field inline">
-            <span>Subject</span>
-            <select id="filter-subject"><option value="">All subjects</option></select>
-          </label>
-          <label class="check"><input type="checkbox" id="hide-done"> <span>Hide done</span></label>
-          <label class="check"><input type="checkbox" id="week-sun"> <span>Week starts Sunday</span></label>
+          <div class="filter-select" id="filter-select">
+            <button type="button" class="filter-btn" id="filter-subject-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by subject">
+              <span class="filter-btn-label">All subjects</span>
+              <svg class="filter-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </button>
+            <select id="filter-subject" class="filter-native" tabindex="-1" aria-hidden="true"><option value="">All subjects</option></select>
+            <div class="filter-menu" id="filter-subject-menu" role="listbox" aria-label="Subject" hidden></div>
+          </div>
+          <label class="check"><input type="checkbox" id="hide-done"><svg class="tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span>Hide done</span></label>
+          <label class="check"><input type="checkbox" id="week-sun"><svg class="tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg><span>Week starts Sunday</span></label>
           <div class="seg" role="group" aria-label="Task layout">
             <button class="seg-btn active" type="button" id="view-board" aria-pressed="true">Week</button>
             <button class="seg-btn" type="button" id="view-list" aria-pressed="false">List</button>

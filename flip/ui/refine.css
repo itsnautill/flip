@@ -1122,3 +1122,147 @@ html[data-m3="on"] #task-board .task-meta .chip > span {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ================================================= 6. task filters */
+
+/* The subject filter is a tonal pill with its own menu, not a native select. */
+html[data-m3="on"] #tasks .filter-select {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+html[data-m3="on"] #tasks .filter-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-m3="on"] #tasks .filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  max-width: 260px;
+  padding: 0 10px 0 16px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font: 600 13px/1 var(--font-ui);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
+  cursor: pointer;
+}
+
+html[data-m3="on"] #tasks .filter-btn:hover {
+  background: color-mix(in srgb, var(--on-secondary-container) 8%, var(--secondary-container));
+}
+
+html[data-m3="on"] #tasks .filter-btn:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+html[data-m3="on"] #tasks .filter-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-m3="on"] #tasks .filter-chev {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  opacity: 0.72;
+  transition: transform 160ms var(--spring-effects-fast);
+}
+
+html[data-m3="on"] #tasks .filter-btn[aria-expanded="true"] .filter-chev {
+  transform: rotate(180deg);
+}
+
+html[data-m3="on"] #tasks .filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 20px;
+  background: var(--surface-container-high);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 8%, transparent),
+    0 20px 40px -24px rgba(0, 0, 0, 0.55);
+}
+
+html[data-m3="on"] #tasks .filter-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--on-surface);
+  font: 500 13px/1 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-m3="on"] #tasks .filter-opt:hover,
+html[data-m3="on"] #tasks .filter-opt.is-active {
+  background: var(--state-hover);
+}
+
+html[data-m3="on"] #tasks .filter-opt[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent-text) 16%, transparent);
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+html[data-m3="on"] #tasks .filter-opt .opt-tick {
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  color: var(--accent-text);
+}
+
+html[data-m3="on"] #tasks .filter-opt[aria-selected="true"] .opt-tick {
+  opacity: 1;
+}
+
+/* Lane headers keep one height whether or not a count pill is showing. */
+html[data-m3="on"] #task-board .day-head {
+  height: 32px;
+  align-items: center;
+  align-content: center;
+}
+
+/* A toggle chip shows a tick once it is on, and only then takes the room. */
+html[data-m3="on"] .head-actions .check .tick {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+html[data-m3="on"] .head-actions .check:has(input:checked) {
+  padding-left: 34px;
+}
+
+html[data-m3="on"] .head-actions .check:has(input:checked) .tick {
+  opacity: 1;
+}
+
