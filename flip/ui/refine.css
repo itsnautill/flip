@@ -354,6 +354,12 @@ html[data-m3="on"] #stage .card {
     0 26px 50px -38px rgba(0, 0, 0, 0.7);
 }
 
+/* The old sheet pulled each tile left over its neighbour by a fraction of its
+   width; with 32px gaps that offset the whole pair off centre. */
+html[data-m3="on"] #stage .card {
+  margin: 0;
+}
+
 /* Top half a shade lighter than the bottom, as if lit from above. */
 html[data-m3="on"] #stage .card .top,
 html[data-m3="on"] #stage .card .flap-top {
@@ -425,40 +431,56 @@ html[data-m3="on"] #stage .card .flap-bottom {
 
 /* ======================================================== 11. timer bar */
 
-/* The stage is one centred column: tiles, bar, controls, mode switch. */
+/* One centred column, one vertical axis: tiles, bar, controls, mode switch.
+   Nothing here is absolutely positioned, so the stack cannot drift sideways. */
 html[data-m3="on"][data-stage="timer"] #stage {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 0;
   padding: 24px;
 }
 
-html[data-m3="on"][data-stage="timer"] #stage #timer-group {
-  position: relative;
+html[data-m3="on"][data-stage="timer"] #stage > #timer-group {
+  position: static;
   inset: auto;
+  left: auto;
+  right: auto;
+  margin: 0 auto;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 32px;
-  width: auto;
+  width: max-content;
+  max-width: none;
   height: auto;
   opacity: 1;
   transform: none;
   visibility: visible;
 }
 
+/* A stray icon inside the tile group used to take a flex slot and a gap,
+   which pushed the whole pair off the axis. */
+html[data-m3="on"] #timer-group > svg {
+  display: none;
+}
+
 html[data-m3="on"] #timer-ring {
   display: none !important;
 }
 
+/* The bar is measured from the tile pair by m3.js: same width, 24px below,
+   and no grey rail behind it, so an idle timer shows nothing at all. */
 html[data-m3="on"] #timer-progress {
   position: static;
+  inset: auto;
   flex: 0 0 auto;
   width: 320px;
   max-width: 100%;
+  height: 12px;
+  margin: 24px auto 0;
   display: none;
 }
 
@@ -467,6 +489,10 @@ html[data-m3="on"][data-stage="timer"] #stage #timer-progress {
 }
 
 html[data-m3="on"][data-stage="clock"] #timer-progress {
+  display: none;
+}
+
+html[data-m3="on"] #timer-progress .wave-track-line {
   display: none;
 }
 
@@ -481,6 +507,7 @@ html[data-m3="on"] #timer-controls {
   flex: 0 0 auto;
   width: max-content;
   max-width: 100%;
+  margin: 24px auto 0;
 }
 
 html[data-m3="on"] #timer-controls #timer-transport,
@@ -514,6 +541,11 @@ html[data-m3="on"] #timer-toggle svg {
 html[data-m3="on"] #timer-tools .icon-btn {
   width: 44px;
   height: 44px;
+  color: var(--on-surface-variant);
+}
+
+html[data-m3="on"] #timer-tools .icon-btn:hover {
+  color: var(--on-surface);
 }
 
 html[data-m3="on"] #timer-tools .icon-btn svg {
@@ -525,14 +557,14 @@ html[data-m3="on"][data-stage="clock"] #timer-controls {
   display: none;
 }
 
-/* The mode switch sits 24px under the controls, at 14px. */
+/* The mode switch closes the column, 24px under the controls, at 14px. */
 html[data-m3="on"][data-stage="timer"] #stage #dots {
   position: static;
   left: auto;
   right: auto;
   bottom: auto;
   transform: none;
-  margin: 0;
+  margin: 24px auto 0;
   flex: 0 0 auto;
 }
 

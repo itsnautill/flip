@@ -361,36 +361,40 @@
     watchWave(host);
 
     /* Everything on the timer screen has to fit without scrolling: the pair
-       is sized from what is left after the 24px gaps, the bar and the control
-       row, and the bar is measured from the pair so they always match. */
+       is sized from what is left after the bar, the control row and the mode
+       switch, and the bar is measured from the pair so they always match. */
+    function syncBar() {
+      var width = Math.round(group.getBoundingClientRect().width);
+      if (width > 0) host.style.width = width + "px";
+      wave.resize();
+    }
+
     function fit() {
       var timerMode = document.documentElement.dataset.stage === "timer";
       if (timerMode) {
         var controls = document.getElementById("timer-controls");
-        var toggle = document.getElementById("timer-toggle");
-        var barHeight = host.getBoundingClientRect().height || 16;
-        var controlsHeight = controls ? controls.getBoundingClientRect().height : 0;
-        var dockHeight = window.innerWidth < 840 ? 74 : 0;
         var dots = document.getElementById("dots");
-        var dotsHeight = timerMode && dots ? dots.getBoundingClientRect().height : 0;
-        var fixed = 50 + 3 * 24 + barHeight + controlsHeight + dotsHeight + dockHeight;
-        var availW = stage.clientWidth - 48;
+        var pad = 48;
+        var barHeight = host.getBoundingClientRect().height || 12;
+        var controlsHeight = controls ? controls.offsetHeight : 0;
+        var dotsHeight = dots ? dots.offsetHeight : 0;
+        var gaps = 24 * 3;
+        var fixed = pad + gaps + barHeight + controlsHeight + dotsHeight;
+        var availW = stage.clientWidth - pad;
         var availH = stage.clientHeight - fixed;
         var pairGap = 32;
         var count = Math.max(2, group.querySelectorAll(".card").length);
         var width = Math.min((availW - pairGap * (count - 1)) / count, availH / 1.2);
         width = Math.max(110, Math.min(width, 620));
-        if (toggle) toggle.style.width = toggle.style.height = "";
-        group.style.setProperty("--w", Math.floor(width) + "px");
+        width = Math.floor(width);
+        group.style.setProperty("--w", width + "px");
+        /* max-content rounds the pair against the gap; set it outright so the
+           group is exactly as wide as its tiles. */
+        group.style.width = count * width + pairGap * (count - 1) + "px";
       }
-      var cards = group.querySelectorAll(".card");
-      if (cards.length < 2) return;
-      var first = cards[0].getBoundingClientRect();
-      var last = cards[cards.length - 1].getBoundingClientRect();
-      var width2 = Math.round(last.right - first.left);
-      if (width2 > 0) host.style.width = width2 + "px";
-      wave.resize();
+      syncBar();
     }
+
     window.addEventListener("resize", fit);
     if (window.ResizeObserver) {
       new ResizeObserver(fit).observe(group);
