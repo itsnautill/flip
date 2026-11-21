@@ -581,7 +581,7 @@
 
     var title = el("div", "tip-title");
     var swatch = el("span", "tip-swatch");
-    swatch.style.background = subjectColour(subjectRow.hue).border;
+    swatch.style.background = subjectColour(subjectRow.hue).mark;
     title.appendChild(swatch);
     title.appendChild(el("span", "", subjectRow.name));
     if (subjectRow.room) title.appendChild(el("span", "tip-room", subjectRow.room));

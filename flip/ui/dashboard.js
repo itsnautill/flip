@@ -100,7 +100,7 @@
   }
 
   function paintColour(hue) {
-    return window.FlipColor ? window.FlipColor.subjectColorFromHue(hue).border : "var(--muted)";
+    return window.FlipColor ? window.FlipColor.subjectColorFromHue(hue).mark : "var(--muted)";
   }
 
   function subjectColor(id) {

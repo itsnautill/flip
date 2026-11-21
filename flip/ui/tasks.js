@@ -336,7 +336,7 @@
       var subject = Board.subject(task.subjectId);
       if (subject) {
         var chip = Board.el("span", "chip");
-        chip.style.setProperty("--chip-c", window.FlipColor ? window.FlipColor.subjectColorFromHue(subject.hue).border : "var(--muted)");
+        chip.style.setProperty("--chip-c", window.FlipColor ? window.FlipColor.subjectColorFromHue(subject.hue).mark : "var(--muted)");
         chip.appendChild(Board.el("i", ""));
         chip.appendChild(
           Board.el("span", "", subject.name + (subject.inTimetable ? "" : " (no class)"))
@@ -806,7 +806,7 @@
 
       var head = Board.el("div", "suggestion-head");
       var swatch = Board.el("span", "suggestion-swatch");
-      swatch.style.background = window.FlipColor ? window.FlipColor.subjectColorFromHue(suggestion.subjectHue).border : "var(--muted)";
+      swatch.style.background = window.FlipColor ? window.FlipColor.subjectColorFromHue(suggestion.subjectHue).mark : "var(--muted)";
       head.appendChild(swatch);
       var text = Board.el("div", "");
       text.appendChild(Board.el("div", "suggestion-title", suggestion.title));

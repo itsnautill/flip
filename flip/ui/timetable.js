@@ -749,8 +749,9 @@
       var colour = colourOf(subject.hue);
       var chip = Board.el("button", "brush-chip" + (brushSubject === subject.id ? " active" : ""));
       chip.type = "button";
-      chip.style.setProperty("--subj", colour.border);
+      chip.style.setProperty("--subj", colour.mark);
       chip.style.setProperty("--subj-fill", colour.fill);
+      chip.style.setProperty("--subj-edge", colour.edge);
       chip.style.setProperty("--subj-ink", colour.text);
       chip.textContent = subject.name;
       chip.setAttribute("aria-pressed", String(brushSubject === subject.id));
@@ -822,8 +823,9 @@
     var colour = colourOf(cellView.hue);
     cell.classList.add("filled");
     cell.dataset.subject = cellView.subjectId;
-    cell.style.setProperty("--subj", colour.border);
+    cell.style.setProperty("--subj", colour.mark);
     cell.style.setProperty("--subj-fill", colour.fill);
+    cell.style.setProperty("--subj-edge", colour.edge);
     cell.style.setProperty("--subj-badge", colour.badge);
     cell.style.setProperty("--subj-ink", colour.text);
 

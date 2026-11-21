@@ -157,6 +157,7 @@
       hue: h,
       fill: fill,
       text: text,
+      mark: oklch(dark ? 0.78 : 0.6, dark ? 0.09 : 0.09, h),
       border: oklch(dark ? 0.72 : 0.58, 0.15, h),
       badge: oklch(dark ? 0.4 : 0.84, 0.09, h),
       soft: oklch(dark ? 0.22 : 0.965, dark ? 0.035 : 0.03, h),
