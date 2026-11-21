@@ -124,7 +124,7 @@ html[data-m3="on"] {
     flex-direction: column;
     gap: 6px;
     width: 100%;
-    padding: 10px 6px;
+    padding: 10px 2px;
     border-radius: 20px;
     justify-content: center;
   }
@@ -140,7 +140,8 @@ html[data-m3="on"] {
     line-height: 1.4;
     white-space: normal;
     text-align: center;
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
+    word-break: normal;
     hyphens: none;
   }
 
@@ -704,6 +705,19 @@ html[data-m3="on"] .tt-brush .chip-btn {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
 }
 
+/* Form selects open the platform menu, but they keep the platform arrow on
+   top of it. Swap in the same thin chevron the filter pill draws, so the
+   dialog fields read as one family. */
+html[data-m3="on"] .modal select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2380808c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}
+
 /* ================================================ 17. timetable toolbar */
 
 /* Two clusters: [lock][weekend][undo][redo] on the left, [import][template]
@@ -841,6 +855,22 @@ html[data-m3="on"] #tt-brush::-webkit-scrollbar {
 
 html[data-m3="on"] #tt-brush .brush-label {
   flex: 0 0 auto;
+}
+
+/* The palette chips are subject marks too: they wear the same derived tint as
+   the timetable cells instead of a neutral surface, so the brush row reads as
+   a colour legend in both themes. */
+html[data-m3="on"] #tt-brush .brush-chip {
+  background: var(--subj-fill);
+  color: var(--subj-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--subj-edge, var(--subj)) 60%, transparent);
+  font-weight: 600;
+}
+
+html[data-m3="on"] #tt-brush .brush-chip.active {
+  background: var(--subj-fill);
+  color: var(--subj-ink);
+  box-shadow: inset 0 0 0 2px var(--subj);
 }
 
 html[data-m3="on"] #tt-brush .brush-chip,
@@ -1273,6 +1303,9 @@ html[data-m3="on"] .head-actions .check:has(input:checked) .tick {
 html[data-m3="on"] .tab-label {
   padding: 0 10px;
   max-width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 /* The week card: the body takes the card's height and the four figures fill

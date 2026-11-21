@@ -363,9 +363,27 @@
     /* Everything on the timer screen has to fit without scrolling: the pair
        is sized from what is left after the bar, the control row and the mode
        switch, and the bar is measured from the pair so they always match. */
+    /* The pair is what the bar has to match and what has to sit on the axis.
+       Any zero-width leftover slot in the group shifts the flex centring, so
+       measure the tiles that are really there and place them on the bar's
+       centre line instead of trusting the group box. */
     function syncBar() {
-      var width = Math.round(group.getBoundingClientRect().width);
+      var shown = Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
+        return card.getClientRects().length > 0;
+      });
+      if (!shown.length) return;
+      group.style.transform = "none";
+      var first = shown[0].getBoundingClientRect();
+      var last = shown[shown.length - 1].getBoundingClientRect();
+      var width = Math.round(last.right - first.left);
       if (width > 0) host.style.width = width + "px";
+      if (document.documentElement.dataset.stage === "timer") {
+        var bar = host.getBoundingClientRect();
+        var pairCentre = (first.left + last.right) / 2;
+        var barCentre = bar.left + bar.width / 2;
+        var dx = Math.round(barCentre - pairCentre);
+        if (dx) group.style.transform = "translateX(" + dx + "px)";
+      }
       wave.resize();
     }
 
@@ -383,9 +401,21 @@
         var availW = stage.clientWidth - pad;
         var availH = stage.clientHeight - fixed;
         var pairGap = 32;
-        var count = Math.max(2, group.querySelectorAll(".card").length);
+        /* An hours tile reading 00 is not part of the pair: the old sheet kept
+           it as a zero-width slot with a negative margin, which tilted the
+           whole column. Take it out of the flow instead. */
+        Array.prototype.forEach.call(group.querySelectorAll(".card.hours"), function (card) {
+          var digit = card.querySelector(".d");
+          var text = digit ? digit.textContent.trim() : "";
+          card.style.display = !text || /^0+$/.test(text) ? "none" : "";
+        });
+        /* Only the tiles that are actually on screen count. */
+        var shown = Array.prototype.filter.call(group.querySelectorAll(".card"), function (card) {
+          return card.getClientRects().length > 0;
+        });
+        var count = Math.max(2, shown.length);
         var width = Math.min((availW - pairGap * (count - 1)) / count, availH / 1.2);
-        width = Math.max(110, Math.min(width, 620));
+        width = Math.max(110, Math.min(width, 520));
         width = Math.floor(width);
         group.style.setProperty("--w", width + "px");
         /* max-content rounds the pair against the gap; set it outright so the
