@@ -493,7 +493,9 @@ html[data-m3="on"] #timer-ring {
 /* The bar is measured from the tile pair by m3.js: same width, 24px below,
    and no grey rail behind it, so an idle timer shows nothing at all. */
 html[data-m3="on"] #timer-progress {
-  position: static;
+  /* relative, not static: the rail inside it is absolutely positioned, and
+     with a static host it escaped to #stage and covered the play button. */
+  position: relative;
   inset: auto;
   flex: 0 0 auto;
   width: 320px;
@@ -511,7 +513,10 @@ html[data-m3="on"][data-stage="clock"] #timer-progress {
   display: none;
 }
 
-html[data-m3="on"] #timer-progress .wave-track-line {
+html[data-m3="on"] #timer-progress .wave-track-line,
+/* The dashboard widget bars are a 12px strip at the very bottom of a card: an
+   empty grey rule there reads as a stray divider, so an idle bar shows nothing. */
+html[data-m3="on"] #dash-grid .wave-host .wave-track-line {
   display: none;
 }
 
@@ -716,6 +721,17 @@ html[data-m3="on"] .modal select {
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 12px 8px;
+}
+
+/* Every wave is decoration: it may sit over the grid or under the tiles, but it
+   must never eat a click meant for a control. */
+html[data-m3="on"] .wave-host,
+html[data-m3="on"] .wave-rail,
+html[data-m3="on"] .wave-clip,
+html[data-m3="on"] .wave-track-line,
+html[data-m3="on"] .wave-dot,
+html[data-m3="on"] .wave-host svg {
+  pointer-events: none;
 }
 
 /* ================================================ 17. timetable toolbar */
