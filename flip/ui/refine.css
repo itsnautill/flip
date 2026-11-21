@@ -643,3 +643,67 @@ html[data-m3="on"] .tt-brush .tt-swatch,
 html[data-m3="on"] .tt-brush .chip-btn {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
 }
+
+/* ================================================ 17. timetable toolbar */
+
+/* Two clusters: [lock][weekend][undo][redo] on the left, [import][template]
+   [add row] on the right, reset on its own as the destructive action. Every
+   button is the same 40px tonal text button; at narrow widths the cluster
+   wraps under the title instead of squeezing it. */
+html[data-m3="on"] #timetable .head-actions {
+  gap: 8px;
+  align-items: center;
+}
+
+html[data-m3="on"] #timetable .head-actions .btn,
+html[data-m3="on"] #timetable .head-actions .check {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: 500 13px/1 var(--font-ui);
+  box-shadow: none;
+}
+
+html[data-m3="on"] #timetable .head-actions .btn.icon-only {
+  width: 40px;
+  padding: 0;
+}
+
+html[data-m3="on"] #timetable .head-actions .btn:hover,
+html[data-m3="on"] #timetable .head-actions .check:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+html[data-m3="on"] #timetable .head-actions .check {
+  padding: 0 14px;
+}
+
+/* Push the import cluster to the right without touching the title. */
+html[data-m3="on"] #tt-import {
+  margin-left: auto;
+}
+
+html[data-m3="on"] #tt-reset {
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+  color: var(--error);
+}
+
+html[data-m3="on"] #tt-reset:hover {
+  background: color-mix(in srgb, var(--error) 22%, transparent);
+  color: var(--error);
+}
+
+@media (max-width: 900px) {
+  html[data-m3="on"] #timetable .head-actions {
+    width: 100%;
+  }
+
+  html[data-m3="on"] #tt-import {
+    margin-left: 0;
+  }
+}
