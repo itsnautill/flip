@@ -802,7 +802,6 @@ html[data-m3="on"] .day-col,
 html[data-m3="on"] .suggestion,
 html[data-m3="on"] .list-group,
 html[data-m3="on"] .task,
-html[data-m3="on"] .tt-dropzone,
 html[data-m3="on"] .setting-row {
   border: 0;
   background: var(--glass-fill);
@@ -842,8 +841,7 @@ html[data-m3="on"] .widget-head h2 {
 }
 
 /* Icon tiles: fully round, accent tint, glyph perfectly centred. */
-html[data-m3="on"] .widget-badge,
-html[data-m3="on"] .tt-dropzone-icon {
+html[data-m3="on"] .widget-badge {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -855,8 +853,7 @@ html[data-m3="on"] .tt-dropzone-icon {
   overflow: hidden;
 }
 
-html[data-m3="on"] .widget-badge svg,
-html[data-m3="on"] .tt-dropzone-icon svg {
+html[data-m3="on"] .widget-badge svg {
   width: 18px;
   height: 18px;
   display: block;
@@ -1564,40 +1561,6 @@ html[data-m3="on"] .list-group h3 span {
 
 /* ---------------------------------------------------------- timetable */
 
-html[data-m3="on"] .tt-dropzone {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-  margin-bottom: 14px;
-  border-radius: var(--r-28);
-  background: var(--glass-fill);
-  transition: background var(--dur-effects-fast) var(--spring-effects-fast);
-}
-
-html[data-m3="on"] .tt-dropzone.is-over {
-  background: var(--primary-container);
-}
-
-html[data-m3="on"] .tt-dropzone-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1 1 260px;
-  min-width: 0;
-}
-
-html[data-m3="on"] .tt-dropzone-text strong {
-  font: var(--type-emphasized);
-  color: var(--on-surface);
-}
-
-html[data-m3="on"] .tt-dropzone-text span {
-  font: var(--type-small);
-  color: var(--on-surface-variant);
-}
-
 html[data-m3="on"] .tt-brush {
   display: flex;
   flex-wrap: wrap;
@@ -2185,7 +2148,6 @@ html[data-m3="on"] .waves-hidden .ring-flow {
   html[data-m3="on"] .day-col,
   html[data-m3="on"] .task,
   html[data-m3="on"] .suggestion,
-  html[data-m3="on"] .tt-dropzone,
   html[data-m3="on"] .week-bar,
   html[data-m3="on"] .summary-strip,
   html[data-m3="on"] #tabs,
@@ -2264,7 +2226,6 @@ html[data-theme="dark"][data-m3="on"] .widget,
 html[data-theme="dark"][data-m3="on"] .day-col,
 html[data-theme="dark"][data-m3="on"] .suggestion,
 html[data-theme="dark"][data-m3="on"] .list-group,
-html[data-theme="dark"][data-m3="on"] .tt-dropzone,
 html[data-theme="dark"][data-m3="on"] .setting-row,
 html[data-theme="dark"][data-m3="on"] .week-bar,
 html[data-theme="dark"][data-m3="on"] .summary-strip {

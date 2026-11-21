@@ -177,19 +177,18 @@
           <input type="file" id="tt-file" accept=".xlsx" hidden>
         </div>
       </div>
-      <div id="tt-dropzone" class="tt-dropzone">
-        <span class="tt-dropzone-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5"></path><path d="M7.5 9.5 12 5l4.5 4.5"></path><path d="M5 15v3.2A1.8 1.8 0 0 0 6.8 20h10.4a1.8 1.8 0 0 0 1.8-1.8V15"></path></svg>
-        </span>
-        <span class="tt-dropzone-text">
-          <strong>Drop an .xlsx timetable here</strong>
-          <span>or pick one from this computer. Columns become days, rows become periods.</span>
-        </span>
-        <button class="btn primary" type="button" id="tt-dropzone-import">Choose file</button>
-      </div>
       <div id="tt-wave" class="wave-host" hidden></div>
       <div id="tt-brush" class="tt-brush" role="group" aria-label="Subjects" hidden></div>
       <div class="tt-scroll">
+        <div id="tt-empty" class="tt-empty" hidden>
+          <p class="tt-empty-title">No timetable yet</p>
+          <p class="tt-empty-hint">Import an .xlsx file, or build the grid by hand and add your classes in it.</p>
+          <div class="tt-empty-actions">
+            <button class="btn primary" type="button" id="tt-empty-import">Import</button>
+            <button class="btn" type="button" id="tt-empty-add">Add row</button>
+            <button class="btn" type="button" id="tt-empty-template">Download Template</button>
+          </div>
+        </div>
         <div id="tt-grid" class="tt-grid" role="grid" aria-label="Weekly timetable"></div>
       </div>
     </section>
@@ -234,6 +233,16 @@
       <div id="task-board" class="task-board"></div>
       <div id="task-list" class="task-list" hidden></div>
     </section>
+  </div>
+
+  <div id="tt-drop" class="tt-drop" hidden aria-hidden="true">
+    <div class="tt-drop-card">
+      <span class="tt-drop-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5"></path><path d="M7.5 9.5 12 5l4.5 4.5"></path><path d="M5 15v3.2A1.8 1.8 0 0 0 6.8 20h10.4a1.8 1.8 0 0 0 1.8-1.8V15"></path></svg>
+      </span>
+      <strong class="tt-drop-title">Drop .xlsx to import</strong>
+      <span class="tt-drop-hint">Day, start, end, subject and room: one lesson per row.</span>
+    </div>
   </div>
 
   <div id="tooltip" class="tooltip" role="tooltip" hidden></div>

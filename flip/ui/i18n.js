@@ -321,10 +321,13 @@
     "You're all set": "Đã xong",
     "Everything stays on this computer.": "Mọi thứ lưu trên máy này.",
     "Timetable is ready. Click any slot to add a subject.": "Thời khóa biểu đã sẵn sàng. Bấm vào ô trống để thêm môn.",
-    "Drop an .xlsx timetable here": "Kéo tệp thời khóa biểu .xlsx vào đây",
-    "or pick one from this computer. Columns become days, rows become periods.":
-      "hoặc chọn tệp từ máy này. Cột là ngày, hàng là tiết.",
-    "Choose file": "Chọn tệp",
+    "Filter by subject": "Lọc theo môn",
+    "Drop .xlsx to import": "Thả tệp .xlsx để nhập",
+    "Day, start, end, subject and room: one lesson per row.":
+      "Ngày, bắt đầu, kết thúc, môn và phòng: mỗi dòng một tiết.",
+    "No timetable yet": "Chưa có thời khóa biểu",
+    "Import an .xlsx file, or build the grid by hand and add your classes in it.":
+      "Nhập tệp .xlsx, hoặc tự dựng lưới rồi thêm tiết học vào.",
     "Start timer": "Bắt đầu hẹn giờ",
     "Pause timer": "Tạm dừng hẹn giờ",
     "Import a timetable from an .xlsx file": "Nhập thời khóa biểu từ tệp .xlsx",

@@ -202,7 +202,6 @@ html[data-m3="on"] body::after {
 html[data-theme="dark"][data-m3="on"] .widget,
 html[data-theme="dark"][data-m3="on"] .day-col,
 html[data-theme="dark"][data-m3="on"] .list-group,
-html[data-theme="dark"][data-m3="on"] .tt-dropzone,
 html[data-theme="dark"][data-m3="on"] .setting-row,
 html[data-theme="dark"][data-m3="on"] .week-bar,
 html[data-theme="dark"][data-m3="on"] .summary-strip {
@@ -810,54 +809,113 @@ html[data-m3="on"] #tt-reset:hover {
   }
 }
 
-/* ================================================= 18. import card */
+/* ================================================= 18. file drop */
 
-/* With classes already on the timetable the drop card folds to a 52px strip:
-   icon, one line, and the file button. Dragging a file over the window opens
-   it again. */
-html[data-m3="on"] #tt-dropzone.is-slim,
-html[data-m3="on"] body.is-file-drag #tt-dropzone {
-  background: color-mix(in srgb, var(--surface-container-low) 70%, transparent);
+/* There is no permanent drop card any more. A file dragged over the window
+   gets one prompt over everything, and it is gone on drop, on drag leave and
+   on Escape. */
+html[data-m3="on"] .tt-drop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--scrim) 34%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+  pointer-events: none;
 }
 
-html[data-m3="on"] #tt-dropzone.is-slim {
-  min-height: 52px;
-  padding: 6px 10px 6px 14px;
-  border-radius: var(--r-full);
-  gap: 10px;
-}
-
-html[data-m3="on"] #tt-dropzone.is-slim .tt-dropzone-icon {
-  width: 32px;
-  height: 32px;
-}
-
-html[data-m3="on"] #tt-dropzone.is-slim .tt-dropzone-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-html[data-m3="on"] #tt-dropzone.is-slim .tt-dropzone-text > strong {
-  font: 500 13px/1.3 var(--font-ui);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-html[data-m3="on"] #tt-dropzone.is-slim .tt-dropzone-text > span {
+html[data-m3="on"] .tt-drop[hidden] {
   display: none;
 }
 
-html[data-m3="on"] body.is-file-drag #tt-dropzone.is-slim {
-  min-height: 84px;
-  padding: 18px;
-  border-radius: var(--r-22);
+html[data-m3="on"] .tt-drop:not([hidden]) {
+  animation: overlay-in var(--dur-200) var(--ease-enter);
 }
 
-html[data-m3="on"] body.is-file-drag #tt-dropzone.is-slim .tt-dropzone-text > span {
-  display: block;
+html[data-m3="on"] .tt-drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, 100%);
+  padding: 38px 30px;
+  border-radius: var(--r-32);
+  border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: inset 0 1px 0 var(--glass-edge), var(--glass-shadow);
+  text-align: center;
+}
+
+html[data-m3="on"] .tt-drop-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-text);
+}
+
+html[data-m3="on"] .tt-drop-title {
+  font: 600 18px/26px var(--font-ui);
+  color: var(--on-surface);
+}
+
+html[data-m3="on"] .tt-drop-hint {
+  font: var(--type-small);
+  color: var(--on-surface-variant);
+  line-height: 1.45;
+}
+
+/* ============================================== 18b. empty timetable */
+
+/* A timetable with no grid yet says what to do next instead of showing a
+   blank band: one import button, then the two hand-built ways in. */
+html[data-m3="on"] .tt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 320px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+html[data-m3="on"] .tt-empty[hidden] {
+  display: none;
+}
+
+html[data-m3="on"] .tt-empty-title {
+  font: var(--type-section);
+  color: var(--on-surface);
+}
+
+html[data-m3="on"] .tt-empty-hint {
+  max-width: 420px;
+  font: var(--type-body);
+  line-height: 1.45;
+  color: var(--on-surface-variant);
+  text-wrap: balance;
+}
+
+html[data-m3="on"] .tt-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* The empty state takes the grid's place instead of stacking above it. */
+html[data-m3="on"] .tt-scroll:has(.tt-empty:not([hidden])) #tt-grid {
+  display: none;
 }
 
 /* =================================================== 19. paint palette */

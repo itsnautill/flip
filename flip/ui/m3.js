@@ -818,66 +818,56 @@
     apply(button.classList.contains("is-busy"));
   }
 
-  /* A timetable that already has classes does not need the big drop card: it
-     folds to a 52px strip with its file button, and opens up again only while a
-     file is being dragged over the window. */
-  function wireDropzoneCollapse() {
-    var zone = document.getElementById("tt-dropzone");
-    var grid = document.getElementById("tt-grid");
-    if (!zone || !grid) return;
+  /* ------------------------------------------------------------ file drop */
 
-    function paint() {
-      var filled = grid.querySelectorAll(".tt-cell.filled").length > 0;
-      zone.classList.toggle("is-slim", filled);
-    }
-
-    new MutationObserver(function () {
-      requestAnimationFrame(paint);
-    }).observe(grid, { childList: true, subtree: true });
-
-    var dragging = 0;
-    window.addEventListener("dragenter", function (event) {
-      if (!event.dataTransfer || Array.prototype.indexOf.call(event.dataTransfer.types || [], "Files") < 0) return;
-      dragging += 1;
-      document.body.classList.add("is-file-drag");
-    });
-    window.addEventListener("dragleave", function () {
-      dragging = Math.max(0, dragging - 1);
-      if (!dragging) document.body.classList.remove("is-file-drag");
-    });
-    window.addEventListener("drop", function () {
-      dragging = 0;
-      document.body.classList.remove("is-file-drag");
-    });
-    paint();
-  }
-
-  function wireDropzone() {
-    var zone = document.getElementById("tt-dropzone");
-    var pick = document.getElementById("tt-dropzone-import");
+  /* No permanent drop card: a file dragged over the window raises one prompt
+     over everything. It is there only while a drag is in flight, and any drop,
+     drag leave or Escape takes it away again. */
+  function wireFileDrop() {
+    var overlay = document.getElementById("tt-drop");
     var input = document.getElementById("tt-file");
-    if (!zone || !input) return;
+    if (!overlay || !input) return;
 
-    if (pick) {
-      pick.addEventListener("click", function () {
-        var fileButton = document.getElementById("tt-import");
-        if (fileButton) fileButton.click();
-      });
+    var depth = 0;
+
+    function files(event) {
+      return event.dataTransfer && Array.prototype.indexOf.call(event.dataTransfer.types || [], "Files") >= 0;
     }
 
-    ["dragenter", "dragover"].forEach(function (type) {
-      zone.addEventListener(type, function (event) {
-        event.preventDefault();
-        zone.classList.add("is-over");
-      });
-    });
-    ["dragleave", "drop"].forEach(function (type) {
-      zone.addEventListener(type, function () {
-        zone.classList.remove("is-over");
-      });
-    });
-    zone.addEventListener("drop", function (event) {
+    function show(on) {
+      overlay.hidden = !on;
+      document.body.classList.toggle("is-file-drag", on);
+    }
+
+    window.addEventListener("dragenter", function (event) {
+      if (!files(event)) return;
       event.preventDefault();
+      depth += 1;
+      show(true);
+    });
+    window.addEventListener("dragover", function (event) {
+      if (!files(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    });
+    window.addEventListener("dragleave", function (event) {
+      if (!files(event)) return;
+      depth = Math.max(0, depth - 1);
+      /* Leaving the window (or a tangle of nested leaves) closes it. */
+      if (!depth || !event.relatedTarget) {
+        depth = 0;
+        show(false);
+      }
+    });
+    window.addEventListener("dragend", function () {
+      depth = 0;
+      show(false);
+    });
+    window.addEventListener("drop", function (event) {
+      if (!files(event)) return;
+      event.preventDefault();
+      depth = 0;
+      show(false);
       var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
       if (!file) return;
       var transfer = new DataTransfer();
@@ -885,6 +875,44 @@
       input.files = transfer.files;
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    window.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || overlay.hidden) return;
+      depth = 0;
+      show(false);
+    });
+  }
+
+  /* ------------------------------------------------------- empty timetable */
+
+  /* With no grid at all, the grid area offers one way in: import, or the two
+     hand-built routes. It leaves as soon as a cell exists. */
+  function wireEmptyTimetable() {
+    var grid = document.getElementById("tt-grid");
+    var empty = document.getElementById("tt-empty");
+    if (!grid || !empty) return;
+
+    function paint() {
+      empty.hidden = grid.querySelectorAll(".tt-cell").length > 0;
+    }
+
+    new MutationObserver(function () {
+      requestAnimationFrame(paint);
+    }).observe(grid, { childList: true, subtree: true });
+
+    function press(id) {
+      var target = document.getElementById(id);
+      if (target) target.click();
+    }
+
+    var importButton = document.getElementById("tt-empty-import");
+    if (importButton) importButton.addEventListener("click", function () { press("tt-import"); });
+    var addButton = document.getElementById("tt-empty-add");
+    if (addButton) addButton.addEventListener("click", function () { press("tt-add-period"); });
+    var templateButton = document.getElementById("tt-empty-template");
+    if (templateButton)
+      templateButton.addEventListener("click", function () { press("tt-template"); });
+
+    paint();
   }
 
   /* ------------------------------------------------------ tasks helpers */
@@ -1007,8 +1035,9 @@
     wireDayWaves();
     wireBars();
     wireImportWave();
-    wireDropzone();
-    wireDropzoneCollapse();
+    wireFileDrop();
+    wireEmptyTimetable();
+    wireIdleGlide();
     wireTasksExtras();
     wireLaneHeight();
     wireTodayScroll();
