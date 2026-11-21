@@ -336,3 +336,86 @@ html[data-m3="on"] #dash-new-task {
   height: 40px;
   min-height: 40px;
 }
+
+/* ========================================================== 10. flip tiles */
+
+html[data-m3="on"] {
+  --flip-half: 160ms;
+  --flip-top-ease: cubic-bezier(0.3, 0.05, 0.3, 1);
+  --flip-bottom-ease: cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+/* A split-flap tile: 5:6, hinge, pins. The same shape in both modes. */
+html[data-m3="on"] #stage .card {
+  width: var(--w);
+  height: auto;
+  aspect-ratio: 5 / 6;
+  perspective: 900px;
+  border-radius: 26px;
+  background: var(--surface-container-lowest);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 6%, transparent),
+    0 26px 50px -38px rgba(0, 0, 0, 0.7);
+}
+
+/* Top half a shade lighter than the bottom, as if lit from above. */
+html[data-m3="on"] #stage .card .top,
+html[data-m3="on"] #stage .card .flap-top {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-bright) 34%, var(--surface-container-lowest)),
+    color-mix(in srgb, var(--surface-bright) 18%, var(--surface-container-lowest))
+  );
+}
+
+html[data-m3="on"] #stage .card .bottom,
+html[data-m3="on"] #stage .card .flap-bottom {
+  background: var(--surface-container-lowest);
+}
+
+/* Hinge: a dark hairline with a light one under it. */
+html[data-m3="on"] #stage .card::after {
+  top: calc(50% - 1px);
+  height: 1px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+/* Two 4px pins at the ends of the hinge. */
+html[data-m3="on"] #stage .card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 2px);
+  height: 4px;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 2px at 3px 50%, rgba(0, 0, 0, 0.34) 98%, transparent 100%),
+    radial-gradient(circle 2px at calc(100% - 3px) 50%, rgba(0, 0, 0, 0.34) 98%, transparent 100%);
+}
+
+/* A soft shadow falling from the hinge onto the lower half. */
+html[data-m3="on"] #stage .card .bottom,
+html[data-m3="on"] #stage .card .flap-bottom {
+  box-shadow: inset 0 8px 8px -8px rgba(0, 0, 0, 0.45);
+}
+
+html[data-m3="on"] #stage .card .d {
+  font-family: var(--font-clock);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+  font-size: calc(var(--w) * 0.46);
+  line-height: 1;
+  transform: translateY(-0.01em);
+}
+
+/* Only the changed digit flips, ~320ms in total. */
+html[data-m3="on"] .card.flipping .flap-top {
+  animation: flip-top var(--flip-half) var(--flip-top-ease) forwards;
+}
+
+html[data-m3="on"] .card.flipping .flap-bottom {
+  animation: flip-bottom var(--flip-half) var(--flip-bottom-ease) var(--flip-half) both;
+}
