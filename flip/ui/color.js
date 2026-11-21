@@ -129,13 +129,34 @@
   function subjectColorFromHue(hue, theme) {
     var dark = isDark(theme);
     var h = normaliseHue(hue);
-    /* Equal OKLCH lightness across hues: this is what stops yellow reading as
-       a highlight and blue as a hole. */
-    var fill = readableFill(dark ? 0.28 : 0.93, dark ? 0.05 : 0.045, h, dark);
+
+    /* One recipe per theme, and both keep the subject's own hue.
+       Dark: a low-chroma mid tone (L 0.32) with a light tint of the same hue on
+       top at 7:1 or better - the muddy olive/brown came from a nearly grey fill
+       under near-white text.
+       Light: the same shape, a pastel fill with dark ink. */
+    var fill;
+    var text;
+    if (dark) {
+      fill = oklch(0.32, 0.06, h);
+      text = oklch(0.92, 0.035, h);
+      for (var step = 0; step < 24 && contrast(fill, text) < 7; step++) {
+        text = oklch(Math.min(0.99, 0.92 + step * 0.004), 0.035, h);
+        if (step > 12) fill = oklch(0.32 - step * 0.002, 0.06, h);
+      }
+    } else {
+      fill = oklch(0.93, 0.045, h);
+      text = inkOn(fill);
+      for (var pass = 0; pass < 20 && contrast(fill, text) < 7; pass++) {
+        fill = oklch(0.93 - pass * 0.01, 0.045, h);
+        text = inkOn(fill);
+      }
+    }
+
     return {
       hue: h,
-      fill: fill.fill,
-      text: fill.ink,
+      fill: fill,
+      text: text,
       border: oklch(dark ? 0.72 : 0.58, 0.15, h),
       badge: oklch(dark ? 0.4 : 0.84, 0.09, h),
       soft: oklch(dark ? 0.22 : 0.965, dark ? 0.035 : 0.03, h),

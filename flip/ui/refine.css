@@ -589,3 +589,57 @@ html[data-m3="on"] .tt-break {
   letter-spacing: 0;
   background-image: none !important;
 }
+
+/* ================================================= 16. subject cells */
+
+/* The subject keeps its hue; the fill and the ink are derived per theme so the
+   card is neither muddy nor a highlighter. */
+html[data-m3="on"] .tt-cell {
+  min-height: 56px;
+  border-radius: 20px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+}
+
+html[data-m3="on"] .tt-cell.filled {
+  background: var(--subj-fill) !important;
+  color: var(--subj-ink) !important;
+  box-shadow: none;
+}
+
+html[data-m3="on"] .tt-cell .tt-name {
+  font: 600 14px/1.35 var(--font-ui);
+  color: var(--subj-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+html[data-m3="on"] .tt-cell .tt-room {
+  color: var(--subj-ink);
+  opacity: 0.82;
+  font: 400 12px/1.3 var(--font-ui);
+}
+
+/* The cell menu only shows on hover, so the name keeps the row. */
+html[data-m3="on"] .tt-cell .tt-menu-btn {
+  color: var(--subj-ink);
+  opacity: 0;
+}
+
+html[data-m3="on"] .tt-cell:hover .tt-menu-btn,
+html[data-m3="on"] .tt-cell:focus-within .tt-menu-btn {
+  opacity: 0.72;
+}
+
+/* Subject chips in the palette keep the same hues and stay distinguishable. */
+html[data-m3="on"] .tt-brush .tt-swatch,
+html[data-m3="on"] .tt-brush .chip-btn {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
+}

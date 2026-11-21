@@ -855,7 +855,7 @@
 
     if (cellView.room) cell.appendChild(Board.el("span", "tt-room", cellView.room));
 
-    var label =
+    var description =
       cellView.name +
       (cellView.room ? ", " + cellView.room : "") +
       (cellView.pending > 0 ? ", " + cellView.pending + " pending task(s)" : "") +
