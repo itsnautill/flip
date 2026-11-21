@@ -204,20 +204,10 @@ pub fn run() {
             #[cfg(not(desktop))]
             let _ = saved_zoom;
 
-            /* Size, place and pin survive a restart, like the zoom does. */
+            /* Only the pin survives a restart: the window always opens at the
+            small default size in the middle of the screen. */
             #[cfg(desktop)]
-            {
-                window_state::restore(app.handle(), &data_dir);
-                if let Some(window) = app.get_webview_window("main") {
-                    let handle = app.handle().clone();
-                    let window_dir = data_dir.clone();
-                    window.on_window_event(move |event| {
-                        if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
-                            window_state::save(&handle, &window_dir);
-                        }
-                    });
-                }
-            }
+            window_state::restore(app.handle(), &data_dir);
 
             let shared: SharedCore = Arc::new(Mutex::new(core));
             app.manage(Arc::clone(&shared));

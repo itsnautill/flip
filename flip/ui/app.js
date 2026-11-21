@@ -1528,18 +1528,9 @@
 
   /* -------------------------------------------------------------------- tabs */
 
-  function rememberView(name) {
-    try {
-      window.localStorage.setItem("flip.view", name);
-    } catch (_) {
-      /* a refused store only costs the memory */
-    }
-  }
-
   function setView(name, fromHistory) {
     if (name === currentView) return;
     currentView = name;
-    rememberView(name);
     /* One entry per section, so Android's back button and the browser's back
        both walk through the app instead of leaving it. */
     if (!fromHistory) {
@@ -2016,16 +2007,8 @@
   window.Dashboard.init();
   window.Dashboard.show();
 
-  /* Flip reopens on the section it was closed on. */
-  var savedView = null;
-  try {
-    savedView = window.localStorage.getItem("flip.view");
-  } catch (_) {
-    savedView = null;
-  }
-  if (savedView && savedView !== currentView && VIEW_ORDER.indexOf(savedView) >= 0) {
-    setView(savedView, true);
-  }
+  /* Flip always opens on the Dashboard, whatever was on screen last time. */
+  if (currentView !== "dashboard") setView("dashboard", true);
   booting = false;
 
   /* The timetable and the task board are the two largest builds in the app and
