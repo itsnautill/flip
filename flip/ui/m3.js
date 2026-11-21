@@ -357,18 +357,50 @@
     var wave = new WavyLinear(host, { amplitude: 2.6, wavelength: 36, height: 16, stroke: 4 });
     watchWave(host);
 
-    /* Same width as the tile pair, measured rather than guessed. */
+    /* Everything on the timer screen has to fit without scrolling: the pair
+       is sized from what is left after the 24px gaps, the bar and the control
+       row, and the bar is measured from the pair so they always match. */
     function fit() {
+      var timerMode = document.documentElement.dataset.stage === "timer";
+      if (timerMode) {
+        var controls = document.getElementById("timer-controls");
+        var toggle = document.getElementById("timer-toggle");
+        var barHeight = host.getBoundingClientRect().height || 16;
+        var controlsHeight = controls ? controls.getBoundingClientRect().height : 0;
+        var dockHeight = window.innerWidth < 840 ? 74 : 0;
+        var dots = document.getElementById("dots");
+        var dotsHeight = timerMode && dots ? dots.getBoundingClientRect().height : 0;
+        var fixed = 50 + 3 * 24 + barHeight + controlsHeight + dotsHeight + dockHeight;
+        var availW = stage.clientWidth - 48;
+        var availH = stage.clientHeight - fixed;
+        var pairGap = 32;
+        var count = Math.max(2, group.querySelectorAll(".card").length);
+        var width = Math.min((availW - pairGap * (count - 1)) / count, availH / 1.2);
+        width = Math.max(110, Math.min(width, 620));
+        if (toggle) toggle.style.width = toggle.style.height = "";
+        group.style.setProperty("--w", Math.floor(width) + "px");
+      }
       var cards = group.querySelectorAll(".card");
       if (cards.length < 2) return;
       var first = cards[0].getBoundingClientRect();
       var last = cards[cards.length - 1].getBoundingClientRect();
-      var width = Math.round(last.right - first.left);
-      if (width > 0) host.style.width = width + "px";
+      var width2 = Math.round(last.right - first.left);
+      if (width2 > 0) host.style.width = width2 + "px";
       wave.resize();
     }
     window.addEventListener("resize", fit);
-    if (window.ResizeObserver) new ResizeObserver(fit).observe(group);
+    if (window.ResizeObserver) {
+      new ResizeObserver(fit).observe(group);
+      new ResizeObserver(fit).observe(stage);
+    }
+    window.__fitTimer = fit;
+
+    /* The mode switch changes what has to fit, and the first pass runs before
+       the tiles have their final width: fit again once layout has settled. */
+    new MutationObserver(function () {
+      requestAnimationFrame(fit);
+      setTimeout(fit, 80);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-stage"] });
 
     /* The snapshot carries the remaining time, not the duration. An idle timer
        shows its preset, so that is where the total comes from; a running
@@ -390,6 +422,31 @@
       wave.set(progress);
       fit();
     });
+  }
+
+  /* Play/pause and the two small tools become one centred row under the bar;
+     the mode switch stays at the bottom, 24px further down. */
+  function wireTimerControls() {
+    var stage = document.getElementById("stage");
+    var dots = document.getElementById("dots");
+    if (!stage || !dots) return;
+
+    var row = document.getElementById("timer-controls");
+    if (!row) {
+      row = document.createElement("div");
+      row.id = "timer-controls";
+      row.className = "timer-controls";
+      stage.insertBefore(row, dots);
+    }
+    ["timer-transport", "timer-tools"].forEach(function (id) {
+      var node = document.getElementById(id);
+      if (node && node.parentNode !== row) row.appendChild(node);
+    });
+
+    /* Order: tiles, bar, controls, mode switch. */
+    var bar = document.getElementById("timer-progress");
+    if (bar && bar.nextElementSibling !== row) stage.insertBefore(bar, row);
+    if (window.__fitTimer) requestAnimationFrame(window.__fitTimer);
   }
 
   /* --------------------------------------------------------- week board */
@@ -671,6 +728,7 @@
     wireStageMode();
     wireTimerTransport();
     wireTimerProgress();
+    wireTimerControls();
     wireDayWaves();
     wireBars();
     wireImportWave();
