@@ -1025,3 +1025,27 @@ html[data-m3="on"] #task-board .day-count {
   font-size: 10.5px;
   letter-spacing: -0.01em;
 }
+
+/* Seven lanes at 1366 leave ~100px each: drop the count pill before the date
+   has to be clipped, so weekday and date stay on one readable line. */
+html[data-m3="on"] #task-board .day-col {
+  container-type: inline-size;
+}
+
+@container (max-width: 132px) {
+  html[data-m3="on"] #task-board .day-count {
+    display: none;
+  }
+}
+
+html[data-m3="on"] #task-board .day-head {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+html[data-m3="on"] #task-board .day-head > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

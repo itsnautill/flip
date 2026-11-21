@@ -469,7 +469,7 @@
           host = document.createElement("div");
           host.className = "wave-host day-wave";
           head ? head.parentNode.insertBefore(host, head.nextSibling) : column.insertBefore(host, column.firstChild);
-          host.__wave = new WavyLinear(host, { amplitude: 2.2, wavelength: 26, height: 11, stroke: 4 });
+          host.__wave = new WavyLinear(host, { amplitude: 1.6, wavelength: 30, height: 11, stroke: 4 });
           watchWave(host);
         }
         host.__wave.set(total ? done / total : 0);
@@ -548,7 +548,7 @@
         track.appendChild(host);
         track.__fill = fill;
         if (fill) fill.style.display = "none";
-        track.__wave = new WavyLinear(host, { amplitude: 2, wavelength: 30, height: 12, stroke: 4 });
+        track.__wave = new WavyLinear(host, { amplitude: 1.8, wavelength: 44, height: 12, stroke: 4 });
         watchWave(host);
         updateBar(track);
       }
