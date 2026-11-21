@@ -359,14 +359,33 @@
       });
     }
 
+    /* Stored labels are the backend's "Period N", which counts break rows too
+       and so repeats a number in a day. Number the class rows only, at render
+       time: a hand-written label is shown exactly, and the saved data is never
+       touched. */
+    var classNumber = 0;
+    var labels = {};
     periods.forEach(function (period) {
-      grid.appendChild(timeCell(period, view.currentPeriod === period.id, period.id === nextId));
+      if (period["break"]) {
+        labels[period.id] = period.label;
+      } else {
+        classNumber += 1;
+        labels[period.id] = /^period\s+\d+$/i.test(String(period.label || ""))
+          ? "Period " + classNumber
+          : period.label;
+      }
+    });
+
+    periods.forEach(function (period) {
+      grid.appendChild(
+        timeCell(period, labels[period.id], view.currentPeriod === period.id, period.id === nextId)
+      );
 
       if (period["break"]) {
         var bar = Board.el(
           "div",
           "tt-break" + (view.currentPeriod === period.id ? " now" : ""),
-          period.label + " · " + period.start + "–" + period.end
+          labels[period.id]
         );
         bar.style.gridColumn = "2 / span " + Math.max(1, days.length);
         grid.appendChild(bar);
@@ -374,7 +393,7 @@
       }
 
       days.forEach(function (day) {
-        grid.appendChild(dayCell(view, day, period));
+        grid.appendChild(dayCell(view, day, period, labels[period.id]));
       });
     });
 
@@ -758,16 +777,16 @@
 
   /* ------------------------------------------------------------------- cells */
 
-  function timeCell(period, isNow, isNext) {
+  function timeCell(period, label, isNow, isNext) {
     var cell = Board.el("button", "tt-time" + (isNow ? " now" : "") + (isNext ? " next" : ""));
     cell.type = "button";
-    cell.appendChild(Board.el("span", "tt-time-label", period.label));
+    cell.appendChild(Board.el("span", "tt-time-label", label));
     if (isNow) cell.appendChild(Board.el("span", "tt-flag", "Now"));
     else if (isNext) cell.appendChild(Board.el("span", "tt-flag ghost", "Next"));
     cell.appendChild(Board.el("span", "tt-time-range", period.start + " – " + period.end));
     cell.setAttribute(
       "aria-label",
-      "Edit " + period.label + ", " + period.start + " to " + period.end
+      "Edit " + label + ", " + period.start + " to " + period.end
     );
     cell.addEventListener("click", function () {
       editPeriod(period);
@@ -775,7 +794,7 @@
     return cell;
   }
 
-  function dayCell(view, day, period) {
+  function dayCell(view, day, period, label) {
     var key = day.key + "-" + period.id;
     var cellView = view.cells[key];
     var cell = Board.el("div", "tt-cell");
@@ -788,7 +807,7 @@
 
     if (!cellView) {
       cell.classList.add("empty");
-      cell.setAttribute("aria-label", "Add a subject to " + day.label + " " + period.label);
+      cell.setAttribute("aria-label", "Add a subject to " + day.label + " " + label);
       cell.appendChild(Board.el("span", "tt-plus", "+"));
       cell.addEventListener("click", function () {
         pickEmptyCell(day.key, period.id);
