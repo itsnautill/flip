@@ -233,14 +233,14 @@ html[data-theme="dark"] {
   --tertiary-container: #241d18;
   --on-tertiary-container: #f2dfd1;
 
-  --surface: #17120e;
-  --surface-dim: #17120e;
-  --surface-bright: #3a332c;
-  --surface-container-lowest: #241e19;
-  --surface-container-low: #2b241e;
-  --surface-container: #322a23;
-  --surface-container-high: #3a312a;
-  --surface-container-highest: #433930;
+  --surface: #1f1a15;
+  --surface-dim: #1a1511;
+  --surface-bright: #40372f;
+  --surface-container-lowest: #2a231d;
+  --surface-container-low: #2f2721;
+  --surface-container: #352c25;
+  --surface-container-high: #3d332b;
+  --surface-container-highest: #463a31;
 
   --on-surface: #f1e5dc;
   --on-surface-variant: #d3c3b6;
@@ -261,10 +261,10 @@ html[data-theme="dark"] {
   --status-soon: #f0c386;
   --status-soon-container: #33260f;
 
-  --wash-base: #16110d;
-  --wash-a: #2a1d14;
-  --wash-b: #20170f;
-  --wash-c: #1b1512;
+  --wash-base: #1d1712;
+  --wash-a: #3a2a1f;
+  --wash-b: #241d18;
+  --wash-c: #2a211a;
 
   --glass-fill: color-mix(in srgb, var(--surface-container-lowest) 74%, transparent);
   --glass-fill-strong: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
@@ -297,14 +297,14 @@ html[data-theme="dark"] {
     --on-secondary-container: #f2dfd1;
     --tertiary-container: #241d18;
     --on-tertiary-container: #f2dfd1;
-    --surface: #17120e;
-    --surface-dim: #17120e;
-    --surface-bright: #3a332c;
-    --surface-container-lowest: #241e19;
-    --surface-container-low: #2b241e;
-    --surface-container: #322a23;
-    --surface-container-high: #3a312a;
-    --surface-container-highest: #433930;
+    --surface: #1f1a15;
+    --surface-dim: #1a1511;
+    --surface-bright: #40372f;
+    --surface-container-lowest: #2a231d;
+    --surface-container-low: #2f2721;
+    --surface-container: #352c25;
+    --surface-container-high: #3d332b;
+    --surface-container-highest: #463a31;
     --on-surface: #f1e5dc;
     --on-surface-variant: #d3c3b6;
     --outline: #9d8c7f;
@@ -319,10 +319,10 @@ html[data-theme="dark"] {
     --status-overdue-container: #3c1a16;
     --status-soon: #f0c386;
     --status-soon-container: #33260f;
-    --wash-base: #16110d;
-    --wash-a: #2a1d14;
-    --wash-b: #20170f;
-    --wash-c: #1b1512;
+    --wash-base: #1d1712;
+    --wash-a: #3a2a1f;
+    --wash-b: #241d18;
+    --wash-c: #2a211a;
     --glass-fill: color-mix(in srgb, var(--surface-container-lowest) 74%, transparent);
     --glass-fill-strong: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
     --glass-edge: rgba(255, 255, 255, 0.1);

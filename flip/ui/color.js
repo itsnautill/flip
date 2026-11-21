@@ -243,11 +243,11 @@
       return oklch(l, c, h + (shift || 0));
     }
 
-    var surface = at(dark ? 0.175 : 0.985, dark ? 0.012 : 0.012);
+    var surface = at(dark ? 0.2 : 0.985, dark ? 0.012 : 0.012);
     /* Dark surfaces need a wider ladder than light ones: on a near-black page a
        3% step is invisible, so each container sits clearly above the last. */
     var levels = dark
-      ? [0.21, 0.245, 0.275, 0.31, 0.35]
+      ? [0.245, 0.27, 0.3, 0.335, 0.375]
       : [0.998, 0.972, 0.955, 0.936, 0.916];
     var levelChroma = dark ? [0.014, 0.016, 0.018, 0.02, 0.022] : [0.006, 0.012, 0.015, 0.018, 0.021];
 
@@ -296,10 +296,10 @@
       "--inverse-surface": at(dark ? 0.93 : 0.24, 0.018),
       "--inverse-on-surface": at(dark ? 0.22 : 0.96, 0.012),
 
-      "--wash-base": at(dark ? 0.16 : 0.982, dark ? 0.018 : 0.02),
-      "--wash-a": at(dark ? 0.225 : 0.955, dark ? 0.04 : 0.036, -8),
-      "--wash-b": at(dark ? 0.19 : 0.972, dark ? 0.032 : 0.028, 12),
-      "--wash-c": at(dark ? 0.21 : 0.962, dark ? 0.03 : 0.03, 22),
+      "--wash-base": at(dark ? 0.19 : 0.982, dark ? 0.018 : 0.02),
+      "--wash-a": at(dark ? 0.27 : 0.955, dark ? 0.05 : 0.036, -8),
+      "--wash-b": at(dark ? 0.205 : 0.972, dark ? 0.036 : 0.028, 12),
+      "--wash-c": at(dark ? 0.225 : 0.962, dark ? 0.032 : 0.03, 22),
 
       "--glass-fill": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 74%" : " 62%") + ", transparent)",
       "--glass-fill-strong": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 92%" : " 86%") + ", transparent)",

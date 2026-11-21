@@ -142,3 +142,47 @@ html[data-m3="on"] {
     padding-left: var(--page-gutter);
   }
 }
+
+/* ======================================================= 4. dark surfaces */
+
+/* Two same-hue glows - a strong one top-left, a fainter one bottom-right -
+   instead of the old vignette that turned the bottom of the window black. */
+html[data-theme="dark"][data-m3="on"] body::before {
+  background:
+    radial-gradient(62vw 58vw at 2% -10%, var(--wash-a), transparent 62%),
+    radial-gradient(46vw 44vw at 104% 108%, var(--wash-b), transparent 64%),
+    radial-gradient(38vw 34vw at 86% -6%, var(--wash-c), transparent 70%);
+}
+
+/* A 2% dither over the gradients: without it 8-bit dark steps band. */
+html[data-m3="on"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Cards sit one clear step above the page with a hairline of light. */
+html[data-theme="dark"][data-m3="on"] .widget,
+html[data-theme="dark"][data-m3="on"] .day-col,
+html[data-theme="dark"][data-m3="on"] .list-group,
+html[data-theme="dark"][data-m3="on"] .tt-dropzone,
+html[data-theme="dark"][data-m3="on"] .setting-row,
+html[data-theme="dark"][data-m3="on"] .week-bar,
+html[data-theme="dark"][data-m3="on"] .summary-strip {
+  background: var(--surface-container);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--glass-shadow);
+}
+
+html[data-theme="dark"][data-m3="on"] .day-col.today {
+  background: color-mix(in srgb, var(--primary-container) 58%, var(--surface-container));
+}
+
+html[data-theme="dark"][data-m3="on"] .widget-next {
+  background: color-mix(in srgb, var(--primary-container) 52%, var(--surface-container));
+}
