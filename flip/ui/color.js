@@ -130,23 +130,35 @@
     var dark = isDark(theme);
     var h = normaliseHue(hue);
 
-    /* One recipe per theme, and both keep the subject's own hue.
-       Dark: a low-chroma mid tone (L 0.32) with a light tint of the same hue on
-       top at 7:1 or better - the muddy olive/brown came from a nearly grey fill
-       under near-white text.
-       Light: the same shape, a pastel fill with dark ink. */
+    /* One recipe per theme, both keep the subject's own hue.
+       Dark: a translucent tint of the hue over the card surface with a 1px edge
+       of the same hue - the card reads lighter than a solid block, and the ink
+       is a light tint of the hue at 7:1 or better.
+       Light: a pastel fill with dark ink. */
     var fill;
     var text;
+    var edge;
+    var warm = h >= 45 && h <= 105;
     if (dark) {
-      fill = oklch(0.32, 0.06, h);
-      text = oklch(0.92, 0.035, h);
-      for (var step = 0; step < 24 && contrast(fill, text) < 7; step++) {
-        text = oklch(Math.min(0.99, 0.92 + step * 0.004), 0.035, h);
-        if (step > 12) fill = oklch(0.32 - step * 0.002, 0.06, h);
+      /* Gold and amber go muddy when they are a near-grey brown; the warm band
+         gets a lighter, more chromatic tint so it reads as gold, not mud. The
+         hue itself is never moved. */
+      var tintL = warm ? 0.84 : 0.76;
+      var tintC = warm ? 0.22 : 0.2;
+      var share = 0.16;
+      var cardL = 0.245;
+      var tint = oklch(tintL, tintC, h);
+      var solid = oklch(cardL + share * (tintL - cardL), share * tintC, h);
+      fill = "color-mix(in srgb, " + tint + " 16%, var(--surface-container))";
+      edge = "color-mix(in srgb, " + tint + " 32%, transparent)";
+      text = oklch(0.93, 0.03, h);
+      for (var step = 0; step < 20 && contrast(solid, text) < 7; step++) {
+        text = oklch(Math.min(0.99, 0.93 + step * 0.004), 0.03, h);
       }
     } else {
       fill = oklch(0.93, 0.045, h);
       text = inkOn(fill);
+      edge = oklch(0.78, 0.09, h);
       for (var pass = 0; pass < 20 && contrast(fill, text) < 7; pass++) {
         fill = oklch(0.93 - pass * 0.01, 0.045, h);
         text = inkOn(fill);
@@ -158,6 +170,7 @@
       fill: fill,
       text: text,
       mark: oklch(dark ? 0.78 : 0.6, dark ? 0.09 : 0.09, h),
+      edge: edge,
       border: oklch(dark ? 0.72 : 0.58, 0.15, h),
       badge: oklch(dark ? 0.4 : 0.84, 0.09, h),
       soft: oklch(dark ? 0.22 : 0.965, dark ? 0.035 : 0.03, h),
