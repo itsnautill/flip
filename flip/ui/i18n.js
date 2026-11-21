@@ -89,6 +89,7 @@
     "Today": "Hôm nay",
     "focused": "đã tập trung",
     "day streak": "ngày liên tiếp",
+    "Plan it for tonight?": "Lên kế hoạch cho tối nay?",
     "overdue": "quá hạn",
     "now": "bây giờ",
     "break": "nghỉ",
@@ -676,6 +677,21 @@
 
     if (Object.prototype.hasOwnProperty.call(VI, trimmed)) {
       return text.replace(trimmed, VI[trimmed]);
+    }
+
+    /* A date with a word in front of it ("due Nov 24") needs both halves. */
+    var prefixed = trimmed.match(/^(due|overdue) ([A-Z][a-z]{2} \d+)$/);
+    if (prefixed) {
+      var stamp = translate(prefixed[2]);
+      return text.replace(
+        trimmed,
+        (prefixed[1] === "due" ? "hạn " : "quá hạn ") + stamp
+      );
+    }
+
+    var suggestion = trimmed.match(/^(.*) has work with no day planned$/);
+    if (suggestion) {
+      return text.replace(trimmed, suggestion[1] + " có việc chưa xếp ngày");
     }
 
     /* Dates are built from parts, so handle them directly. */

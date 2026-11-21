@@ -1009,3 +1009,8 @@ html[data-m3="on"] #task-board .task.done .task-note {
 html[data-m3="on"] #task-board .task.done .check {
   opacity: 1;
 }
+
+/* An empty done count is no pill at all. */
+html[data-m3="on"] #task-board .day-count:empty {
+  display: none;
+}
