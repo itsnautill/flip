@@ -1050,3 +1050,16 @@ html[data-m3="on"] #task-board .day-head > span {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The subject chip in a narrow lane ends in an ellipsis, not mid-word. */
+html[data-m3="on"] #task-board .task-meta .chip {
+  max-width: 100%;
+  min-width: 0;
+}
+
+html[data-m3="on"] #task-board .task-meta .chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
