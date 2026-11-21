@@ -757,3 +757,41 @@ html[data-m3="on"] body.is-file-drag #tt-dropzone.is-slim {
 html[data-m3="on"] body.is-file-drag #tt-dropzone.is-slim .tt-dropzone-text > span {
   display: block;
 }
+
+/* =================================================== 19. paint palette */
+
+/* One row of equal 32px chips that scrolls sideways with a soft fade at the
+   end, so no row can end with three orphans. */
+html[data-m3="on"] #tt-brush {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+}
+
+html[data-m3="on"] #tt-brush::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-m3="on"] #tt-brush .brush-label {
+  flex: 0 0 auto;
+}
+
+html[data-m3="on"] #tt-brush .brush-chip,
+html[data-m3="on"] #tt-brush .brush-stop {
+  flex: 0 0 auto;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-full);
+  font: 500 12.5px/1 var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
