@@ -419,12 +419,18 @@
       });
       body.appendChild(form);
 
-      var week = el("div", "dash-progress");
-      var track = el("div", "track");
-      var fill = el("span", "");
-      track.appendChild(fill);
-      week.appendChild(track);
-      body.appendChild(week);
+      /* No tasks means no progress line at all; with tasks it is the thin
+         wavy bar plus the count, so the empty rule is obvious. */
+      if (mine.length) {
+        var week = el("div", "dash-progress");
+        var track = el("div", "track");
+        var fill = el("span", "");
+        fill.style.width = Math.round((done / mine.length) * 100) + "%";
+        track.appendChild(fill);
+        week.appendChild(track);
+        week.appendChild(el("span", "dash-progress-count", done + "/" + mine.length));
+        body.appendChild(week);
+      }
     },
   };
 
