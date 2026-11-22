@@ -144,14 +144,49 @@ fn run_installer(file: &Path) -> Result<(), String> {
     /// Keeps a console window from flashing up next to the installer.
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-    std::process::Command::new(file)
-        // /S is NSIS silent, /UPDATE replaces the installed copy and removes
-        // the old one without asking.
-        .args(["/S", "/UPDATE"])
+    let exe = std::env::current_exe()
+        .map_err(|err| format!("Could not find this copy of Flip: {err}"))?;
+    let script = relaunch_script(file, &exe)?;
+
+    /* The script lives next to the download, not in a fresh folder: Windows
+    will not run a batch file from a directory it considers unsafe. */
+    let folder = std::env::temp_dir().join(FOLDER);
+    std::fs::create_dir_all(&folder).map_err(|err| format!("No place to save it: {err}"))?;
+    let path = folder.join(format!("install-{}.cmd", std::process::id()));
+    std::fs::write(&path, script)
+        .map_err(|err| format!("Could not prepare the installer: {err}"))?;
+
+    std::process::Command::new("cmd")
+        .arg("/C")
+        .arg(&path)
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map(|_| ())
         .map_err(|err| format!("Could not start the installer: {err}"))
+}
+
+/// A silent NSIS /UPDATE replaces the files and quits without starting Flip
+/// again, so the update is run from a small script: wait for the install to
+/// finish, then start the newly installed copy.
+#[cfg(windows)]
+fn relaunch_script(installer: &Path, exe: &Path) -> Result<String, String> {
+    fn quoted(path: &Path) -> Result<String, String> {
+        let text = path.to_string_lossy();
+        if text.contains('"') || text.contains(['\r', '\n']) {
+            return Err("The update path has characters Flip cannot use.".into());
+        }
+        Ok(format!("\"{text}\""))
+    }
+
+    let installer = quoted(installer)?;
+    let exe = quoted(exe)?;
+    Ok(format!(
+        "@echo off\r\n\
+         rem Written by Flip: replace this copy, then open it again.\r\n\
+         start /wait \"\" {installer} /S /UPDATE\r\n\
+         start \"\" {exe}\r\n\
+         del \"%~f0\"\r\n"
+    ))
 }
 
 #[cfg(not(windows))]
@@ -271,6 +306,27 @@ mod tests {
         assert!(check_download(&ok).is_ok());
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn relaunch_script_installs_then_starts_flip() {
+        let script = relaunch_script(
+            Path::new("C:\\Temp\\FlipUpdates\\flip-update-1.3.3.exe"),
+            Path::new("C:\\Users\\me\\AppData\\Local\\Flip\\flip.exe"),
+        )
+        .expect("script");
+        let install = script.find("/S /UPDATE").expect("silent update flag");
+        let start = script.find("start \"\" \"C:\\Users").expect("restart");
+        assert!(install < start, "the restart has to follow the install");
+        assert!(script.contains("\"C:\\Temp\\FlipUpdates\\flip-update-1.3.3.exe\""));
+        assert!(script.starts_with("@echo off"));
+
+        let odd = relaunch_script(Path::new("C:\\a\"b.exe"), Path::new("C:\\flip.exe"));
+        assert!(
+            odd.is_err(),
+            "a quote in a path is refused, not escaped blindly"
+        );
     }
 
     #[test]

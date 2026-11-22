@@ -1108,8 +1108,10 @@ html[data-m3="on"] #task-board .day-col {
   height: auto;
 }
 
+/* Past lanes keep their cards readable: the dimming lives on the day label in
+   m3.css, not on the whole column. */
 html[data-m3="on"] #task-board .day-col.is-past {
-  opacity: 0.78;
+  opacity: 1;
 }
 
 html[data-m3="on"] #task-board .day-head {
@@ -1514,6 +1516,18 @@ html[data-m3="on"] body.is-idle #dots {
   visibility: hidden;
   pointer-events: none;
   transition: opacity var(--dur-exit-500) var(--ease-exit), visibility 0s var(--dur-exit-500);
+}
+
+/* The chosen segment is one filled pill everywhere: Mode, Clock, Language,
+   Animations and the setup wizard. The older sheets pinned the active segment
+   to the panel colour, which is the track's own tone, so the pill vanished. */
+html[data-m3="on"] .seg-btn.active,
+html[data-m3="on"] .theme-modes .seg-btn.active,
+html[data-m3="on"] .setup .seg-btn.active {
+  background: var(--primary-container) !important;
+  color: var(--on-primary-container) !important;
+  border-color: transparent !important;
+  box-shadow: none;
 }
 
 /* ============================================== 25. one motion system */

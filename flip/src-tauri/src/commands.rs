@@ -125,7 +125,7 @@ pub fn timer_reset(app: AppHandle, core: State<'_, SharedCore>) -> Snapshot {
     let now = Instant::now();
     if c.mode == Mode::Timer {
         /* Resetting a focus session stops it, so it is credited like any other
-           early finish rather than vanishing. */
+        early finish rather than vanishing. */
         let saved = credit_focus(&mut c, now);
         c.timer.reset();
         let snapshot = c.snapshot(now);
@@ -411,8 +411,8 @@ pub fn set_on_top(app: AppHandle, core: State<'_, SharedCore>, on: bool) -> bool
         let dir = settings_path
             .parent()
             .map(|dir| dir.to_path_buf())
-            .unwrap_or_else(|| std::env::temp_dir());
-        return crate::window_state::set_on_top(&app, &dir, on);
+            .unwrap_or_else(std::env::temp_dir);
+        crate::window_state::set_on_top(&app, &dir, on)
     }
     #[cfg(not(desktop))]
     {
@@ -501,12 +501,7 @@ fn android_static_bool(method: &str, value: bool) -> Result<(), String> {
         .map_err(|e| format!("MainActivity missing: {e}"))?;
     let class = unsafe { JClass::from_raw(class.into_raw()) };
 
-    match env.call_static_method(
-        &class,
-        method,
-        "(Z)V",
-        &[JValue::Bool(u8::from(value))],
-    ) {
+    match env.call_static_method(&class, method, "(Z)V", &[JValue::Bool(u8::from(value))]) {
         Ok(_) => Ok(()),
         Err(e) => {
             env.exception_describe().ok();
@@ -628,7 +623,10 @@ pub fn start_focus(
 /// Stops the running countdown, logging the whole minutes already spent so a
 /// session stopped at 12:30 still counts as 12 minutes. Returns the board to
 /// save when something was logged.
-fn credit_focus(c: &mut crate::state::Core, now: Instant) -> Option<(PathBuf, crate::board::Board)> {
+fn credit_focus(
+    c: &mut crate::state::Core,
+    now: Instant,
+) -> Option<(PathBuf, crate::board::Board)> {
     let target = c.focus_target.take()?;
     let minutes = c.timer.spent_secs(now) / 60;
     if minutes == 0 {

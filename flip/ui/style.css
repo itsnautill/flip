@@ -4675,22 +4675,8 @@ input[type="checkbox"]:checked:hover,
   }
 }
 
-@keyframes tab-pop {
-  from {
-    transform: scale(0.94);
-  }
-  60% {
-    transform: scale(1.03);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-
-/* always on, in every mode */
-.tab.active {
-  animation: tab-pop 0.26s cubic-bezier(0.2, 0.8, 0.25, 1);
-}
+/* The active pill marks the tab; the old pop animation replayed on every
+   switch and, with hovering, made the rail flicker while moving between tabs. */
 
 .btn:hover {
   transform: translateY(-1px);

@@ -1591,9 +1591,10 @@ html[data-motion="extra"] .modal {
 
 /* ---- flat surfaces: no glass, no heavy shadow -------------------------- */
 
+/* The toast and the tooltip are the app's inverse surfaces: they are painted
+   by their own rules, so forcing the page panel here left dark text on a dark
+   fill. */
 .modal,
-.toast,
-.tooltip,
 #chrome,
 .seg,
 .check {

@@ -674,10 +674,30 @@
 
   var ATTRS = ["title", "aria-label", "placeholder", "alt"];
 
+  /* The table read backwards, so switching English → Vietnamese and back is
+     a live re-translation instead of a page reload. */
+  var EN = null;
+
+  function englishTable() {
+    if (EN) return EN;
+    EN = {};
+    Object.keys(VI).forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(EN, VI[key])) EN[VI[key]] = key;
+    });
+    return EN;
+  }
+
   function translate(text) {
-    if (LANG !== "vi" || !text) return text;
+    if (!text) return text;
     var trimmed = text.trim();
     if (!trimmed) return text;
+
+    if (LANG === "en") {
+      var table = englishTable();
+      return Object.prototype.hasOwnProperty.call(table, trimmed)
+        ? text.replace(trimmed, table[trimmed])
+        : text;
+    }
 
     if (Object.prototype.hasOwnProperty.call(VI, trimmed)) {
       return text.replace(trimmed, VI[trimmed]);
@@ -757,7 +777,7 @@
   var applying = false;
 
   function apply(root) {
-    if (LANG === "en" || !root) return;
+    if (!root) return;
     applying = true;
     try {
       if (root.nodeType === 3) {

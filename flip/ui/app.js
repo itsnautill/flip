@@ -862,7 +862,14 @@
           function (value) {
             if (value === currentLang) return;
             invoke("set_language", { language: value }).then(function () {
-              location.reload();
+              currentLang = value;
+              /* Both directions translate in place, so the dialog stays open
+                 on the same pane instead of the page reloading under it. */
+              if (window.I18n) {
+                window.I18n.setLanguage(value);
+                window.I18n.apply(document.body);
+              }
+              showPane("general");
             });
           }
         )

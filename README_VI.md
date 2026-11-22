@@ -7,7 +7,7 @@ Xây dựng bằng Rust và Tauri 2. Mọi thứ nằm trên máy của bạn: k
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Ti%E1%BA%BFng%20Vi%E1%BB%87t-2ea44f)
-![Version](https://img.shields.io/badge/version-1.3.2-blue)
+![Version](https://img.shields.io/badge/version-1.3.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 [English](README.md) | Tiếng Việt
@@ -87,7 +87,7 @@ Sáu widget trên một trang: tiết học kế tiếp, danh sách hôm nay, vi
 
 ## Cài đặt
 
-1. Tải `Flip_1.3.2_x64-setup.exe` từ [Releases](https://github.com/itsnautill/flip/releases/latest)
+1. Tải `Flip_1.3.3_x64-setup.exe` từ [Releases](https://github.com/itsnautill/flip/releases/latest)
 2. Chạy tệp. Bộ cài đặt cài theo từng người dùng, không cần quyền quản trị.
 3. Windows sẽ hiện *"Windows protected your PC"* vì bộ cài đặt chưa được ký số. Nhấn **Run anyway** (xem [phần tiếp theo](#về-cảnh-báo-của-windows) nếu bạn muốn biết lý do).
 
@@ -106,13 +106,13 @@ Lần chạy đầu tiên sẽ hiện **"Windows protected your PC"** với dòn
 **Để kiểm tra bản tải về đúng là bản được build ở đây:**
 
 ```powershell
-Get-FileHash .\Flip_1.3.2_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Flip_1.3.3_x64-setup.exe -Algorithm SHA256
 ```
 
-Với bản 1.3.2, kết quả phải là:
+Với bản 1.3.3, kết quả phải là:
 
 ```
-f0dd05bdcee0fd0f8b454cd96b8afc87b0411ab3bdeda313400b87eb29fdc602
+b062cf8d4ae73f56d89f5477bcbc412469c22c1ccd27eb47a55ef4a0d9eec741
 ```
 
 **Để tắt cảnh báo trên máy của riêng bạn:** nhấp chuột phải vào tệp `.exe`, mở **Properties**, tick **Unblock**, rồi nhấn **OK**.

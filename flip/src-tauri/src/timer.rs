@@ -386,9 +386,15 @@ mod tests {
         assert_eq!(t.toggle(t0), ToggleResult::Started);
         assert_eq!(t.spent_secs(t0 + Duration::from_secs(720)), 720);
         /* A pause freezes what has been spent, not the remaining time. */
-        assert_eq!(t.toggle(t0 + Duration::from_secs(720)), ToggleResult::Paused);
+        assert_eq!(
+            t.toggle(t0 + Duration::from_secs(720)),
+            ToggleResult::Paused
+        );
         assert_eq!(t.spent_secs(t0 + Duration::from_secs(900)), 720);
-        assert_eq!(t.toggle(t0 + Duration::from_secs(900)), ToggleResult::Resumed);
+        assert_eq!(
+            t.toggle(t0 + Duration::from_secs(900)),
+            ToggleResult::Resumed
+        );
         assert_eq!(t.spent_secs(t0 + Duration::from_secs(960)), 780);
     }
 

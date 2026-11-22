@@ -636,36 +636,44 @@
 
   function hideTooltip() {
     clearTimeout(tooltipTimer);
+    clearTimeout(tooltipShowTimer);
+    clearTimeout(tooltipHideTimer);
     var tip = $("tooltip");
     if (tip) tip.hidden = true;
   }
 
+  /* One pending show and one pending hide for the whole grid. With a timer per
+     cell, leaving one subject started a hide that the next subject's show
+     could not cancel, so moving across the timetable made the tooltip blink. */
+  var tooltipShowTimer = 0;
+  var tooltipHideTimer = 0;
+
+  function scheduleShow(cell, subjectId) {
+    clearTimeout(tooltipHideTimer);
+    clearTimeout(tooltipShowTimer);
+    tooltipShowTimer = setTimeout(function () {
+      showTooltip(cell, subjectId);
+    }, 150);
+  }
+
+  function scheduleHide() {
+    clearTimeout(tooltipShowTimer);
+    clearTimeout(tooltipHideTimer);
+    tooltipHideTimer = setTimeout(hideTooltip, 120);
+  }
+
   /** Hover, focus and long-press all open the same tooltip. */
   function bindTooltip(cell, subjectId) {
-    var showTimer = 0;
-    var hideTimer = 0;
     var pressTimer = 0;
-
-    function scheduleShow() {
-      clearTimeout(hideTimer);
-      clearTimeout(showTimer);
-      showTimer = setTimeout(function () {
-        showTooltip(cell, subjectId);
-      }, 150);
-    }
-
-    function scheduleHide() {
-      clearTimeout(showTimer);
-      clearTimeout(pressTimer);
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(hideTooltip, 80);
-    }
 
     cell.addEventListener("pointerenter", function (event) {
       if (event.pointerType === "touch") return;
-      scheduleShow();
+      scheduleShow(cell, subjectId);
     });
-    cell.addEventListener("pointerleave", scheduleHide);
+    cell.addEventListener("pointerleave", function (event) {
+      if (event.pointerType === "touch") return;
+      scheduleHide();
+    });
     cell.addEventListener("focus", function () {
       showTooltip(cell, subjectId);
     });

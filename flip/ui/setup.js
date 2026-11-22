@@ -109,9 +109,8 @@
 
   /* ------------------------------------------------------------------ steps */
 
-  /* Vietnamese can be applied live; going back to English needs a reload so the
-     already-translated nodes start from the source text again. The wizard
-     resumes on the same step after that reload. */
+  /* The translator reads the table both ways, so the wizard switches language
+     in place and never loses the step it is on. */
   function chooseLanguage(lang) {
     if (!invoke) return;
     remember();
@@ -119,12 +118,8 @@
       if (((snap && snap.language) || "en") === lang) return;
       invoke("set_language", { language: lang })
         .then(function () {
-          if (lang === "en") {
-            location.reload();
-            return;
-          }
           if (window.I18n) {
-            window.I18n.setLanguage("vi");
+            window.I18n.setLanguage(lang);
             window.I18n.apply(document.body);
           }
         })

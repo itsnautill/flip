@@ -285,9 +285,7 @@ fn ask(target: &str, port: u16, code: &str) -> Option<(String, String)> {
     socket.set_broadcast(true).ok()?;
     socket.set_read_timeout(Some(FIND_WAIT)).ok()?;
     let question = format!("FLIP-FIND {code}");
-    socket
-        .send_to(question.as_bytes(), (target, port))
-        .ok()?;
+    socket.send_to(question.as_bytes(), (target, port)).ok()?;
     let mut buffer = [0u8; 512];
     loop {
         let (n, from) = socket.recv_from(&mut buffer).ok()?;
@@ -482,7 +480,7 @@ pub fn watch(app: AppHandle, core: SharedCore) {
         loop {
             std::thread::sleep(Duration::from_secs(2));
             ticks = ticks.wrapping_add(1);
-            if ticks % 2 != 0 {
+            if !ticks.is_multiple_of(2) {
                 continue;
             }
             let (code, auto) = {

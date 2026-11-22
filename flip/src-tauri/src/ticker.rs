@@ -10,7 +10,7 @@ use crate::board::{self, Board};
 use crate::state::{lock, SharedCore, Snapshot};
 
 /* Ten wake-ups a second is enough for a display that counts seconds, and half
-   the work of the old twenty on a laptop or a phone. */
+the work of the old twenty on a laptop or a phone. */
 const TICK_MS: u64 = 100;
 
 pub fn spawn(app: AppHandle) {
