@@ -476,19 +476,30 @@
     return t(String((result && result.message) || ""));
   }
 
-  function themePreview() {
-    var box = Board.el("div", "theme-preview");
-    var bar = Board.el("div", "tp-bar");
-    for (var i = 0; i < 3; i++) bar.appendChild(Board.el("i"));
-    box.appendChild(bar);
-    box.appendChild(Board.el("div", "tp-head"));
-    var row = Board.el("div", "tp-body");
-    var card = Board.el("div", "tp-card");
-    card.appendChild(Board.el("i"));
-    row.appendChild(card);
-    row.appendChild(Board.el("div", "tp-side"));
-    box.appendChild(row);
-    return box;
+  /* A miniature of the app for a theme card: a rail, a title and two rows of
+     subject cards. It carries the palette's own data attributes, so the theme
+     rules paint it from the palette's tokens instead of a hand-written swatch,
+     and `data-theme` makes it show that palette in the base the app is in. */
+  function themePreview(choice) {
+    var mock = Board.el("span", "theme-mock");
+    mock.setAttribute("aria-hidden", "true");
+    mock.setAttribute("data-palette", choice.id);
+    var rail = Board.el("span", "tm-rail");
+    for (var i = 0; i < 3; i++) rail.appendChild(Board.el("i"));
+    mock.appendChild(rail);
+    var page = Board.el("span", "tm-page");
+    page.appendChild(Board.el("i", "tm-title"));
+    for (var row = 0; row < 2; row++) {
+      var line = Board.el("span", "tm-row");
+      for (var cell = 0; cell < 3; cell++) {
+        line.appendChild(
+          Board.el("i", "tm-cell" + (cell === (row ? 1 : 2) ? " tm-accent" : ""))
+        );
+      }
+      page.appendChild(line);
+    }
+    mock.appendChild(page);
+    return mock;
   }
 
   function switchControl(label, checked, onChange) {
@@ -539,7 +550,48 @@
     return seg;
   }
 
-  function openSettings() {
+  /* Changing the interface language rebuilds every label in the app. Doing that
+     in place left half of the screen in the old language until something else
+     re-rendered it, so the page reloads instead: an overlay covers the swap and
+     Settings reopens on the pane it was left on. */
+  var LANG_REOPEN_KEY = "flip.reopenSettings";
+
+  function languageOverlay() {
+    var root = document.getElementById("modal-root");
+    if (!root) return null;
+    Board.clear(root);
+    var overlay = Board.el("div", "overlay lang-overlay");
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-busy", "true");
+    overlay.setAttribute("aria-label", "Applying language…");
+    var card = Board.el("div", "lang-card");
+    var ring = Board.el("span", "lang-ring");
+    ring.setAttribute("aria-hidden", "true");
+    card.appendChild(ring);
+    card.appendChild(Board.el("div", "lang-title", "Applying language…"));
+    card.appendChild(
+      Board.el("div", "sub", "Flip will reopen Settings in a moment.")
+    );
+    overlay.appendChild(card);
+    root.appendChild(overlay);
+    return overlay;
+  }
+
+  /* Runs once after boot: the reload that follows a language change brings the
+     settings dialog back where it was. */
+  function reopenSettings() {
+    var pane = null;
+    try {
+      pane = window.sessionStorage.getItem(LANG_REOPEN_KEY);
+      if (pane) window.sessionStorage.removeItem(LANG_REOPEN_KEY);
+    } catch (_) {
+      /* private mode: nothing was stored, nothing to reopen */
+      return;
+    }
+    if (pane) openSettings(pane);
+  }
+
+  function openSettings(startPane) {
     var snap = lastSnapshot || {};
     var current = String(snap.accent || "#B4622D").toUpperCase();
     var isTwelve = Boolean(snap.clock && snap.clock.is12h);
@@ -559,22 +611,38 @@
     navPill.setAttribute("aria-hidden", "true");
     nav.appendChild(navPill);
 
-    var appearancePane = Board.el("div", "settings-pane");
-    var generalPane = Board.el("div", "settings-pane");
-    var dataPane = Board.el("div", "settings-pane");
-    generalPane.hidden = true;
-    dataPane.hidden = true;
+    /* One pane per section, in the order people look for them: the everyday
+       switches first, then looks, privacy, files and finally this copy. */
+    var panes = {
+      general: Board.el("div", "settings-pane"),
+      appearance: Board.el("div", "settings-pane"),
+      privacy: Board.el("div", "settings-pane"),
+      data: Board.el("div", "settings-pane"),
+      about: Board.el("div", "settings-pane"),
+    };
+    var appearancePane = panes.appearance;
+    var generalPane = panes.general;
+    var privacyPane = panes.privacy;
+    var dataPane = panes.data;
+    var aboutPane = panes.about;
+    var firstPane = panes[startPane] ? startPane : "general";
+    Object.keys(panes).forEach(function (name) {
+      panes[name].hidden = name !== firstPane;
+    });
 
     var navButtons = [];
     [
-      ["appearance", "Appearance"],
       ["general", "General"],
+      ["appearance", "Appearance"],
+      ["privacy", "Privacy"],
       ["data", "Data"],
+      ["about", "About"],
     ].forEach(function (entry) {
-      var button = Board.el("button", entry[0] === "appearance" ? "active" : "", entry[1]);
+      var on = entry[0] === firstPane;
+      var button = Board.el("button", on ? "active" : "", entry[1]);
       button.type = "button";
       button.setAttribute("role", "tab");
-      button.setAttribute("aria-selected", String(entry[0] === "appearance"));
+      button.setAttribute("aria-selected", String(on));
       button.addEventListener("click", function () {
         showPane(entry[0]);
       });
@@ -598,9 +666,9 @@
     }
 
     function showPane(which) {
-      appearancePane.hidden = which !== "appearance";
-      generalPane.hidden = which !== "general";
-      dataPane.hidden = which !== "data";
+      Object.keys(panes).forEach(function (name) {
+        panes[name].hidden = name !== which;
+      });
       navButtons.forEach(function (entry) {
         var on = entry.name === which;
         entry.button.classList.toggle("active", on);
@@ -608,7 +676,7 @@
       });
       movePill();
       /* Only the pane scrolls, so this is the one and only scroll reset. */
-      var pane = { appearance: appearancePane, general: generalPane, data: dataPane }[which];
+      var pane = panes[which];
       if (pane) {
         pane.scrollTop = 0;
         /* Extra replays a short entrance; every other mode swaps instantly. */
@@ -656,6 +724,22 @@
         });
     }
 
+    /* A palette is a whole look that arrives with its own accent hue, so a
+       custom accent colour has to let go of the palette first; otherwise the
+       two keep repainting the same token and the app ends up half one, half
+       the other. */
+    function releasePalette() {
+      if (!palette) return;
+      palette = "";
+      applyTheme(theme, "");
+      paintThemes();
+      invoke("set_palette", { palette: "" })
+        .then(render)
+        .catch(function (err) {
+          console.error("flip: set_palette failed", err);
+        });
+    }
+
     appearancePane.appendChild(Board.el("h3", "", "Mode"));
 
     var modeRow = Board.el("div", "seg theme-modes");
@@ -679,56 +763,47 @@
       Board.el("p", "mode-note", "Every theme below follows this mode.")
     );
 
-    appearancePane.appendChild(Board.el("h3", "", "Custom themes"));
+    appearancePane.appendChild(Board.el("h3", "", "Themes"));
 
     var grid = Board.el("div", "theme-grid theme-grid-custom");
     grid.setAttribute("role", "radiogroup");
     grid.setAttribute("aria-label", "Custom themes");
     var cards = [];
-    var extraCards = [];
-    var expanded = false;
 
-    (window.FlipThemes ? window.FlipThemes.custom : []).forEach(function (choice, index) {
+    /* All five palettes are on show. The old section hid three behind a button
+       that sat below the fold, so "more" had to be scrolled to before it could
+       be believed, and expanding it pushed a card under the dialog footer. */
+    (window.FlipThemes ? window.FlipThemes.custom : []).forEach(function (choice) {
       var card = Board.el("button", "theme-card");
       card.type = "button";
       card.setAttribute("role", "radio");
       card.setAttribute("data-theme-preview", choice.id);
       card.setAttribute("aria-checked", String(choice.id === palette));
-      card.appendChild(themePreview());
+      var preview = themePreview(choice);
+      card.appendChild(preview);
       var name = Board.el("span", "theme-name");
       name.appendChild(Board.el("span", "theme-dot"));
-      name.appendChild(Board.el("span", "", choice.name));
+      name.appendChild(Board.el("span", "theme-label", choice.name));
+      name.appendChild(Board.el("span", "theme-check"));
       card.appendChild(name);
       card.appendChild(Board.el("span", "theme-note", choice.note));
       card.addEventListener("click", function () {
         pickTheme(theme, choice.id);
       });
-      /* Two palettes are on show; the rest wait behind View more themes. */
-      if (index > 1) {
-        card.hidden = true;
-        extraCards.push(card);
-      }
       grid.appendChild(card);
-      cards.push({ name: choice.id, card: card });
+      cards.push({ name: choice.id, card: card, preview: preview });
     });
     appearancePane.appendChild(grid);
 
-    var moreButton = Board.el("button", "btn small theme-more", "View more themes");
-    moreButton.type = "button";
-    moreButton.setAttribute("aria-expanded", "false");
-    moreButton.addEventListener("click", function () {
-      expanded = !expanded;
-      extraCards.forEach(function (card) {
-        card.hidden = !expanded;
-      });
-      moreButton.setAttribute("aria-expanded", String(expanded));
-      moreButton.textContent = expanded ? "Show fewer themes" : "View more themes";
-      /* The new row can land under the footer; keep the button in view. */
-      moreButton.scrollIntoView({ block: "nearest" });
-    });
-    if (extraCards.length) appearancePane.appendChild(moreButton);
+    /* The base can change while the dialog is open (the computer flips between
+       light and dark), and every preview has to follow it. */
+    function themeBase() {
+      var painted = document.documentElement.getAttribute("data-theme") || "light";
+      return painted.indexOf("dark") === 0 ? "dark" : "light";
+    }
 
     function paintThemes() {
+      var baseTheme = themeBase();
       modeButtons.forEach(function (entry) {
         var on = entry.name === theme;
         entry.button.classList.toggle("active", on);
@@ -736,9 +811,11 @@
       });
       cards.forEach(function (entry) {
         entry.card.setAttribute("aria-checked", String(entry.name === palette));
+        entry.preview.setAttribute("data-theme", baseTheme);
       });
     }
     paintThemes();
+    window.addEventListener("flip-theme", paintThemes);
 
     appearancePane.appendChild(Board.el("h3", "", "Accent"));
 
@@ -765,6 +842,7 @@
         button.title = preset.name;
         button.setAttribute("aria-pressed", String(Math.round(accentHue) === preset.hue));
         button.addEventListener("click", function () {
+          releasePalette();
           accentHue = preset.hue;
           markPresets(accentHue);
           slider.set(accentHue);
@@ -784,6 +862,7 @@
           label: "Custom accent hue",
           accent: true,
           onChange: function (hue) {
+            releasePalette();
             accentHue = hue;
             markPresets(hue);
             /* Live paint without touching the disk until the drag settles. */
@@ -791,6 +870,7 @@
             applyAccent(hue);
           },
           onCommit: function (hue) {
+            releasePalette();
             accentHue = hue;
             markPresets(hue);
             commitAccent(hue);
@@ -816,8 +896,6 @@
     );
 
     /* ---- general ---- */
-
-    generalPane.appendChild(Board.el("h3", "", "Clock and sound"));
 
     generalPane.appendChild(
       settingRow(
@@ -850,8 +928,6 @@
       )
     );
 
-    generalPane.appendChild(Board.el("h3", "", "Language and motion"));
-
     generalPane.appendChild(
       settingRow(
         "Language",
@@ -861,16 +937,32 @@
           currentLang,
           function (value) {
             if (value === currentLang) return;
-            invoke("set_language", { language: value }).then(function () {
-              currentLang = value;
-              /* Both directions translate in place, so the dialog stays open
-                 on the same pane instead of the page reloading under it. */
-              if (window.I18n) {
-                window.I18n.setLanguage(value);
-                window.I18n.apply(document.body);
-              }
-              showPane("general");
-            });
+            /* The dialog will not be closed in the usual way, so an accent that
+               is still only a preview is saved before the page reloads. */
+            commitAccent();
+            var overlay = languageOverlay();
+            try {
+              /* The page is about to rebuild itself, so the dialog is asked for
+                 again on the other side of the reload. */
+              window.sessionStorage.setItem(LANG_REOPEN_KEY, "general");
+            } catch (_) {
+              /* private mode: the language still changes, the dialog just closes */
+            }
+            invoke("set_language", { language: value })
+              .then(function () {
+                window.location.reload();
+              })
+              .catch(function (err) {
+                console.error("flip: set_language failed", err);
+                try {
+                  window.sessionStorage.removeItem(LANG_REOPEN_KEY);
+                } catch (_) {
+                  /* nothing to clean up */
+                }
+                if (overlay && overlay.parentNode) {
+                  overlay.parentNode.removeChild(overlay);
+                }
+              });
           }
         )
       )
@@ -901,9 +993,7 @@
 
     /* ---- what this build sends, and what it never sends ---- */
 
-    generalPane.appendChild(Board.el("h3", "", "Privacy"));
-
-    generalPane.appendChild(
+    privacyPane.appendChild(
       settingRow(
         "Discord Rich Presence",
         switchControl("Discord Rich Presence", snap.discord !== false, function (on) {
@@ -950,18 +1040,16 @@
       Board.el("div", "", "Your IP address is not stored, and nothing is linked to an account.")
     );
     telemetryRow.appendChild(telemetryDetail);
-    generalPane.appendChild(telemetryRow);
+    privacyPane.appendChild(telemetryRow);
 
-    /* ---- app-level actions ---- */
-
-    generalPane.appendChild(Board.el("h3", "", "This copy"));
+    /* ---- this copy ---- */
 
     var updateBox = Board.el("div", "setting-row column");
     var updateText = Board.el("div", "setting-text");
     updateText.appendChild(Board.el("div", "setting-title", "Updates"));
     updateBox.appendChild(updateText);
     if (window.FlipUpdate) window.FlipUpdate.mount(updateBox);
-    generalPane.appendChild(updateBox);
+    aboutPane.appendChild(updateBox);
 
     var setupRow = Board.el("div", "setting-row");
     var setupText = Board.el("div", "setting-text");
@@ -974,7 +1062,7 @@
       if (window.FlipSetup) window.FlipSetup.open();
     });
     setupRow.appendChild(setupButton);
-    generalPane.appendChild(setupRow);
+    aboutPane.appendChild(setupRow);
 
     /* ---- data ---- */
 
@@ -996,9 +1084,9 @@
     }
 
     body.appendChild(nav);
-    body.appendChild(appearancePane);
-    body.appendChild(generalPane);
-    body.appendChild(dataPane);
+    Object.keys(panes).forEach(function (name) {
+      body.appendChild(panes[name]);
+    });
 
     Board.modal({
       title: "Settings",
@@ -1010,6 +1098,7 @@
         commitAccent();
       },
       onClose: function () {
+        window.removeEventListener("flip-theme", paintThemes);
         if (pendingAccent !== null) commitAccent(pendingAccent);
       },
     });
@@ -1023,12 +1112,13 @@
       });
     });
 
-    /* The dialog is built at the top; focusing the first tab must not move it. */
-    appearancePane.scrollTop = 0;
-    setTimeout(function () {
-      if (navButtons[0]) navButtons[0].button.focus({ preventScroll: true });
-      appearancePane.scrollTop = 0;
-    }, 0);
+    /* The dialog is built at the top; nothing here may scroll it. The tabs are
+       deliberately not focused: the dialog already hands focus to its first
+       field, and a second, programmatic focus drew a second ring around the
+       active tab. */
+    Object.keys(panes).forEach(function (name) {
+      panes[name].scrollTop = 0;
+    });
   }
 
   /* ---------------------------------------------------------------- wi-fi sync */
@@ -1076,42 +1166,72 @@
       return section;
     }
 
-    /* ---- step 1: the network, and the code to read out ---- */
+    /* ---- step 1: who is sending ---- */
 
+    /* The first screen is the choice itself. It used to open on this device's
+       code with a "I have the other code" button underneath, which never said
+       which device was sending and which was receiving. */
     var stepOne = addStep();
-
-    var art = Board.el("div", "sync-art");
-    art.setAttribute("aria-hidden", "true");
-    art.innerHTML =
-      '<span class="sync-art-ring"></span><span class="sync-art-ring"></span>' +
-      '<span class="sync-art-ring"></span><span class="sync-art-core">' +
-      '<svg viewBox="0 0 24 24"><path d="M3.5 8.6a13 13 0 0 1 17 0"/>' +
-      '<path d="M6.6 12.1a9 9 0 0 1 10.8 0"/><path d="M9.7 15.6a5 5 0 0 1 4.6 0"/>' +
-      '<circle cx="12" cy="19" r="1.3"/></svg></span>';
-    stepOne.appendChild(art);
-    stepOne.appendChild(Board.el("h3", "sync-title", "Connect to the same Wi-Fi"));
     stepOne.appendChild(
-      Board.el("p", "sub sync-lede", "Both devices need the same Wi-Fi. No internet, no account.")
+      Board.el(
+        "p",
+        "sync-notice",
+        "Make sure both devices are connected to the same network."
+      )
+    );
+
+    function choiceButton(label, sub, onPick, primary) {
+      var button = Board.el("button", "btn sync-choice-btn" + (primary ? " primary" : ""));
+      button.type = "button";
+      button.appendChild(Board.el("span", "sync-choice-label", label));
+      button.appendChild(Board.el("span", "sync-choice-sub", sub));
+      button.addEventListener("click", onPick);
+      return button;
+    }
+
+    var choiceRow = Board.el("div", "sync-choice");
+    var sendButton = choiceButton("Send", "Show this device's code", function () {
+      goStep(2);
+    }, true);
+    var receiveButton = choiceButton("Receive", "Enter the other device's code", function () {
+      goStep(3, false, true);
+    }, false);
+    choiceRow.appendChild(sendButton);
+    choiceRow.appendChild(receiveButton);
+    stepOne.appendChild(choiceRow);
+
+    /* ---- step 2: this device sends its code ---- */
+
+    var stepTwo = addStep();
+    stepTwo.appendChild(Board.el("h3", "sync-title", "Your code"));
+    stepTwo.appendChild(
+      Board.el("p", "sub sync-lede", "Type this code on the other device.")
     );
 
     var codeBlock = Board.el("div", "sync-code-block");
-    codeBlock.appendChild(Board.el("span", "sync-code-label", "Your code"));
     var codeValue = Board.el("strong", "sync-code-value", "———");
     codeBlock.appendChild(codeValue);
-    codeBlock.appendChild(
-      Board.el("p", "sub", "Type it on your other device, with both apps open.")
-    );
-    stepOne.appendChild(codeBlock);
+    stepTwo.appendChild(codeBlock);
 
-    var nextButton = Board.el("button", "btn primary sync-next", "I have the other code");
-    nextButton.type = "button";
-    stepOne.appendChild(nextButton);
+    /* The other device pulls the data, so this side waits, then says what
+       happened as soon as a sync lands. */
+    var sendLine = Board.el("div", "sync-line busy");
+    sendLine.appendChild(Board.el("span", "sync-dot"));
+    var sendLineText = Board.el("span", "sync-line-text", "Waiting for your other device…");
+    sendLine.appendChild(sendLineText);
+    stepTwo.appendChild(sendLine);
 
-    /* ---- step 2: the six digits ---- */
+    var sendActions = Board.el("div", "sync-actions");
+    var sendBack = Board.el("button", "btn small", "Back");
+    sendBack.type = "button";
+    sendActions.appendChild(sendBack);
+    stepTwo.appendChild(sendActions);
 
-    var stepTwo = addStep();
-    stepTwo.appendChild(Board.el("h3", "sync-title", "Enter their code"));
-    stepTwo.appendChild(
+    /* ---- step 3: this device receives, with the six digits ---- */
+
+    var stepReceive = addStep();
+    stepReceive.appendChild(Board.el("h3", "sync-title", "Enter their code"));
+    stepReceive.appendChild(
       Board.el("p", "sub sync-lede", "Type the six digits shown on your other device.")
     );
 
@@ -1130,14 +1250,14 @@
       cells.push(cell);
       otp.appendChild(cell);
     }
-    stepTwo.appendChild(otp);
+    stepReceive.appendChild(otp);
 
     var line = Board.el("div", "sync-line");
     line.hidden = true;
     line.appendChild(Board.el("span", "sync-dot"));
     var lineText = Board.el("span", "sync-line-text", "");
     line.appendChild(lineText);
-    stepTwo.appendChild(line);
+    stepReceive.appendChild(line);
 
     var actions = Board.el("div", "sync-actions");
     var backButton = Board.el("button", "btn small", "Back");
@@ -1146,11 +1266,11 @@
     goButton.type = "button";
     actions.appendChild(backButton);
     actions.appendChild(goButton);
-    stepTwo.appendChild(actions);
+    stepReceive.appendChild(actions);
 
-    /* ---- step 3: verify, then copy ---- */
+    /* ---- step 4: verify, then copy ---- */
 
-    var stepThree = addStep();
+    var stepResult = addStep();
     var stageBox = Board.el("div", "sync-stage");
     stageBox.setAttribute("aria-hidden", "true");
     var spinner = Board.el("span", "sync-ring");
@@ -1165,21 +1285,21 @@
     stageBox.appendChild(spinner);
     stageBox.appendChild(check);
     stageBox.appendChild(fail);
-    stepThree.appendChild(stageBox);
+    stepResult.appendChild(stageBox);
 
     var stageTitle = Board.el("h3", "sync-title", "Verifying code");
     var stageText = Board.el("p", "sub sync-lede", "Talking to your other device…");
-    stepThree.appendChild(stageTitle);
-    stepThree.appendChild(stageText);
+    stepResult.appendChild(stageTitle);
+    stepResult.appendChild(stageText);
 
     var progress = Board.el("div", "sync-progress");
     var progressFill = Board.el("span", "sync-progress-fill");
     progress.appendChild(progressFill);
-    stepThree.appendChild(progress);
+    stepResult.appendChild(progress);
 
     var retryButton = Board.el("button", "btn small sync-retry", "Try again");
     retryButton.type = "button";
-    stepThree.appendChild(retryButton);
+    stepResult.appendChild(retryButton);
 
     var autoRow = Board.el("div", "setting-row sync-auto");
     var autoText = Board.el("div", "setting-text");
@@ -1197,23 +1317,30 @@
         });
     });
     autoRow.appendChild(autoSwitch);
-    stepThree.appendChild(autoRow);
+    stepResult.appendChild(autoRow);
 
     var current = 1;
 
-    function goStep(n, silent) {
+    function goStep(n, silent, fresh) {
       if (closed) return;
+      /* Choosing Receive always starts from empty boxes: the code from the last
+         pairing is last time's code, and a pre-filled row made it look as if
+         something had already been typed. */
+      if (n === 3 && fresh) fillOtp("");
       body.dataset.dir = n < current ? "back" : "fwd";
       current = n;
       steps.forEach(function (section, index) {
         section.classList.toggle("is-active", index + 1 === n);
       });
+      /* Three marks for four screens: choosing a side, the code screen, then
+         the copy itself. Send and Receive are the same middle beat. */
+      var railAt = n <= 1 ? 1 : n === 4 ? 3 : 2;
       railSegs.forEach(function (seg, index) {
-        seg.classList.toggle("is-on", index + 1 <= n);
-        seg.classList.toggle("is-now", index + 1 === n);
+        seg.classList.toggle("is-on", index + 1 <= railAt);
+        seg.classList.toggle("is-now", index + 1 === railAt);
       });
       if (!silent) playSound("syncTick");
-      if (n === 2) {
+      if (n === 3) {
         timers.push(
           setTimeout(function () {
             if (closed) return;
@@ -1232,8 +1359,8 @@
 
     function setStage(name, title, text) {
       stage = name;
-      stepThree.classList.remove("is-verify", "is-connected", "is-sync", "is-done", "is-error");
-      stepThree.classList.add("is-" + name);
+      stepResult.classList.remove("is-verify", "is-connected", "is-sync", "is-done", "is-error");
+      stepResult.classList.add("is-" + name);
       stageTitle.textContent = title;
       stageText.textContent = text;
     }
@@ -1293,7 +1420,7 @@
       lastCode = code;
       setLine("", "");
       goButton.disabled = true;
-      goStep(3);
+      goStep(4);
       setStage("verify", t("Verifying code"), t("Talking to your other device…"));
       progressFill.style.width = "0%";
       playSound("syncStart");
@@ -1340,8 +1467,8 @@
 
     /* ---- wiring ---- */
 
-    nextButton.addEventListener("click", function () {
-      goStep(2);
+    sendBack.addEventListener("click", function () {
+      goStep(1);
     });
     backButton.addEventListener("click", function () {
       goStep(1);
@@ -1350,7 +1477,7 @@
     retryButton.addEventListener("click", function () {
       setLine("", "");
       progressFill.style.width = "0%";
-      goStep(2);
+      goStep(3);
     });
 
     cells.forEach(function (cell, index) {
@@ -1409,6 +1536,13 @@
           stageText.textContent = syncLabel(result);
           playSound("syncDone");
         }
+        /* This device was showing its code and the other one just pulled. */
+        if (current === 2) {
+          sendLine.classList.remove("busy");
+          sendLine.classList.add("ok");
+          sendLineText.textContent = syncLabel(result);
+          playSound("syncDone");
+        }
       },
     };
 
@@ -1416,10 +1550,9 @@
       .then(function (info) {
         if (closed) return;
         paint(info);
-        if (info && info.peerCode) {
-          lastCode = String(info.peerCode);
-          fillOtp(lastCode);
-        }
+        /* The remembered code only feeds the automatic check; the boxes stay
+           empty for the next pairing. */
+        if (info && info.peerCode) lastCode = String(info.peerCode);
       })
       .catch(function (err) {
         console.error("flip: sync_info failed", err);
@@ -1595,6 +1728,10 @@
   });
 
   window.addEventListener("popstate", function (event) {
+    /* A dialog or menu closing itself removes its own history entry with a
+       back(); that pop is not a tab change, and used to leave the user on the
+       wrong tab after pressing Done. */
+    if (window.Board && window.Board.consumeSelfBack && window.Board.consumeSelfBack()) return;
     /* An open dialog owns its own history entry and closes itself. */
     if (window.Board && window.Board.isModalOpen()) return;
     var state = event.state || {};
@@ -1947,6 +2084,7 @@
       var first = await invoke("get_snapshot");
       render(first);
       if (!first.onboarded && window.FlipSetup) window.FlipSetup.resume();
+      else reopenSettings();
     } catch (err) {
       console.error("flip: get_snapshot failed", err);
     }

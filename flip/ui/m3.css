@@ -49,6 +49,21 @@ html[data-m3="on"] body > .toast {
   z-index: 250;
 }
 
+/* Same reason: the timetable tooltip is placed in viewport coordinates. In the
+   page flow it landed at the bottom of the page and pushed the grid around as
+   it opened, which read as a hover glitch over subject cells. */
+html[data-m3="on"] body > #tooltip {
+  position: fixed;
+  z-index: 260;
+}
+
+/* The date calendar is a fixed layer too, so the body-flow rule above must not
+   put it under the form it belongs to. */
+html[data-m3="on"] body > .date-pop {
+  position: fixed;
+  z-index: 300;
+}
+
 html[data-m3="on"] * {
   box-sizing: border-box;
 }

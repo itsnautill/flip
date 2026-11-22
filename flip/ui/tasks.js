@@ -488,6 +488,7 @@
     input.type = "date";
     input.value = task.date || Board.todayKey();
     field.appendChild(input);
+    Board.dateField(input);
     body.appendChild(field);
 
     Board.modal({
@@ -585,6 +586,7 @@
     dayInput.type = "date";
     dayInput.value = data.date || "";
     dayField.appendChild(dayInput);
+    Board.dateField(dayInput);
 
     var dueField = Board.el("label", "field");
     dueField.appendChild(Board.el("span", "", "Due date"));
@@ -592,6 +594,7 @@
     dueInput.type = "date";
     dueInput.value = data.due || "";
     dueField.appendChild(dueInput);
+    Board.dateField(dueInput);
     days.appendChild(dayField);
     days.appendChild(dueField);
 
@@ -690,12 +693,14 @@
     var dayInput = document.createElement("input");
     dayInput.type = "date";
     dayField.appendChild(dayInput);
+    Board.dateField(dayInput);
 
     var dueField = Board.el("label", "field");
     dueField.appendChild(Board.el("span", "", "Due date (optional)"));
     var dueInput = document.createElement("input");
     dueInput.type = "date";
     dueField.appendChild(dueInput);
+    Board.dateField(dueInput);
     whenRow.appendChild(dayField);
     whenRow.appendChild(dueField);
 

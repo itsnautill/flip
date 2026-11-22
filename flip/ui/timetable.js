@@ -863,7 +863,9 @@
       (cellView.pending > 0 ? ", " + cellView.pending + " pending task(s)" : "") +
       ". Open tasks.";
     cell.setAttribute("aria-label", label);
-    cell.title = cellView.name + (cellView.room ? " · " + cellView.room : "");
+    /* The cell has its own tooltip (Board.tooltip); a native title opened a
+       second, unstyled one after a second of hovering. */
+    cell.removeAttribute("title");
 
     cell.addEventListener("click", function () {
       if (brushSubject || copySource) {

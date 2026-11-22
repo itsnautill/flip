@@ -755,7 +755,7 @@ dependencies = [
 
 [[package]]
 name = "flip"
-version = "1.3.3"
+version = "1.3.4"
 dependencies = [
  "chrono",
  "discord-rich-presence",

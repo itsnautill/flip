@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
-  "notes": "Fixes the nine issues reported for 1.3.2. Notifications are readable again and sit above dialogs. The setup wizard opens as a centred modal with its backdrop. Every segmented control shows the same filled pill for the chosen option. Switching language keeps Settings open and translates back to English in place. Past task lanes keep their cards at full contrast. The timetable tooltip no longer blinks between subjects. Data-pane primary buttons light up on hover instead of going dark. Tabs no longer flicker when switching quickly, and Install and restart opens Flip again after updating.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.3.3/Flip_1.3.3_x64-setup.exe"
+  "version": "1.3.4",
+  "notes": "Fixes two reported issues and refreshes the interface. Timetable break rows can no longer turn into subjects, and tooltips stay attached to their cell above dialogs. Date fields now open a calendar drawn in the app's own theme, in either language. Settings is split into five sections, themes get preview cards, Wi-Fi sync has send and receive screens, and switching language reloads cleanly and reopens Settings where you left it.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.3.4/Flip_1.3.4_x64-setup.exe"
 }

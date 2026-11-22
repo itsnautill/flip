@@ -172,7 +172,7 @@ html[data-theme="flat"] {
    rendition, and data-theme stays the real base, so every dark-mode rule keeps
    working whichever palette is on top. */
 
-html[data-palette="blossom"][data-theme="light"] {
+[data-palette="blossom"][data-theme="light"] {
   --bg: #FBF3F5;
   --bg-accent: linear-gradient(180deg, #FFF8FA 0%, #F9EDF0 100%);
   --panel: #FFFFFF;
@@ -203,7 +203,7 @@ html[data-palette="blossom"][data-theme="light"] {
   --radius-sm: 12px;
 }
 
-html[data-palette="paper"][data-theme="light"] {
+[data-palette="paper"][data-theme="light"] {
   --bg: #F6EFE0;
   --bg-accent: linear-gradient(180deg, #FBF6EA 0%, #F3EADB 100%);
   --panel: #FFFBF2;
@@ -234,7 +234,7 @@ html[data-palette="paper"][data-theme="light"] {
   --radius-sm: 11px;
 }
 
-html[data-palette="mint"][data-theme="light"] {
+[data-palette="mint"][data-theme="light"] {
   --bg: #EDF5F0;
   --bg-accent: linear-gradient(180deg, #F6FBF8 0%, #E9F3ED 100%);
   --panel: #FFFFFF;
@@ -265,7 +265,7 @@ html[data-palette="mint"][data-theme="light"] {
   --radius-sm: 12px;
 }
 
-html[data-palette="slate"][data-theme="light"] {
+[data-palette="slate"][data-theme="light"] {
   --bg: #F1F3F6;
   --bg-accent: linear-gradient(180deg, #F7F9FC 0%, #EEF1F6 100%);
   --panel: #FFFFFF;
@@ -296,7 +296,7 @@ html[data-palette="slate"][data-theme="light"] {
   --radius-sm: 10px;
 }
 
-html[data-palette="midnight"][data-theme="dark"] {
+[data-palette="midnight"][data-theme="dark"] {
   --bg: #0E1420;
   --bg-accent: linear-gradient(180deg, #131B2A 0%, #0B111B 100%);
   --panel: #151D2B;
@@ -330,7 +330,7 @@ html[data-palette="midnight"][data-theme="dark"] {
 /* Every palette in its dark rendition. The same hues, dropped until the
    surfaces read as evening without losing the theme's colour. */
 
-html[data-palette="blossom"][data-theme="dark"] {
+[data-palette="blossom"][data-theme="dark"] {
   --bg: #1A1317;
   --bg-accent: linear-gradient(180deg, #211820 0%, #161013 100%);
   --panel: #241B21;
@@ -361,7 +361,7 @@ html[data-palette="blossom"][data-theme="dark"] {
   --radius-sm: 12px;
 }
 
-html[data-palette="paper"][data-theme="dark"] {
+[data-palette="paper"][data-theme="dark"] {
   --bg: #171310;
   --bg-accent: linear-gradient(180deg, #1D1813 0%, #14100D 100%);
   --panel: #231D16;
@@ -392,7 +392,7 @@ html[data-palette="paper"][data-theme="dark"] {
   --radius-sm: 11px;
 }
 
-html[data-palette="mint"][data-theme="dark"] {
+[data-palette="mint"][data-theme="dark"] {
   --bg: #0E1613;
   --bg-accent: linear-gradient(180deg, #131E19 0%, #0B1210 100%);
   --panel: #16211C;
@@ -423,7 +423,7 @@ html[data-palette="mint"][data-theme="dark"] {
   --radius-sm: 12px;
 }
 
-html[data-palette="slate"][data-theme="dark"] {
+[data-palette="slate"][data-theme="dark"] {
   --bg: #11151B;
   --bg-accent: linear-gradient(180deg, #161B23 0%, #0E1217 100%);
   --panel: #1A1F27;
@@ -456,7 +456,7 @@ html[data-palette="slate"][data-theme="dark"] {
 
 /* Midnight is the one palette that was born dark; in daylight it becomes a
    moonlit pale blue rather than a washed-out navy. */
-html[data-palette="midnight"][data-theme="light"] {
+[data-palette="midnight"][data-theme="light"] {
   --bg: #EDF1F8;
   --bg-accent: linear-gradient(180deg, #F7FAFF 0%, #E8EEF7 100%);
   --panel: #FFFFFF;
@@ -1382,7 +1382,9 @@ html[data-touch="on"] .switch[aria-checked="true"]::after {
   display: block;
   height: 100%;
   width: 100%;
-  transform-origin: right center;
+  /* The bar drains towards the left, so the part still standing sits where the
+     reading starts. */
+  transform-origin: left center;
   background: var(--accent);
   animation-name: toast-countdown;
   animation-duration: var(--toast-ms, 3200ms);
@@ -2465,7 +2467,10 @@ input[type="tel"]:focus-visible {
 .modal.modal-settings .settings-nav {
   grid-column: 1;
   grid-row: 1;
-  position: static;
+  /* The highlight is measured from these buttons, so the nav has to be their
+     offset parent; as `static` its pill was placed against the dialog instead
+     and sat 20px to the left, clipped by the nav. */
+  position: relative;
   align-self: stretch;
   min-height: 0;
   max-height: 100%;
@@ -3377,11 +3382,6 @@ h1 {
   background: var(--panel) !important;
 }
 
-.theme-more {
-  align-self: flex-start;
-  margin-top: 4px;
-}
-
 /* On a narrow window one card per row still shows the whole preview. */
 @media (max-width: 560px) {
   .theme-grid-custom {
@@ -3854,6 +3854,66 @@ body.is-idle #stage {
   text-align: center;
 }
 
+/* The one rule that has to hold before anything else: same network. */
+.sync-notice {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Send or Receive, before either side shows a code. */
+.sync-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Two-line buttons. The generic `.btn` rules set a 38px single-line height, so
+   the height, padding and gap have to be stated as loudly as they are. */
+.sync-choice-btn,
+html[data-m3="on"] .sync-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px !important;
+  width: 100%;
+  min-height: 78px !important;
+  height: auto !important;
+  padding: 13px 12px !important;
+  white-space: normal;
+  text-align: center;
+}
+
+.sync-choice-label {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.sync-choice-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: .78;
+}
+
+/* Nested spans in a button lose the parent's colour; keep it. */
+.sync-choice-btn .sync-choice-label,
+.sync-choice-btn .sync-choice-sub {
+  color: inherit;
+}
+
+/* Both halves of the choice have to look like buttons; a plain .btn is only
+   coloured text, which made Receive read as a caption. */
+html[data-m3="on"] .sync-choice-btn:not(.primary) {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  box-shadow: inset 0 0 0 1px var(--outline-variant);
+}
+
 /* ---- the Wi-Fi hint: rings, never an address ---- */
 
 .sync-art {
@@ -3996,6 +4056,12 @@ body.is-idle #stage {
 
 .sync-actions .btn {
   flex: 1;
+}
+
+/* One button on a line does not need to be a full-width bar. */
+.sync-actions .btn:only-child {
+  flex: 0 0 auto;
+  min-width: 96px;
 }
 
 .sync-otp-cell,
@@ -4226,5 +4292,279 @@ body.is-idle #stage {
 
   .sync-progress-fill {
     transition: width .2s linear;
+  }
+}
+
+/* ============================================================ date field ==
+   Chromium draws the <input type="date"> calendar itself, a grey system
+   popup that cannot be themed. The field draws its own calendar instead. */
+
+.date-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.date-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 12px 8px 14px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--surface-container-high) 86%, transparent);
+  color: var(--on-surface);
+  font: var(--type-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-effects-fast) ease;
+}
+
+.date-btn:hover {
+  background: var(--surface-container-highest);
+}
+
+.date-btn[aria-expanded="true"] {
+  background: var(--surface-container-lowest);
+  box-shadow: inset 0 0 0 2px var(--accent-text);
+}
+
+.date-icon,
+.date-caret {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--on-surface-variant);
+}
+
+.date-caret {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--dur-effects-fast) ease;
+}
+
+.date-btn[aria-expanded="true"] .date-caret {
+  transform: rotate(180deg);
+}
+
+.date-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.date-field.is-empty .date-label {
+  color: color-mix(in srgb, var(--on-surface-variant) 80%, transparent);
+}
+
+.date-clear {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.date-clear:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+.date-clear-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.date-clear[hidden] {
+  display: none;
+}
+
+/* ---- the calendar ---- */
+
+.date-pop {
+  position: fixed;
+  z-index: 300;
+  width: 292px;
+  padding: 10px 10px 6px;
+  border-radius: var(--r-22);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  box-shadow:
+    0 24px 48px -28px rgba(20, 8, 2, .55),
+    0 4px 10px -6px rgba(20, 8, 2, .3);
+  animation: date-pop-in .14s cubic-bezier(.2, .8, .3, 1);
+}
+
+@keyframes date-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(.98);
+  }
+}
+
+.date-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 2px 4px;
+}
+
+.date-pop-title {
+  flex: 1 1 auto;
+  padding-left: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  text-transform: capitalize;
+}
+
+.date-nav {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.date-nav svg {
+  width: 18px;
+  height: 18px;
+}
+
+.date-nav:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+.date-week,
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.date-week span {
+  padding: 4px 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.date-day {
+  height: 34px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--on-surface);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.date-day:hover {
+  background: var(--state-hover);
+}
+
+.date-day.is-out {
+  color: color-mix(in srgb, var(--on-surface) 34%, transparent);
+}
+
+.date-day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.date-day.is-selected {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.date-pop-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.date-link {
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.date-link:hover {
+  background: var(--state-hover);
+}
+
+@media (max-width: 640px) {
+  .date-pop {
+    width: min(292px, calc(100vw - 16px));
+  }
+
+  .date-day {
+    height: 38px;
+  }
+}
+
+/* ---- interface language reload ---- */
+
+.lang-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 26px 32px;
+  border: 1px solid var(--line-2);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.lang-ring {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: sync-spin .8s linear infinite;
+}
+
+.lang-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-ring {
+    animation-duration: 2s;
   }
 }

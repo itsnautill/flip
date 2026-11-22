@@ -11,6 +11,10 @@
      one closed would receive that stale popstate and close itself. Count the
      backs we asked for and swallow exactly those. */
   var pendingBacks = 0;
+  /* A dialog or menu that closes itself pops the entry it pushed. That pop is
+     not a Back press, but it reaches the tab handler all the same; these count
+     the pops the app should ignore. */
+  var selfBacks = 0;
   var toastTimer = 0;
 
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -329,6 +333,7 @@
         pushed = false;
         /* Removing the entry we added keeps the history clean. */
         pendingBacks++;
+        selfBacks++;
         window.history.back();
       }
       /* Dialogs leave the way they came: Normal and Extra get a short exit,
@@ -460,6 +465,7 @@
       if (pushed && !fromHistory) {
         pushed = false;
         pendingBacks++;
+        selfBacks++;
         window.history.back();
       }
       layer.remove();
@@ -626,12 +632,30 @@
     }
   }
 
+  /* The translator and the task list both change the tooltip's size after it is
+     placed, so it is re-measured whenever that size changes instead of once
+     when it opens (a longer Vietnamese title used to hang out of the pill). */
+  var tooltipObserver = null;
+  var tooltipCell = null;
+
+  function watchTooltipSize(cell) {
+    tooltipCell = cell;
+    if (!window.ResizeObserver || tooltipObserver) return;
+    var tip = $("tooltip");
+    if (!tip) return;
+    tooltipObserver = new ResizeObserver(function () {
+      if (!tip.hidden && tooltipCell) styleTooltip(tooltipCell);
+    });
+    tooltipObserver.observe(tip);
+  }
+
   function showTooltip(cell, subjectId) {
     var tip = $("tooltip");
     clearTimeout(tooltipTimer);
     buildTooltip(subjectId);
     tip.hidden = false;
     styleTooltip(cell);
+    watchTooltipSize(cell);
   }
 
   function hideTooltip() {
@@ -732,6 +756,12 @@
     menu: menu,
     closeModal: closeModal,
     isModalOpen: isModalOpen,
+    /** One popstate caused by a dialog or menu closing itself. */
+    consumeSelfBack: function () {
+      if (selfBacks <= 0) return false;
+      selfBacks--;
+      return true;
+    },
     errorText: errorText,
     confirm: confirmBox,
     tooltip: { show: showTooltip, hide: hideTooltip, bind: bindTooltip },

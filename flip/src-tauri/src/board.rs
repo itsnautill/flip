@@ -1172,6 +1172,20 @@ impl Board {
             .collect();
 
         for (day, start, end, subject, room) in &lessons {
+            /* A sheet lists break rows too ("Ra chơi", "Nghỉ trưa"). They match a
+            period, but they are not lessons and must not create a subject. */
+            let period_id = {
+                let Some(period) = self.periods.iter().find(|p| {
+                    parse_hhmm(&p.start) == Some(*start) && parse_hhmm(&p.end) == Some(*end)
+                }) else {
+                    continue;
+                };
+                if period.is_break {
+                    continue;
+                }
+                period.id.clone()
+            };
+
             let key = subject.to_lowercase();
             let id = match by_name.get(&key) {
                 Some(id) => id.clone(),
@@ -1196,14 +1210,7 @@ impl Board {
                     }
                 }
             }
-            if let Some(period) = self
-                .periods
-                .iter()
-                .find(|p| parse_hhmm(&p.start) == Some(*start) && parse_hhmm(&p.end) == Some(*end))
-            {
-                let period_id = period.id.clone();
-                self.cells.insert(cell_key(day, &period_id), id);
-            }
+            self.cells.insert(cell_key(day, &period_id), id);
         }
 
         let used: HashSet<String> = self.cells.values().cloned().collect();
@@ -1711,8 +1718,24 @@ impl Board {
             }
         }
 
+        /* A break row is not a lesson. Sheets imported before this rule can still
+        hold cells on those rows, and they used to show up as paint colours. */
+        let breaks: HashSet<&str> = self
+            .periods
+            .iter()
+            .filter(|p| p.is_break)
+            .map(|p| p.id.as_str())
+            .collect();
+        let on_break = |key: &str| {
+            key.split_once('-')
+                .is_some_and(|(_, id)| breaks.contains(id))
+        };
+
         let mut cells = BTreeMap::new();
         for (key, subject_id) in &self.cells {
+            if on_break(key) {
+                continue;
+            }
             if let Some(subject) = self.subjects.iter().find(|s| &s.id == subject_id) {
                 cells.insert(
                     key.clone(),
@@ -1741,16 +1764,40 @@ impl Board {
             })
             .collect();
 
+        /* A subject whose only cells sit on break rows was never a lesson; it is
+        a leftover from such an import and has no business in the paint bar or
+        a subject picker. Anything a task still points at is kept. */
+        let break_only = |id: &str| -> bool {
+            let mut seen = false;
+            for (key, subject_id) in &self.cells {
+                if subject_id != id {
+                    continue;
+                }
+                seen = true;
+                if !on_break(key) {
+                    return false;
+                }
+            }
+            seen
+        };
+
         let subjects = self
             .subjects
             .iter()
+            .filter(|s| {
+                let linked = self
+                    .tasks
+                    .iter()
+                    .any(|t| t.subject_id.as_deref() == Some(s.id.as_str()));
+                linked || !break_only(&s.id)
+            })
             .map(|s| SubjectView {
                 id: s.id.clone(),
                 name: s.name.clone(),
                 hue: s.hue,
                 room: s.room.clone(),
                 pending: pending.get(s.id.as_str()).copied().unwrap_or(0),
-                in_timetable: self.cells.values().any(|v| v == &s.id),
+                in_timetable: cells.values().any(|c| c.subject_id == s.id),
             })
             .collect();
 
@@ -2302,6 +2349,102 @@ mod tests {
         // Math is gone from the timetable but its task still points at it.
         assert!(board.subjects.iter().any(|s| s.id == math));
         assert!(!board.cells.values().any(|id| *id == math));
+    }
+
+    #[test]
+    fn import_skips_a_row_that_is_a_break() {
+        let mut board = Board {
+            days: vec!["Mon".into()],
+            periods: vec![
+                period("p1", "Truy bài đầu giờ", "07:30", "07:45", true),
+                period("p2", "Period 1", "07:50", "08:35", false),
+            ],
+            ..Board::default()
+        };
+        let rows = vec![
+            ImportRow {
+                day: "Mon".into(),
+                start: "07:30".into(),
+                end: "07:45".into(),
+                subject: "Truy bài đầu giờ".into(),
+                room: String::new(),
+            },
+            ImportRow {
+                day: "Mon".into(),
+                start: "07:50".into(),
+                end: "08:35".into(),
+                subject: "Toán".into(),
+                room: String::new(),
+            },
+        ];
+        board
+            .apply(
+                BoardAction::ImportTimetable { rows, merge: true },
+                "2026-11-09",
+            )
+            .expect("merge");
+
+        assert_eq!(board.cells.len(), 1, "the break row takes no lesson");
+        assert!(board.cells.contains_key("Mon-p2"));
+        assert!(
+            !board.subjects.iter().any(|s| s.name == "Truy bài đầu giờ"),
+            "a break label must not become a subject"
+        );
+    }
+
+    #[test]
+    fn a_break_cell_from_older_data_never_reaches_the_view() {
+        let mut board = Board {
+            days: vec!["Mon".into()],
+            periods: vec![
+                period("p1", "Ra chơi", "08:35", "09:00", true),
+                period("p2", "Period 1", "09:05", "09:50", false),
+            ],
+            subjects: vec![
+                Subject {
+                    id: "s1".into(),
+                    name: "Ra chơi".into(),
+                    hue: 30.0,
+                    room: String::new(),
+                    legacy_color: String::new(),
+                },
+                Subject {
+                    id: "s2".into(),
+                    name: "Toán".into(),
+                    hue: 120.0,
+                    room: String::new(),
+                    legacy_color: String::new(),
+                },
+            ],
+            cells: [
+                ("Mon-p1".to_string(), "s1".to_string()),
+                ("Mon-p2".to_string(), "s2".to_string()),
+            ]
+            .into_iter()
+            .collect(),
+            ..Board::default()
+        };
+
+        let view = board.view(date("2026-11-09"), 9 * 60);
+        assert!(
+            !view.cells.contains_key("Mon-p1"),
+            "a break row shows no cell"
+        );
+        assert_eq!(view.subjects.len(), 1);
+        assert_eq!(view.subjects[0].name, "Toán");
+        assert!(
+            view.subjects.iter().all(|s| s.in_timetable),
+            "nothing outside the timetable is offered as a paint colour"
+        );
+
+        // A task still pointing at the leftover subject keeps it available.
+        add_task(&mut board, "Bring the form back", Some("s1"), None);
+        let view = board.view(date("2026-11-09"), 9 * 60);
+        assert!(view.subjects.iter().any(|s| s.id == "s1"));
+        assert_eq!(
+            view.subjects.iter().find(|s| s.id == "s1").unwrap().pending,
+            1
+        );
     }
 
     #[test]

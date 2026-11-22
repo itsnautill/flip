@@ -1878,3 +1878,263 @@ html[data-m3="on"] #stage > .group {
 html[data-m3="on"] #stage > .group:not(.active) {
   transform: none;
 }
+
+/* ================================================= 30. the timetable frame */
+
+/* The scroll box wraps the grid but paints nothing itself; its 28px radius with
+   overflow:auto only served to clip whatever sat at the edge, which cut the
+   accent ring of the last day's header and of the cells under it. */
+html[data-m3="on"] .tt-scroll {
+  border-radius: 0;
+}
+
+/* One corner for the whole table. The corner spacer used to be a filled pill,
+   the day headings and break bands were full lozenges, and the cells were
+   rounded rectangles, so the top-left and the right edge read as stray shapes.
+   Everything in the grid now shares the 18px corner of a cell. */
+
+html[data-m3="on"] .tt-corner {
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-m3="on"] .tt-head,
+html[data-m3="on"] .tt-head.today {
+  border-radius: 18px !important;
+}
+
+/* Today used to be a pink pill floating over plain cells while the cells in
+   that column draw an accent ring. One column, one treatment. */
+html[data-m3="on"] .tt-head.today {
+  background: color-mix(in srgb, var(--accent) 14%, transparent) !important;
+  color: var(--accent-text);
+  /* The older sheet removes every shadow in the grid with !important, so the
+     ring has to be just as loud. */
+  box-shadow: inset 0 0 0 2px var(--accent) !important;
+}
+
+html[data-m3="on"] .tt-head.today .tt-head-menu {
+  color: var(--accent-text);
+}
+
+html[data-m3="on"] .tt-break {
+  border-radius: 18px !important;
+  background: color-mix(in srgb, var(--surface-container-high) 50%, transparent) !important;
+  box-shadow: inset 0 0 0 1px var(--glass-edge) !important;
+}
+
+/* The subject tooltip is a normal M3 surface. It used the inverse pair, which
+   in the dark theme is a pale sheet that matches nothing around it. */
+html[data-m3="on"] .tooltip {
+  border: 0;
+  border-radius: 16px;
+  max-width: min(320px, calc(100vw - 24px));
+  background: color-mix(in srgb, var(--surface-container-high) 96%, transparent) !important;
+  color: var(--on-surface) !important;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 18px 40px -24px rgba(0, 0, 0, 0.7);
+  /* Opaque, with no backdrop filter: a blurred layer at 110% zoom repainted a
+     frame behind its own text while the pointer moved between cells. */
+  padding: 12px 14px;
+  font: var(--type-body);
+}
+
+html[data-m3="on"] .tooltip .tip-title {
+  margin-bottom: 8px;
+  font: 600 13px/18px var(--font-ui);
+}
+
+html[data-m3="on"] .tooltip .tip-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+html[data-m3="on"] .tooltip .tip-room,
+html[data-m3="on"] .tooltip .tip-when,
+html[data-m3="on"] .tooltip .tip-state,
+html[data-m3="on"] .tooltip .tip-more {
+  color: var(--on-surface-variant);
+}
+
+html[data-m3="on"] .tooltip .tip-empty {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font: var(--type-small);
+  font-style: normal;
+}
+
+html[data-m3="on"] .tooltip .tip-list {
+  gap: 6px;
+  font: var(--type-small);
+}
+
+/* ============================================ 31. the custom theme cards */
+
+/* All five palettes sit in one grid, so nothing hides behind a "more" button
+   and the section never grows under the dialog footer. The columns collapse on
+   their own when the pane is narrow. */
+html[data-m3="on"] .theme-grid-custom {
+  grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+
+html[data-m3="on"] .theme-card {
+  gap: 9px;
+  padding: 10px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+html[data-m3="on"] .theme-card:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--surface-container-low) !important;
+}
+
+html[data-m3="on"] .theme-card[aria-checked="true"] {
+  border-color: var(--accent) !important;
+  box-shadow: inset 0 0 0 1px var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel)) !important;
+}
+
+/* The miniature is painted from the palette's own tokens: it carries the
+   palette and the base as data attributes, so the theme rules in polish.css
+   colour it exactly like the app, and it follows the mode when it changes. */
+.theme-mock {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 7px;
+  min-height: 76px;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  /* The palette's focus colour is the closest token to the accent it brings. */
+  --tm-accent: var(--focus);
+}
+
+.theme-mock .tm-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+
+.theme-mock .tm-rail i {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+
+.theme-mock .tm-rail i:first-child {
+  background: color-mix(in srgb, var(--tm-accent) 55%, transparent);
+}
+
+.theme-mock .tm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.theme-mock .tm-title {
+  display: block;
+  width: 42%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+
+.theme-mock .tm-row {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-mock .tm-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.theme-mock .tm-cell.tm-accent {
+  background: color-mix(in srgb, var(--tm-accent) 24%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-accent) 55%, transparent);
+}
+
+html[data-m3="on"] .theme-card .theme-name {
+  gap: 8px;
+  font: var(--type-label);
+}
+
+html[data-m3="on"] .theme-card .theme-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+html[data-m3="on"] .theme-card .theme-dot {
+  width: 10px;
+  height: 10px;
+  border: 0;
+}
+
+/* A tick rather than a third shade of border: the selected card is obvious at
+   a glance even in a row of five. */
+html[data-m3="on"] .theme-card .theme-check {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-primary, #241b21);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--dur-200) var(--ease-standard), transform var(--dur-200) var(--ease-standard);
+}
+
+html[data-m3="on"] .theme-card .theme-check::before {
+  content: "\2713";
+  font-weight: 700;
+}
+
+html[data-m3="on"] .theme-card[aria-checked="true"] .theme-check {
+  opacity: 1;
+  transform: none;
+}
+
+html[data-m3="on"] .theme-card .theme-note {
+  font: var(--type-small);
+  color: var(--on-surface-variant);
+}
+
+
+/* Vietnamese task titles are longer than the English ones the box was sized
+   for: let the title wrap instead of pushing the due date outside the pill. */
+html[data-m3="on"] .tooltip .tip-list li {
+  align-items: flex-start;
+}
+
+html[data-m3="on"] .tooltip .tip-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+html[data-m3="on"] .tooltip .tip-when {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
