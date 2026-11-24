@@ -7,7 +7,7 @@ Built with Rust and Tauri 2. Everything stays on your machine: no account, no sy
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![Built with](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-000000)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Ti%E1%BA%BFng%20Vi%E1%BB%87t-2ea44f)
-![Version](https://img.shields.io/badge/version-1.3.6-blue)
+![Version](https://img.shields.io/badge/version-1.3.7-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 English | [Tiếng Việt](README_VI.md)
@@ -87,7 +87,7 @@ Six widgets on one page: the next lesson, today's list, what is due, tasks in fl
 
 ## Install
 
-1. Download `Flip_1.3.6_x64-setup.exe` from [Releases](https://github.com/itsnautill/flip/releases/latest)
+1. Download `Flip_1.3.7_x64-setup.exe` from [Releases](https://github.com/itsnautill/flip/releases/latest)
 2. Run it. It installs per user, with no administrator prompt.
 3. Windows will show *"Windows protected your PC"* because the installer is not code-signed. Click **Run anyway** (see [the next section](#about-the-windows-warning) if you want to know why).
 
@@ -106,13 +106,13 @@ The first run shows **"Windows protected your PC"** with *Publisher: Unknown pub
 **To check that your download is the one built here:**
 
 ```powershell
-Get-FileHash .\Flip_1.3.6_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Flip_1.3.7_x64-setup.exe -Algorithm SHA256
 ```
 
-For 1.3.6 it should print:
+For 1.3.7 it should print:
 
 ```
-6b13c7fd899d78578a959af9509cae8fa455ce83d41776384f1fee839aa0d8d5
+0eeab60d240646dfd541aa897fc2036d9fdd680f5ccf0bf28b01ad23189a1a4e
 ```
 
 **To stop the warning on your own machine:** right-click the `.exe`, open **Properties**, tick **Unblock**, then **OK**.
