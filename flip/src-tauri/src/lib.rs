@@ -190,8 +190,29 @@ fn trim_webview_memory(window: &tauri::WebviewWindow) {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// A second launch is not a second window: the copy that is already running
+/// comes back to the front instead.
+#[cfg(desktop)]
+fn focus_main(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    /* Only one Flip runs at a time. The desktop plugin holds a lock for the
+       life of the process, so the second launch exits on the spot and hands its
+       focus to the window that already exists. */
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        focus_main(app);
+    }));
+
+    builder
         .setup(|app| {
             let identifier_dir = app.path().app_config_dir().ok();
             let data_dir = preferred_data_dir()
