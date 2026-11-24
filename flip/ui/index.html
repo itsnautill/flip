@@ -101,6 +101,7 @@
         if (quick) {
           doc.classList.remove("flip-booting");
           if (node.parentNode) node.parentNode.removeChild(node);
+          window.dispatchEvent(new Event("flip-booted"));
           return;
         }
         doc.classList.add("boot-reveal");
@@ -123,6 +124,7 @@
         }
         t3 = setTimeout(function () {
           if (node.parentNode) node.parentNode.removeChild(node);
+          window.dispatchEvent(new Event("flip-booted"));
         }, 760);
       }
 
@@ -148,7 +150,6 @@
         /* One continuous move: the disc swells, then opens on its vertical seam
            and both halves leave on the same push, straight to their bars. There
            is no beat between the break and the flight, so nothing sits parked. */
-        node.className += " is-armed";
         t1 = setTimeout(function () {
           if (!node.parentNode) return;
           node.className += " is-splitting is-flying";
@@ -168,6 +169,38 @@
         }, 380);
       }
 
+      /* Resolves once the first snapshot has been painted and the fonts are in,
+         or after a short cap, so a snapshot that never arrives cannot hold the
+         cover forever. Two frames after that, the show starts. */
+      function ready() {
+        return new Promise(function (resolve) {
+          var settled = false;
+          function fire() {
+            if (settled) return;
+            settled = true;
+            requestAnimationFrame(function () {
+              requestAnimationFrame(resolve);
+            });
+          }
+          var cap = setTimeout(fire, 1600);
+          var waits = [];
+          if (document.fonts && document.fonts.ready) waits.push(document.fonts.ready);
+          if (window.__flipReady) {
+            waits.push(Promise.resolve());
+          } else {
+            waits.push(
+              new Promise(function (done) {
+                window.addEventListener("flip-ready", done, { once: true });
+              })
+            );
+          }
+          Promise.all(waits).then(function () {
+            clearTimeout(cap);
+            fire();
+          });
+        });
+      }
+
       function start() {
         if (quiet || animOff) {
           var cover = splash();
@@ -175,10 +208,12 @@
           doc.classList.remove("flip-booting");
           return;
         }
-        /* Two frames: the first paints the cover, the second starts the show. */
-        requestAnimationFrame(function () {
-          requestAnimationFrame(run);
-        });
+        /* The disc appears at once and breathes there while the app finishes its
+           first paint; only then does it leave. Starting the flight earlier is
+           what lagged on a cold start. */
+        var node = splash();
+        if (node) node.className += " is-armed";
+        ready().then(run);
       }
 
       document.addEventListener("keydown", function (event) {

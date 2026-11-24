@@ -1821,6 +1821,9 @@
     }
   }
 
+  /* Flipped once after the first painted snapshot; the splash listens for it. */
+  var announcedReady = false;
+
   function render(snap) {
     if (!snap) return;
     var wasTimer = lastSnapshot && lastSnapshot.timer ? lastSnapshot.timer.state : null;
@@ -1892,6 +1895,15 @@
       } catch (err) {
         console.error("flip: snapshot listener failed", err);
       }
+    }
+
+    /* The opening animation waits for this: it is the signal that the first
+       snapshot has been painted, so the show cannot start behind a cold first
+       render and stutter. */
+    if (!announcedReady) {
+      announcedReady = true;
+      window.__flipReady = true;
+      window.dispatchEvent(new Event("flip-ready"));
     }
   }
 
@@ -2116,7 +2128,9 @@
       }
     }
     if (ctx && ctx.state === "suspended") ctx.resume();
-    primeSamples();
+    /* Not every cue at once: decoding the whole set on the first sound is what
+       made a cold start stutter behind the opening animation. */
+    schedulePriming();
   }
 
   /* The cues ship as recordings in `sfx/`. Each is decoded once and kept, so
@@ -2182,6 +2196,32 @@
   /* Warm every cue as soon as the context exists, so the first press of a
      button is already decoded. */
   var priming = false;
+  var primingScheduled = false;
+
+  /* The rest of the set arrives while the machine is idle, so no click ever
+     pays for seventeen decodes. */
+  function schedulePriming() {
+    if (priming || primingScheduled) return;
+    primingScheduled = true;
+    var idle = function () {
+      if (window.requestIdleCallback) window.requestIdleCallback(primeSamples, { timeout: 2500 });
+      else setTimeout(primeSamples, 1600);
+    };
+    /* Never while the cover is up: the opening animation owns the main thread
+       until the splash has left. */
+    if (document.documentElement.classList.contains("flip-booting")) {
+      window.addEventListener(
+        "flip-booted",
+        function () {
+          idle();
+        },
+        { once: true }
+      );
+      return;
+    }
+    if (document.readyState === "complete") idle();
+    else window.addEventListener("load", idle, { once: true });
+  }
 
   function primeSamples() {
     if (priming || !ctx) return;
