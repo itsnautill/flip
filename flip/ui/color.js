@@ -76,6 +76,28 @@
     ];
   }
 
+  /* color-mix() arrived in Chrome 111, and the WebView on Android 10 is still
+     Chrome 83: it drops a mix instead of ignoring just that part, so a card
+     painted with one came out fully transparent. The glass fills are inline on
+     <html>, out of reach of any stylesheet fallback, so where the engine has no
+     mix they are written as rgba() with the same weight. */
+  var HAS_MIX =
+    typeof CSS !== "undefined" &&
+    CSS.supports &&
+    CSS.supports("background-color", "color-mix(in srgb, #FFFFFF, #000000)");
+
+  function glassFill(hex, percent) {
+    if (HAS_MIX) {
+      return "color-mix(in srgb, " + hex + " " + percent + "%, transparent)";
+    }
+    var rgb = parseHex(hex);
+    if (!rgb) return hex;
+    var channels = rgb.map(function (channel) {
+      return Math.round(channel * 255);
+    });
+    return "rgba(" + channels.join(", ") + ", " + percent / 100 + ")";
+  }
+
   function luminance(hex) {
     var rgb = parseHex(hex);
     if (!rgb) return 0.5;
@@ -336,8 +358,8 @@
       "--wash-b": at(dark ? 0.205 : 0.972, dark ? 0.036 : 0.028, 12),
       "--wash-c": at(dark ? 0.225 : 0.962, dark ? 0.032 : 0.03, 22),
 
-      "--glass-fill": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 74%" : " 62%") + ", transparent)",
-      "--glass-fill-strong": "color-mix(in srgb, " + at(levels[0], levelChroma[0]) + (dark ? " 92%" : " 86%") + ", transparent)",
+      "--glass-fill": glassFill(at(levels[0], levelChroma[0]), dark ? 74 : 62),
+      "--glass-fill-strong": glassFill(at(levels[0], levelChroma[0]), dark ? 92 : 86),
       "--glass-edge": dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.66)",
       "--glass-inner": dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.34)",
       "--glass-shadow": dark

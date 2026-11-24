@@ -169,6 +169,104 @@ pub fn set_sound(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
 }
 
 #[tauri::command]
+pub fn set_sound_volume(core: State<'_, SharedCore>, volume: u32) -> Snapshot {
+    let mut c = lock(core.inner());
+    let volume = volume.min(100);
+    if c.settings.sound_volume != volume {
+        c.settings.sound_volume = volume;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+/// One cue on or off. Unknown ids are ignored, so a typo cannot grow the file.
+#[tauri::command]
+pub fn set_sound_cue(core: State<'_, SharedCore>, name: String, enabled: bool) -> Snapshot {
+    let mut c = lock(core.inner());
+    if !settings::SOUND_CUES.contains(&name.as_str()) {
+        return c.snapshot(Instant::now());
+    }
+    let muted = c.settings.sound_muted.iter().any(|id| id == &name);
+    if (enabled && muted) || (!enabled && !muted) {
+        if enabled {
+            c.settings.sound_muted.retain(|id| id != &name);
+        } else {
+            c.settings.sound_muted.push(name);
+        }
+        c.settings.sound_muted.sort();
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+/// Select all or deselect all of the individual cues.
+#[tauri::command]
+pub fn set_all_sound_cues(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    let mut c = lock(core.inner());
+    let next: Vec<String> = if enabled {
+        Vec::new()
+    } else {
+        settings::SOUND_CUES
+            .iter()
+            .map(|id| (*id).to_string())
+            .collect()
+    };
+    if c.settings.sound_muted != next {
+        c.settings.sound_muted = next;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+/// Whether a growing study streak gets the cutscene, a toast, or nothing.
+#[tauri::command]
+pub fn set_streak_effects(core: State<'_, SharedCore>, mode: String) -> Snapshot {
+    let mut c = lock(core.inner());
+    let mode = settings::normalise_streak_effects(&mode);
+    if c.settings.streak_effects != mode {
+        c.settings.streak_effects = mode;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+/// Whether a finished countdown is added to the study log as well.
+#[tauri::command]
+pub fn set_timer_focus(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    let mut c = lock(core.inner());
+    if c.settings.timer_focus != enabled {
+        c.settings.timer_focus = enabled;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
+#[tauri::command]
 pub fn set_onboarded(core: State<'_, SharedCore>, done: bool) -> Snapshot {
     let mut c = lock(core.inner());
     if c.settings.onboarded != done {

@@ -24,7 +24,9 @@ html[data-m3="on"] #chrome {
   height: var(--bar-height);
   min-height: var(--bar-height);
   margin-top: var(--header-gap);
-  padding: 0 var(--content-right) 0 var(--page-gutter);
+  /* Both edges sit on the content column: the nav pill starts where the page
+     title starts, the utilities end where the column ends. */
+  padding: 0 var(--content-right);
   gap: 12px;
   border: 0 !important;
   background: transparent !important;
@@ -38,8 +40,11 @@ html[data-m3="on"] #chrome .brand {
 }
 
 /* At rest the header is part of the page: no fill, no hairline. The glass
-   only appears once a screen has scrolled under it. */
+   only appears once a screen has scrolled under it. It starts at the window's
+   own top edge, not at the header's, so the air above the header never shows
+   as a bare strip between the title bar and the bar. */
 html[data-m3="on"] #chrome::after {
+  inset: calc(-1 * var(--header-gap)) 0 0 0;
   background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -97,10 +102,7 @@ html[data-m3="on"] {
   --page-gutter: 32px;
   --content-max: 1400px;
   /* Where the 1400px column ends, so the header can end there too. */
-  --content-right: max(
-    var(--page-gutter),
-    calc((100vw - var(--content-max)) / 2 - (var(--rail-width) + 32px) / 2 + 5px)
-  );
+  --content-right: max(var(--page-gutter), calc((100vw - var(--content-max)) / 2));
 }
 
 html[data-m3="on"] .view {
@@ -113,72 +115,157 @@ html[data-m3="on"] .view > * {
 
 /* =============================================================== 3. rail */
 
-html[data-m3="on"] {
-  --rail-width: 112px;
-  --rail-inset: 16px;
-  --rail-gap: 16px;
+/* Desktop navigation is a second icon group inside the header, reading as one
+   family with the utilities on the right: the same 40px buttons, the same
+   48px glass pill. Every tab is a fixed 40px square, so the row never changes
+   width: the label is a tooltip below the glyph, not part of the layout, and
+   the selected section is one chip that travels between tabs. */
+
+/* On a phone the dock keeps its own chip, so this one is not painted at all. */
+html[data-m3="on"] #tabs-pill {
+  display: none;
 }
 
 @media (min-width: 840px) {
-  /* Top aligned with the page title, not floating in the middle of nowhere. */
   html[data-m3="on"] #tabs {
-    left: var(--rail-inset);
-    top: calc(var(--header-top) + 16px);
-    bottom: auto;
+    /* The chip is the accent's own weight: a deep accent field with the accent
+       glyph in the light theme, the accent field with its ink glyph in the
+       dark one. Both clear 3:1 against the pill. */
+    --nav-chip: var(--accent-text);
+    --nav-chip-ink: var(--accent-soft);
+    position: relative;
+    top: auto;
+    left: auto;
     transform: none;
-    width: var(--rail-width);
-    height: auto;
-    max-height: calc(100vh - var(--header-top) - 32px);
-    padding: 12px;
-    gap: 6px;
+    width: auto;
+    height: 48px;
+    max-height: none;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
     border: 0 !important;
-    border-radius: 26px;
-    background: color-mix(in srgb, var(--surface-container-lowest) 84%, transparent) !important;
-    box-shadow: inset 0 1px 0 var(--glass-edge),
-      inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 7%, transparent),
-      var(--glass-shadow) !important;
+    border-radius: var(--r-full);
+    background: color-mix(in srgb, var(--surface-container-low) 66%, transparent) !important;
+    box-shadow: inset 0 0 0 1px var(--glass-inner) !important;
   }
 
-  html[data-m3="on"] .tab {
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-    padding: 10px 2px;
-    border-radius: 20px;
+  html[data-theme="dark"][data-m3="on"] #tabs {
+    --nav-chip: var(--accent);
+    --nav-chip-ink: var(--on-primary);
+  }
+
+  /* The selected chip is one element that travels, like the settings list:
+     the tabs stay transparent and only their glyph colour changes. */
+  html[data-m3="on"] #tabs-pill {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 0;
+    height: 0;
+    border-radius: var(--r-full);
+    background: var(--nav-chip);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  html[data-m3="on"] #tabs.pill-ready #tabs-pill {
+    transition: transform var(--dur-300) var(--ease-enter),
+      width var(--dur-300) var(--ease-enter),
+      height var(--dur-300) var(--ease-enter),
+      opacity var(--dur-100) var(--ease-standard);
+  }
+
+  html[data-m3="on"] #tabs .tab {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    gap: 0;
+    border-radius: var(--r-full);
     justify-content: center;
+    transition: color var(--dur-effects-default) var(--spring-effects-default);
   }
 
-  html[data-m3="on"] .tab-icon {
-    width: 22px;
-    height: 22px;
+  html[data-m3="on"] #tabs .tab-icon {
+    width: 20px;
+    height: 20px;
   }
 
-  html[data-m3="on"] .tab-label {
-    font-size: 13px;
-    /* 1.4 keeps the stacked accents in "Thời khóa biểu" and "Hẹn giờ" clear. */
-    line-height: 1.4;
-    white-space: normal;
-    text-align: center;
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
-  }
-
-  html[data-m3="on"] .tab.active {
-    background: var(--primary-container) !important;
-    color: var(--on-primary-container);
-    font-weight: 600;
+  /* The active tab sits on the chip, so it takes the chip's glyph colour and
+     no fill of its own; hovering only lifts the glyph. */
+  html[data-m3="on"] #tabs .tab.active {
+    background: transparent !important;
+    color: var(--nav-chip-ink);
     box-shadow: none !important;
   }
 
-  /* Reserve the rail column plus the gap on both sides. */
-  html[data-m3="on"] #chrome,
-  html[data-m3="on"] #app {
-    margin-left: calc(var(--rail-inset) + var(--rail-width) + var(--rail-gap));
+  html[data-m3="on"] #tabs .tab.active:hover {
+    background: transparent;
+    color: var(--nav-chip-ink);
   }
 
-  html[data-m3="on"] #chrome {
-    padding-left: var(--page-gutter);
+  /* The label is a tooltip, not a second column: it hangs below the glyph, out
+     of the flow, so nothing in the row can move. It opens after 300ms (hover
+     or keyboard focus, one at a time) and closes at once. */
+  html[data-m3="on"] #tabs .tab-label {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    z-index: 5;
+    max-width: none;
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-container-high) 96%, transparent);
+    color: var(--on-surface);
+    box-shadow: inset 0 1px 0 var(--glass-edge), 0 14px 30px -20px rgba(0, 0, 0, 0.6);
+    font: 500 12px/16px var(--font-ui);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, -4px);
+    transition: opacity var(--dur-exit-200) var(--ease-exit), transform var(--dur-exit-200) var(--ease-exit),
+      visibility 0s linear var(--dur-exit-200);
+  }
+
+  html[data-m3="on"] #tabs .tab:hover .tab-label,
+  html[data-m3="on"] #tabs .tab:focus-visible .tab-label {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition: opacity var(--dur-100) var(--ease-enter) 300ms,
+      transform var(--dur-100) var(--ease-enter) 300ms, visibility 0s linear 300ms;
+  }
+
+  /* While the pointer is in the nav only the tab under it speaks: a focused
+     neighbour's tooltip would otherwise open beside it. */
+  html[data-m3="on"] #tabs:hover .tab:not(:hover) .tab-label {
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, -4px);
+    transition: opacity var(--dur-exit-200) var(--ease-exit),
+      transform var(--dur-exit-200) var(--ease-exit), visibility 0s linear var(--dur-exit-200);
+  }
+
+  /* The global ring is a 12px squircle; on a pill tab it reads as a stray
+     rectangle, so it follows the tab's own radius instead. */
+  html[data-m3="on"] #tabs .tab:focus-visible {
+    outline-offset: 3px;
+    border-radius: var(--r-full);
+  }
+
+  /* No floating column any more, so the page centres in the window. */
+  html[data-m3="on"] #chrome,
+  html[data-m3="on"] #app {
+    margin-left: 0;
   }
 }
 
@@ -191,6 +278,17 @@ html[data-theme="dark"][data-m3="on"] body::before {
     radial-gradient(62vw 58vw at 2% -10%, var(--wash-a), transparent 62%),
     radial-gradient(46vw 44vw at 104% 108%, var(--wash-b), transparent 64%),
     radial-gradient(38vw 34vw at 86% -6%, var(--wash-c), transparent 70%);
+}
+
+/* The gradient switch owns the theme backdrop: "on" paints the soft pools,
+   "off" leaves the plain solid surface underneath them. */
+html[data-m3="on"][data-wash="off"] body::before {
+  background: none;
+}
+
+/* No gradient left to band, so the dither goes too: off is a clean flat fill. */
+html[data-m3="on"][data-wash="off"] body::after {
+  opacity: 0;
 }
 
 /* A 2% dither over the gradients: without it 8-bit dark steps band. */
@@ -470,9 +568,7 @@ html[data-m3="on"] #stage .card .flap-bottom {
 
 /* One centred column, one vertical axis: tiles, controls, mode switch.
    Nothing here is absolutely positioned, so the stack cannot drift sideways.
-   Clock and Timer share the column, the tile size and the anchor; the clock
-   only keeps the control row's space empty, so the pair never jumps between
-   modes. */
+   Clock and Timer share the column, the tile size and the anchor. */
 html[data-m3="on"][data-stage="timer"] #stage,
 html[data-m3="on"][data-stage="clock"] #stage {
   display: flex;
@@ -481,6 +577,9 @@ html[data-m3="on"][data-stage="clock"] #stage {
   justify-content: center;
   gap: 0;
   padding: 24px;
+  /* The clock never scrolls, so it must not reserve a scrollbar gutter: the
+     reserved strip pulled the tiles about 5px off the window's own axis. */
+  scrollbar-gutter: auto;
 }
 
 html[data-m3="on"][data-stage="timer"] #stage > #timer-group,
@@ -582,9 +681,13 @@ html[data-m3="on"] #timer-tools .icon-btn svg {
   height: 20px;
 }
 
-/* The clock hides the controls but keeps their height, so the tiles sit in
-   exactly the same place in both modes. */
+/* The clock hides the controls completely, height included. Keeping their 88px
+   held the tiles high above an empty band, so the clock only looked centred
+   when the invisible button was counted; tiles and mode switch now centre as
+   one block. Timer mode still shows the row, so the two modes have their own
+   balanced column. */
 html[data-m3="on"][data-stage="clock"] #timer-controls {
+  display: none;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -2137,4 +2240,51 @@ html[data-m3="on"] .tooltip .tip-text {
 html[data-m3="on"] .tooltip .tip-when {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+/* ------------------------------------------------ phone (Chrome 83 WebView) */
+
+/* The dashboard stacks one card per row on a phone. The desktop floor of
+   200px turns six short cards into six half-empty panels, so on the narrow
+   grid the cards take their content's height instead. */
+@media (max-width: 720px) {
+  html[data-m3="on"] #dash-grid .widget {
+    min-height: 0;
+  }
+}
+
+/* A settings row is one line on the desktop, but a four-way segmented control
+   leaves the label 36px on a phone and "Chuyển động" spills under the buttons.
+   The label keeps its line and the control takes the next one, full width. */
+@media (max-width: 720px) {
+  html[data-m3="on"] .setting-row {
+    flex-wrap: wrap;
+  }
+
+  html[data-m3="on"] .setting-row .setting-text {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  html[data-m3="on"] .setting-row .seg {
+    flex: 1 1 100%;
+  }
+}
+
+/* Seven days do not fit 355px. m3.css drops the grid's min-width so it fits
+   the window, which squeezed every subject name to one character per line;
+   the timetable keeps a readable column and scrolls sideways instead. */
+@media (max-width: 720px) {
+  html[data-m3="on"] .tt-grid {
+    min-width: calc(132px + var(--day-count, 7) * 92px);
+  }
+}
+
+/* The hero card's tint is a color-mix() in m3.css. Chrome 83 parses the call
+   and then throws the property away at computed time, which outranks the plain
+   --primary-container line above it and leaves the card with no fill at all. */
+@supports not (color: color-mix(in srgb, #FFFFFF, #000000)) {
+  html[data-m3="on"] .widget-next {
+    background: var(--primary-container);
+  }
 }

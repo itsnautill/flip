@@ -1338,26 +1338,86 @@ html[data-touch="on"] .switch[aria-checked="true"]::after {
 
 /* ------------------------------------------------------------------- toast */
 
-.toast {
+/* Toasts stack in one column at the top of the window: the newest keeps the
+   normal spot and the ones already there step down, fading as they go. */
+.toast-stack {
   position: fixed;
   top: 18px;
   left: 50%;
-  right: auto;
-  bottom: auto;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  max-width: min(520px, 90vw);
+  z-index: 80;
+  pointer-events: none;
+}
+
+/* Space between cards by margin, not gap: the phone's webview predates flex
+   gap and would stack them touching. */
+.toast-stack > .toast + .toast {
+  margin-top: 10px;
+}
+
+.toast {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 220px;
-  max-width: min(520px, 90vw);
+  max-width: 100%;
   padding: 13px 18px 15px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
   box-shadow: var(--shadow);
   overflow: hidden;
-  z-index: 80;
+  opacity: 1;
+  transform: none;
+  transition: opacity calc(.18s * var(--speed, 1)) ease,
+    transform calc(.18s * var(--speed, 1)) ease;
+}
+
+/* Loaded after the older rules that pin a toast to the window, so a card sits in
+   the stack column instead. */
+.toast-stack > .toast {
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  max-width: min(520px, 90vw);
+  pointer-events: auto;
   animation: toast-in calc(.24s * var(--speed, 1)) ease;
+}
+
+/* One step further down the stack per toast behind the newest, each a little
+   fainter than the one above it. */
+.toast[data-depth="1"] {
+  opacity: .74;
+  transform: scale(.985);
+}
+
+.toast[data-depth="2"] {
+  opacity: .5;
+  transform: scale(.97);
+}
+
+.toast[data-depth="3"] {
+  opacity: .3;
+  transform: scale(.955);
+}
+
+.toast.is-leaving {
+  opacity: 0;
+  transform: scale(.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-stack > .toast {
+    animation: none;
+  }
 }
 
 .toast[hidden] {
@@ -1408,11 +1468,11 @@ html[data-touch="on"] .switch[aria-checked="true"]::after {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -8px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
@@ -2490,7 +2550,10 @@ input[type="tel"]:focus-visible {
   align-self: stretch;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 10px 20px 0;
+  /* Room on all four sides: the pane clips, so a row set flush against the
+     edge lost its rounded corner and its shadow on the left. The reserved
+     scrollbar gutter adds 8px on the right, so that side needs less here. */
+  padding: 10px 4px 22px 12px;
   /* A stable gutter means the content never jumps when the bar appears. */
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -4566,5 +4629,652 @@ html[data-m3="on"] .sync-choice-btn:not(.primary) {
 @media (prefers-reduced-motion: reduce) {
   .lang-ring {
     animation-duration: 2s;
+  }
+}
+
+/* The timer's "count as focus session" tick sits at the far left of the
+   footer, opposite Cancel and Set timer. */
+.modal-foot .foot-check {
+  margin-right: auto;
+  margin-left: -6px;
+}
+
+/* ------------------------------------------------------ settings: sounds */
+
+.volume-value {
+  min-width: 48px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.volume-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--vol, 100%),
+    var(--panel-3) var(--vol, 100%)
+  );
+}
+
+.volume-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.volume-range:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+html[data-touch="on"] .volume-range {
+  height: 40px;
+}
+
+html[data-touch="on"] .volume-range::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+}
+
+/* Master off: everything under the switch is inert and greyed. */
+.sounds-below.is-off {
+  opacity: 0.42;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.sounds-below.is-off .switch {
+  cursor: default;
+}
+
+.cue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 4px;
+}
+
+.cue-head h3 {
+  margin: 0;
+}
+
+.cue-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 0 20px;
+}
+
+.cue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cue-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.cue-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A small triangle that plays the cue in place, so it can be heard without
+   turning it on. */
+.cue-preview {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+  transition: color calc(.16s * var(--speed, 1)) ease,
+    border-color calc(.16s * var(--speed, 1)) ease,
+    background calc(.16s * var(--speed, 1)) ease,
+    transform calc(.16s * var(--speed, 1)) ease;
+}
+
+.cue-preview svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+}
+
+.cue-preview:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+.cue-preview:active {
+  transform: scale(.95);
+}
+
+.cue-preview:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+html[data-touch="on"] .cue-preview {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+html[data-touch="on"] .cue-preview svg {
+  width: 12px;
+  height: 12px;
+}
+
+html[data-touch="on"] .cue-row {
+  padding: 12px 2px;
+}
+
+/* -------------------------------------------------- streak celebration */
+
+.streak-cue {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: radial-gradient(
+    circle at 50% 44%,
+    rgba(255, 138, 48, 0.2),
+    rgba(16, 11, 8, 0.62) 64%
+  );
+  animation: streak-fade 0.2s ease-out both;
+}
+
+.streak-card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 30px 46px 26px;
+  border: 1px solid rgba(255, 172, 96, 0.34);
+  border-radius: 26px;
+  background: linear-gradient(170deg, #2a1b12, #1a100b);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 200, 140, 0.16);
+  animation: streak-card-in 0.34s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+
+.streak-flame {
+  position: relative;
+  width: 74px;
+  height: 84px;
+  filter: drop-shadow(0 6px 18px rgba(255, 120, 40, 0.55));
+  animation: streak-flame 1.6s ease-in-out infinite;
+}
+
+.streak-flame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.streak-flame .flame-outer {
+  fill: #ff7a18;
+}
+
+.streak-flame .flame-inner {
+  fill: #ffd166;
+}
+
+.streak-count {
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffe9c4;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 4px 20px rgba(255, 140, 50, 0.5);
+  animation: streak-count-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+}
+
+.streak-label {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 226, 190, 0.72);
+}
+
+.streak-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.streak-sparks i {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffcf7a;
+  opacity: 0;
+  animation: streak-spark 0.9s ease-out var(--delay, 0ms) both;
+}
+
+@keyframes streak-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes streak-card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes streak-flame {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50% { transform: scale(1.06) rotate(1.5deg); }
+}
+
+@keyframes streak-count-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes streak-spark {
+  0% { opacity: 0; transform: translate(-50%, -50%); }
+  20% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0.4);
+  }
+}
+
+.streak-cue.is-closing {
+  animation: streak-out 0.22s ease-in both;
+}
+
+@keyframes streak-out {
+  to { opacity: 0; }
+}
+
+/* Snappy is the accessibility switch: the card appears, nothing moves. */
+html[data-motion="snappy"] .streak-cue,
+html[data-motion="snappy"] .streak-cue * {
+  animation: none !important;
+}
+
+@media (max-width: 640px) {
+  .streak-card {
+    padding: 24px 34px 20px;
+    border-radius: 22px;
+  }
+
+  .streak-flame {
+    width: 60px;
+    height: 68px;
+  }
+
+  .streak-count {
+    font-size: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak-cue,
+  .streak-card,
+  .streak-flame,
+  .streak-count,
+  .streak-sparks i {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------- startup animation */
+
+/* The launch is a small piece of theatre. An empty stage, then an accent disc
+   in the middle. The disc breaks on its seam, the halves fly apart — gooey,
+   stretching and squashing as they go — and land exactly on the navigation
+   pill and the tool bar. Then the dashboard rises in underneath them, tile by
+   tile, with the arrival sound.
+
+   The outline of each half is driven by a transform that lands on the real bar
+   measured at runtime; the squish lives on the blob inside it, so the travel
+   can wobble all it likes and still finish on the pixel. The timeline lives in
+   index.html and starts on the first painted frame, so it is never over before
+   the window has drawn. Space skips it all, sound included. */
+
+/* Nothing of the app shows until the two halves have arrived. */
+html.flip-booting #chrome,
+html.flip-booting #app {
+  opacity: 0;
+}
+
+/* The handover: the app arrives under the pills, so its own bars fade in. */
+#chrome,
+#app {
+  transition: opacity .5s ease;
+}
+
+.boot-splash {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 400;
+  display: grid;
+  place-items: center;
+  background-color: var(--wash-base);
+  transition: background-color .55s ease;
+}
+
+/* A pool of the accent light on the empty stage, breathing while it waits. */
+.boot-splash::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: radial-gradient(38% 34% at 50% 50%, var(--wash-a), transparent 70%);
+  animation: boot-bloom 3.4s ease-in-out infinite;
+  transition: opacity .5s ease;
+}
+
+/* Take-off: the stage clears, so the halves cross the app's own backdrop. */
+.boot-splash.is-flying {
+  background-color: transparent;
+}
+
+.boot-splash.is-flying::before {
+  /* The bloom is an animation, and an animation outranks a plain opacity
+     declaration, so it has to stop before the stage can go clear. */
+  animation: none;
+  opacity: 0;
+}
+
+/* The disc lands on screen with a little too much energy, then settles. */
+.boot-orb {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  opacity: 0;
+  transform: scale(.7);
+  transition: opacity .34s ease, transform .55s cubic-bezier(.2, 1.14, .38, 1);
+}
+
+.boot-splash.is-armed .boot-orb {
+  opacity: 1;
+  transform: none;
+}
+
+/* The half is the geometry: it only translates and scales onto its bar. */
+.boot-half {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  transform-origin: 0 0;
+  /* The box itself morphs to the bar, so its radius is never scaled
+     non-uniformly: the rounded ends stay true circles all the way. */
+  transition:
+    transform .82s cubic-bezier(.4, 0, .16, 1),
+    width .82s cubic-bezier(.4, 0, .16, 1),
+    height .82s cubic-bezier(.4, 0, .16, 1),
+    border-radius .42s ease,
+    opacity .24s ease;
+}
+
+.boot-half-left {
+  border-radius: 60px 0 0 60px;
+}
+
+.boot-half-right {
+  left: 50%;
+  border-radius: 0 60px 60px 0;
+}
+
+/* The blob is the skin: it can squash, stretch and wobble without moving the
+   half's outline, so the landing stays exact. */
+.boot-blob {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  /* The bar's own surface: --panel at the same alpha, with its hairline ring.
+     The opaque value first is the fallback for webviews without color-mix. */
+  background-color: var(--panel);
+  background-color: color-mix(in srgb, var(--panel) 66%, transparent);
+  box-shadow:
+    0 10px 22px -14px rgba(0, 0, 0, .45),
+    inset 0 0 0 1px rgba(255, 255, 255, .05);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* Alive while it waits: a slow jelly breath. */
+.boot-splash.is-armed:not(.is-splitting) .boot-blob {
+  animation: boot-breathe 2.2s ease-in-out infinite;
+}
+
+/* In the air the halves are full pills and they go gooey. */
+.boot-splash.is-flying .boot-half {
+  border-radius: 999px;
+}
+
+.boot-splash.is-flying .boot-blob {
+  animation: boot-goo .82s cubic-bezier(.4, 0, .16, 1) both;
+  box-shadow:
+    0 16px 30px -18px rgba(0, 0, 0, .5),
+    inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+
+/* Landed: one last flatten as the real bars fade in beneath. */
+.boot-splash.is-landing .boot-blob {
+  animation: boot-splat .3s cubic-bezier(.3, 1.3, .5, 1) both;
+}
+
+.boot-splash.is-landing .boot-half {
+  opacity: 0;
+  transition-delay: .04s;
+}
+
+/* The dashboard's own entrance: the tiles rise in, one behind the next. */
+html.boot-reveal .dash-head > *,
+html.boot-reveal #dash-grid > .widget {
+  animation: boot-tile .58s cubic-bezier(.2, .9, .25, 1.02) backwards;
+}
+
+html.boot-reveal .dash-head > *:nth-child(2) {
+  animation-delay: .04s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(2) {
+  animation-delay: .05s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(3) {
+  animation-delay: .1s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(4) {
+  animation-delay: .15s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(5) {
+  animation-delay: .2s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(6) {
+  animation-delay: .25s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(7) {
+  animation-delay: .3s;
+}
+
+html.boot-reveal #dash-grid > .widget:nth-child(n + 8) {
+  animation-delay: .34s;
+}
+
+@keyframes boot-bloom {
+  0%,
+  100% {
+    opacity: .75;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes boot-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+
+  50% {
+    transform: scale(1.022, .984);
+  }
+}
+
+/* The whole trip as one deformation: stretch, lag, over-correct, splat. */
+@keyframes boot-goo {
+  0% {
+    transform: scale(1.01, .995);
+  }
+
+  26% {
+    transform: scale(1.07, .94);
+  }
+
+  52% {
+    transform: scale(.972, 1.028);
+  }
+
+  76% {
+    transform: scale(1.03, .975);
+  }
+
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes boot-splat {
+  0% {
+    transform: scale(1.07, .94);
+  }
+
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes boot-tile {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(.96);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A language change reloads the page in silence: no cover at all. */
+html[data-quiet-boot="on"] .boot-splash {
+  display: none;
+}
+
+/* Snappy and the system's reduced-motion setting both mean: no flight. */
+html[data-motion="snappy"] .boot-orb,
+html[data-motion="snappy"] .boot-half,
+html[data-motion="snappy"] .boot-blob,
+html[data-motion="snappy"] .boot-splash,
+html[data-motion="snappy"] #dash-grid > .widget,
+html[data-motion="snappy"] .dash-head > * {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-orb,
+  .boot-half,
+  .boot-blob,
+  .boot-splash,
+  #chrome,
+  #app,
+  #dash-grid > .widget,
+  .dash-head > * {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .boot-orb {
+    width: 104px;
+    height: 104px;
+  }
+
+  .boot-half-left {
+    border-radius: 52px 0 0 52px;
+  }
+
+  .boot-half-right {
+    border-radius: 0 52px 52px 0;
   }
 }

@@ -44,9 +44,22 @@ html[data-m3="on"] body > .overlay {
   z-index: 205;
 }
 
-html[data-m3="on"] body > .toast {
+html[data-m3="on"] body > .toast-stack {
   position: fixed;
   z-index: 250;
+}
+
+/* The startup splash is another fixed layer, not a row in the page. */
+html[data-m3="on"] body > .boot-splash {
+  position: fixed;
+  z-index: 400;
+}
+
+/* The streak celebration covers the window the same way: in the page flow it
+   dropped to the bottom of the page instead of over it. */
+html[data-m3="on"] body > .streak-cue {
+  position: fixed;
+  z-index: 320;
 }
 
 /* Same reason: the timetable tooltip is placed in viewport coordinates. In the
@@ -280,13 +293,8 @@ html[data-m3="on"] #tabs {
   min-width: 0;
 }
 
-/* The idle clock hides the chrome; the rail is the app's navigation now, so it
-   stays put even when everything else steps aside. */
-html[data-m3="on"] body.is-idle #tabs {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
+/* The idle clock fades the whole header, and the navigation lives in it now:
+   both pills step aside with the rest and come back on the next input. */
 
 html[data-m3="on"] .tab {
   position: relative;
@@ -948,7 +956,8 @@ html[data-m3="on"] .hero-chip {
 }
 
 html[data-m3="on"] .hero-chip.live {
-  color: var(--accent-text);
+  background: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -1967,8 +1976,10 @@ html[data-m3="on"] .toast {
   border: 0;
   border-radius: var(--r-full);
   padding: 12px 20px;
-  background: color-mix(in srgb, var(--inverse-surface) 92%, transparent);
-  color: var(--inverse-on-surface);
+  /* The card belongs to the theme it sits on: the raised surface of this
+     palette, not the inverse pair that read as a light pill on a dark app. */
+  background: color-mix(in srgb, var(--surface-container-high) 94%, transparent);
+  color: var(--on-surface);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 34px -20px rgba(20, 10, 4, 0.6);

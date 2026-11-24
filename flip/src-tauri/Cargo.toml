@@ -1,6 +1,6 @@
 [package]
 name = "flip"
-version = "1.3.4"
+version = "1.3.5"
 edition = "2021"
 
 [lib]
@@ -16,6 +16,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = "0.4"
 discord-rich-presence = "1"
+
+# Windows only: one WebView2 call asks the runtime for its low-memory target.
+[target.'cfg(target_os = "windows")'.dependencies]
+webview2-com = "0.39"
+# The COM interface cast used above lives on this trait.
+windows-core = "0.62"
 
 # Android only: one JNI call asks the activity for landscape or portrait.
 [target.'cfg(target_os = "android")'.dependencies]

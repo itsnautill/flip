@@ -162,6 +162,33 @@ fn migrate_backups(sources: &[PathBuf], data: &Path) {
     }
 }
 
+/// Most of Flip's memory belongs to WebView2's own processes, not to the page.
+/// The low-memory target is the runtime's own knob for handing idle caches
+/// back, and it costs nothing on a phone (there is no WebView2 there).
+#[cfg(windows)]
+fn trim_webview_memory(window: &tauri::WebviewWindow) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
+    };
+    use windows_core::Interface;
+
+    let trimmed = window.with_webview(|webview| {
+        // SAFETY: both calls go through the live controller of this window's
+        // webview, and an older runtime simply fails the cast.
+        unsafe {
+            let Ok(core) = webview.controller().CoreWebView2() else {
+                return;
+            };
+            if let Ok(newer) = core.cast::<ICoreWebView2_19>() {
+                let _ = newer.SetMemoryUsageTargetLevel(COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW);
+            }
+        }
+    });
+    if let Err(e) = trimmed {
+        eprintln!("flip: could not reach the webview to lower its memory target: {e}");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -204,6 +231,11 @@ pub fn run() {
             #[cfg(not(desktop))]
             let _ = saved_zoom;
 
+            #[cfg(windows)]
+            if let Some(window) = app.get_webview_window("main") {
+                trim_webview_memory(&window);
+            }
+
             /* Only the pin survives a restart: the window always opens at the
             small default size in the middle of the screen. */
             #[cfg(desktop)]
@@ -237,6 +269,10 @@ pub fn run() {
             commands::set_accent_hue,
             commands::set_language,
             commands::set_sound,
+            commands::set_sound_volume,
+            commands::set_sound_cue,
+            commands::set_all_sound_cues,
+            commands::set_streak_effects,
             commands::set_onboarded,
             commands::set_motion,
             commands::set_telemetry,
@@ -256,6 +292,7 @@ pub fn run() {
             commands::start_focus,
             commands::cancel_focus,
             commands::set_dashboard,
+            commands::set_timer_focus,
             commands::make_backup,
             commands::list_backups,
             commands::delete_backup,

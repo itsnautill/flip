@@ -970,9 +970,22 @@
     var view = document.getElementById("tasks");
     if (!board || !view) return;
 
+    /* Below 520px the board is one column per row, so today is simply further
+       down the list and "in view" means the bottom of the page: opening the tab
+       dropped the user at the end of the week. A stacked board starts at the
+       top like any other list. */
+    function stacked() {
+      var style = window.getComputedStyle(board);
+      return style.display === "grid" && style.gridTemplateColumns.split(" ").length < 2;
+    }
+
     function focus() {
       var column = board.querySelector(".day-col.today");
       if (!column || board.hidden) return;
+      if (stacked()) {
+        view.scrollTop = 0;
+        return;
+      }
       var head = column.querySelector(".day-head") || column;
       var viewBox = view.getBoundingClientRect();
       var headBox = head.getBoundingClientRect();

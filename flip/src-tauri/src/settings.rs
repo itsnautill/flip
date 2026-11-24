@@ -27,6 +27,32 @@ pub const PALETTES: [&str; 5] = ["blossom", "paper", "mint", "slate", "midnight"
 /// "snappy" removes animation entirely for people who find it distracting.
 pub const MOTIONS: [&str; 4] = ["extra", "normal", "fast", "snappy"];
 
+/// Every interface sound, in the order the Sounds page lists them. A cue id
+/// here is the same one the frontend uses in its sound table.
+pub const SOUND_CUES: [&str; 17] = [
+    "chime",
+    "complete",
+    "uncheck",
+    "start",
+    "pause",
+    "reset",
+    "tab",
+    "dialog",
+    "dismiss",
+    "confirm",
+    "remove",
+    "open",
+    "syncStart",
+    "syncTick",
+    "syncLink",
+    "syncDone",
+    "syncFail",
+];
+
+/// How a growing study streak is celebrated: the full cutscene, a toast, or
+/// nothing at all.
+pub const STREAK_EFFECTS: [&str; 3] = ["full", "notification", "none"];
+
 /// Interface zoom, in percent. The window buttons step by ten.
 pub const MIN_ZOOM: u32 = 80;
 pub const MAX_ZOOM: u32 = 160;
@@ -97,10 +123,16 @@ pub struct Settings {
     pub language: String,
     /// Play the small interface sounds.
     pub sound: bool,
+    /// Master volume for every interface sound, 0-100.
+    pub sound_volume: u32,
+    /// Cue ids the user switched off. Empty means every sound plays.
+    pub sound_muted: Vec<String>,
     /// False until the first-run setup has been finished or skipped.
     pub onboarded: bool,
     /// One of `MOTIONS`: how lively the interface feels.
     pub motion: String,
+    /// One of `STREAK_EFFECTS`: what happens when the study streak grows.
+    pub streak_effects: String,
     /// Interface zoom in percent; 100 is normal.
     pub zoom: u32,
     /// The soft accent gradient behind the app, on by default.
@@ -124,6 +156,10 @@ pub struct Settings {
     pub accent: String,
     /// Length of a focus session, in seconds.
     pub focus_secs: u32,
+    /// Count every finished countdown in the study log, as if it were a focus
+    /// session. On by default; the Set timer dialog can turn it off.
+    #[serde(default = "default_true")]
+    pub timer_focus: bool,
     pub dashboard: Dashboard,
     /// This install's own id, stamped on every board change so a sync can tell
     /// which copy is the newer one.
@@ -137,6 +173,12 @@ pub struct Settings {
     pub sync_auto: bool,
 }
 
+/// A setting that arrived after the first release is on unless the file says
+/// otherwise, so an older settings file keeps the new default.
+fn default_true() -> bool {
+    true
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -147,8 +189,11 @@ impl Default for Settings {
             palette: String::new(),
             language: "en".into(),
             sound: true,
+            sound_volume: 100,
+            sound_muted: Vec::new(),
             onboarded: false,
             motion: "normal".into(),
+            streak_effects: "full".into(),
             zoom: 100,
             wash: true,
             discord: true,
@@ -158,6 +203,7 @@ impl Default for Settings {
             accent_hue: Some(DEFAULT_ACCENT_HUE),
             accent: String::new(),
             focus_secs: DEFAULT_FOCUS_SECS,
+            timer_focus: true,
             dashboard: Dashboard::default(),
             device_id: String::new(),
             sync_code: String::new(),
@@ -197,6 +243,15 @@ fn palette_base(value: &str) -> Option<&'static str> {
         "midnight" => Some("dark"),
         _ => None,
     }
+}
+
+pub fn normalise_streak_effects(value: &str) -> String {
+    match value.trim() {
+        "notification" => "notification",
+        "none" => "none",
+        _ => "full",
+    }
+    .to_string()
 }
 
 pub fn normalise_motion(value: &str) -> String {
@@ -301,6 +356,13 @@ pub fn normalise(mut settings: Settings) -> Settings {
     settings.theme = normalise_theme(&settings.theme);
     settings.palette = normalise_palette(&settings.palette);
     settings.motion = normalise_motion(&settings.motion);
+    settings.streak_effects = normalise_streak_effects(&settings.streak_effects);
+    settings.sound_volume = settings.sound_volume.min(100);
+    settings
+        .sound_muted
+        .retain(|id| SOUND_CUES.contains(&id.as_str()));
+    settings.sound_muted.sort();
+    settings.sound_muted.dedup();
     settings.zoom = settings.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
     if settings.language != "vi" {
         settings.language = "en".into();
@@ -373,6 +435,26 @@ pub fn save(path: &Path, settings: &Settings) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sound_and_streak_preferences_are_kept_sane() {
+        assert_eq!(normalise_streak_effects("wobble"), "full");
+        assert_eq!(normalise_streak_effects(" notification "), "notification");
+        assert_eq!(STREAK_EFFECTS.len(), 3);
+
+        let settings = normalise(Settings {
+            sound_volume: 240,
+            sound_muted: vec!["bogus".into(), "tab".into(), "tab".into()],
+            streak_effects: "none".into(),
+            ..Settings::default()
+        });
+        assert_eq!(settings.sound_volume, 100);
+        assert_eq!(settings.sound_muted, vec!["tab".to_string()]);
+        assert_eq!(settings.streak_effects, "none");
+        assert_eq!(Settings::default().streak_effects, "full");
+        assert_eq!(Settings::default().sound_volume, 100);
+        assert!(Settings::default().sound_muted.is_empty());
+    }
 
     #[test]
     fn accent_hues_stay_on_the_wheel() {

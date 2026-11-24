@@ -15,7 +15,6 @@
      not a Back press, but it reaches the tab handler all the same; these count
      the pops the app should ignore. */
   var selfBacks = 0;
-  var toastTimer = 0;
 
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -171,35 +170,71 @@
 
   /* ------------------------------------------------------------------- toast */
 
-  var toastLeft = 0;
-  var toastStartedAt = 0;
+  /* Toasts stack: the newest keeps the normal spot at the top of the window and
+     the ones already there step down, each a little fainter than the one above
+     it. Depth is written on the node and the stylesheet does the fading. */
+  var TOAST_DEPTH = 4;
+  var toastStack = [];
 
-  function hideToast() {
-    var node = $("toast");
-    if (!node) return;
-    clearTimeout(toastTimer);
-    node.hidden = true;
-    node.onmouseenter = null;
-    node.onmouseleave = null;
-    clear(node);
+  function toastRoot() {
+    return document.getElementById("toast-stack");
   }
 
-  function armHide(ms) {
-    clearTimeout(toastTimer);
-    toastStartedAt = window.performance.now();
-    toastLeft = ms;
-    toastTimer = setTimeout(hideToast, ms);
+  function paintToasts() {
+    toastStack.forEach(function (entry, index) {
+      entry.node.setAttribute("data-depth", String(Math.min(index, TOAST_DEPTH - 1)));
+    });
+  }
+
+  function dropToast(entry, instant) {
+    var at = toastStack.indexOf(entry);
+    if (at >= 0) toastStack.splice(at, 1);
+    clearTimeout(entry.timer);
+    entry.timer = 0;
+    var node = entry.node;
+    function remove() {
+      if (node.parentNode) node.parentNode.removeChild(node);
+      paintToasts();
+    }
+    if (instant) {
+      remove();
+      return;
+    }
+    node.classList.add("is-leaving");
+    setTimeout(remove, 200);
+  }
+
+  /* Every card goes at once: a toast whose own action was taken describes
+     something that no longer applies, so the whole stack is stale. */
+  function hideToast() {
+    toastStack.slice().forEach(function (entry) {
+      dropToast(entry, true);
+    });
+  }
+
+  function armToast(entry, ms) {
+    clearTimeout(entry.timer);
+    entry.left = Math.max(0, ms);
+    entry.startedAt = window.performance.now();
+    entry.timer = setTimeout(function () {
+      dropToast(entry);
+    }, entry.left);
   }
 
   function toast(message, options) {
-    var node = $("toast");
-    if (!node) return;
+    var root = toastRoot();
+    if (!root) return;
     /* Both shapes are used in the app: `toast(text, options)` and the shorter
        `toast(text, "Undo", fn)` for an edit that can be taken back. */
     var opts = typeof options === "string"
       ? { actionLabel: options, onAction: arguments[2] }
       : options || {};
-    clear(node);
+    /* A toast is Flip's notification, so it speaks with the Deleted cue. When a
+       cue has just answered the same moment (a dialog saving, a sync finishing)
+       the toast stays quiet instead of talking over it. */
+    if (!opts.silent && window.performance.now() - lastCueAt > 450) cue("remove");
+
+    var node = el("div", "toast");
     node.appendChild(el("span", "toast-text", message));
     if (opts.actionLabel) {
       var button = el("button", "btn small", opts.actionLabel);
@@ -211,25 +246,35 @@
       node.appendChild(button);
     }
 
+    var duration = opts.duration || (opts.actionLabel ? 6500 : 3200);
     var bar = el("div", "toast-progress");
     var fill = el("i");
+    fill.style.setProperty("--toast-ms", duration + "ms");
     bar.appendChild(fill);
     node.appendChild(bar);
 
-    var duration = opts.duration || (opts.actionLabel ? 6500 : 3200);
-    fill.style.setProperty("--toast-ms", duration + "ms");
+    var entry = { node: node, timer: 0, left: duration, startedAt: 0 };
 
-    node.hidden = false;
-    armHide(duration);
     /* Hovering pauses both the bar and the timer, so a long message can be
        read without it disappearing. */
     node.onmouseenter = function () {
-      clearTimeout(toastTimer);
-      toastLeft = Math.max(0, toastLeft - (window.performance.now() - toastStartedAt));
+      clearTimeout(entry.timer);
+      entry.timer = 0;
+      entry.left = Math.max(0, entry.left - (window.performance.now() - entry.startedAt));
     };
     node.onmouseleave = function () {
-      armHide(toastLeft);
+      if (!entry.timer) armToast(entry, entry.left);
     };
+
+    toastStack.unshift(entry);
+    root.insertBefore(node, root.firstChild);
+    paintToasts();
+    armToast(entry, duration);
+
+    /* Only the newest few stay; one that drops past the last leaves quietly. */
+    while (toastStack.length > TOAST_DEPTH) {
+      dropToast(toastStack[toastStack.length - 1], true);
+    }
   }
 
   /* ------------------------------------------------------------------ modals */
@@ -238,13 +283,30 @@
     return Boolean(closeCurrentModal) || Boolean(closeCurrentMenu);
   }
 
+  /* Every dialog speaks in the same quiet voice: one soft note as it appears,
+     a two-note answer when it saves, a lower pair when it is dismissed. */
+  var lastCueAt = 0;
+
+  function cue(name) {
+    lastCueAt = window.performance.now();
+    if (window.FlipSound) window.FlipSound.play(name);
+  }
+
+  /* The app's own cues go through FlipSound, so it reports them here: a toast
+     that follows any sound must not answer it with the notification cue. */
+  function noteCue() {
+    lastCueAt = window.performance.now();
+  }
+
   function closeModal() {
     if (closeCurrentModal) closeCurrentModal();
   }
 
   /**
-   * opts: { title, body, saveLabel, onSave, onDelete, onClose, hideCancel }
+   * opts: { title, body, saveLabel, onSave, onDelete, onClose, hideCancel,
+   *         hideClose, saveCue }
    * onSave may return a string (shown as an error) or a promise of one.
+   * saveCue is the sound a save plays when it is really a dismissal.
    */
   function modal(opts) {
     closeModal();
@@ -264,8 +326,13 @@
 
     var head = el("div", "modal-head");
     head.appendChild(el("h2", "", opts.title));
-    var closeButton = icon("Close", "×");
-    head.appendChild(closeButton);
+    /* A dialog with nothing but a footer action does not need a second way out
+       in its corner: Settings saves and closes with one button. */
+    var closeButton = null;
+    if (!opts.hideClose) {
+      closeButton = icon("Close", "×");
+      head.appendChild(closeButton);
+    }
 
     var form = document.createElement("form");
     form.className = "modal-body";
@@ -282,10 +349,15 @@
       var removeButton = el("button", "btn small danger spacer", opts.deleteLabel || "Delete");
       removeButton.type = "button";
       removeButton.addEventListener("click", function () {
-        if (opts.onDelete()) close();
+        if (!opts.onDelete()) return;
+        didDelete = true;
+        close();
       });
       foot.appendChild(removeButton);
     }
+    /* Something that belongs at the far left of the footer, like a checkbox
+       that changes what saving the dialog will do. */
+    if (opts.footExtra) foot.appendChild(opts.footExtra);
     var cancel = el("button", "btn small", "Cancel");
     cancel.type = "button";
     var save = el("button", "btn primary", opts.saveLabel || "Save");
@@ -300,8 +372,14 @@
     panel.appendChild(foot);
     overlay.appendChild(panel);
     root.appendChild(overlay);
+    /* A dialog the app reopens on its own (Settings after a language change) is
+       not a user action, so it does not announce itself. */
+    if (!opts.silent) cue("dialog");
 
     var previousFocus = document.activeElement;
+    /* What closed the dialog decides its sound: saving, deleting or leaving. */
+    var didSave = false;
+    var didDelete = false;
 
     /* Android's back button is the webview's back: one history entry per
        dialog means back closes the dialog instead of leaving the app. */
@@ -327,6 +405,7 @@
     function close(fromHistory) {
       if (closeCurrentModal !== close) return;
       closeCurrentModal = null;
+      cue(didSave ? opts.saveCue || "confirm" : didDelete ? "remove" : "dismiss");
       document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("popstate", onPop);
       if (pushed && !fromHistory) {
@@ -401,10 +480,11 @@
         error.hidden = false;
         return;
       }
+      didSave = true;
       close();
     });
 
-    closeButton.addEventListener("click", close);
+    if (closeButton) closeButton.addEventListener("click", close);
     cancel.addEventListener("click", close);
     overlay.addEventListener("mousedown", function (event) {
       if (event.target === overlay) close();
@@ -752,6 +832,7 @@
     weekLabel: weekLabel,
     toast: toast,
     hideToast: hideToast,
+    noteCue: noteCue,
     modal: modal,
     menu: menu,
     closeModal: closeModal,

@@ -32,10 +32,16 @@ pub struct Snapshot {
     pub language: String,
     /// Whether interface sounds are on.
     pub sound: bool,
+    /// Master volume for every interface sound, 0-100.
+    pub sound_volume: u32,
+    /// Cue ids the user switched off.
+    pub sound_muted: Vec<String>,
     /// False only before the first-run setup has been dealt with.
     pub onboarded: bool,
     /// One of the animation modes; "snappy" means none.
     pub motion: String,
+    /// "full", "notification" or "none".
+    pub streak_effects: String,
     /// Bigger targets and spacing for touch screens.
     pub touch: bool,
     /// Interface zoom in percent; the window applies it.
@@ -57,6 +63,8 @@ pub struct Snapshot {
     pub can_redo: bool,
     /// Length of one focus session, in seconds.
     pub focus_secs: u32,
+    /// True when a plain countdown is logged as study time too.
+    pub timer_focus: bool,
     /// Widget order and visibility for the dashboard.
     pub dashboard: Dashboard,
     /// True while the running countdown is a focus session.
@@ -157,8 +165,11 @@ impl Core {
             palette: self.settings.palette.clone(),
             language: self.settings.language.clone(),
             sound: self.settings.sound,
+            sound_volume: self.settings.sound_volume,
+            sound_muted: self.settings.sound_muted.clone(),
             onboarded: self.settings.onboarded,
             motion: self.settings.motion.clone(),
+            streak_effects: self.settings.streak_effects.clone(),
             touch: self.settings.touch,
             zoom: self.settings.zoom,
             wash: self.settings.wash,
@@ -172,6 +183,7 @@ impl Core {
             can_undo: !self.undo_stack.is_empty(),
             can_redo: !self.redo_stack.is_empty(),
             focus_secs: self.settings.focus_secs,
+            timer_focus: self.settings.timer_focus,
             dashboard: self.settings.dashboard.clone(),
             focus_active: self.focus_target.is_some(),
         }

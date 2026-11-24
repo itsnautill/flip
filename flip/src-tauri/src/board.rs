@@ -102,12 +102,17 @@ pub struct Session {
     pub date: String,
 }
 
+/// How much focused time a day needs before it can join the streak. Short
+/// timers still show up as study time, they just do not keep the run alive.
+pub const STREAK_MIN_SECS: u32 = 10 * 60;
+
 /// Study time for the dashboard, derived from the session log.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FocusView {
     pub today_secs: u32,
     pub week_secs: u32,
+    /// Consecutive days that each hold at least `STREAK_MIN_SECS`.
     pub streak: u32,
     pub sessions_today: u32,
 }
@@ -391,13 +396,14 @@ impl Board {
         let mut today_secs: u32 = 0;
         let mut week_secs: u32 = 0;
         let mut sessions_today: u32 = 0;
-        let mut studied: HashSet<NaiveDate> = HashSet::new();
+        let mut studied: HashMap<NaiveDate, u32> = HashMap::new();
         for session in &self.sessions {
             week_secs = week_secs.saturating_add(session.secs);
             let Some(date) = parse_date(&session.date) else {
                 continue;
             };
-            studied.insert(date);
+            let day_secs = studied.entry(date).or_insert(0);
+            *day_secs = day_secs.saturating_add(session.secs);
             if session.date == today_text {
                 today_secs = today_secs.saturating_add(session.secs);
                 sessions_today += 1;
@@ -406,14 +412,21 @@ impl Board {
                 week_secs = week_secs.saturating_sub(session.secs);
             }
         }
+        /* A day joins the streak only once it holds a real study session, so a
+           one-second timer cannot keep the run going. */
+        let counts = |day: NaiveDate| {
+            studied
+                .get(&day)
+                .map_or(false, |secs| *secs >= STREAK_MIN_SECS)
+        };
         // A streak survives until the end of today, so yesterday still counts.
         let mut streak = 0;
-        let mut cursor = if studied.contains(&today) {
+        let mut cursor = if counts(today) {
             today
         } else {
             today - Duration::days(1)
         };
-        while studied.contains(&cursor) {
+        while counts(cursor) {
             streak += 1;
             cursor -= Duration::days(1);
         }
@@ -2167,6 +2180,26 @@ mod tests {
 
     fn date(text: &str) -> NaiveDate {
         NaiveDate::parse_from_str(text, "%Y-%m-%d").expect("test date")
+    }
+
+    #[test]
+    fn a_streak_day_needs_ten_minutes_of_focus() {
+        let today = date("2026-11-09");
+        let mut board = Board::default();
+
+        /* A timer stopped after a couple of seconds, plus a short run, still
+           add up to less than a session: no streak, but the study time stays. */
+        board.add_session(None, None, 1, "2026-11-09");
+        board.add_session(None, None, 300, "2026-11-09");
+        let short = board.focus_view(today);
+        assert_eq!(short.streak, 0);
+        assert_eq!(short.today_secs, 301);
+
+        // Ten minutes today, reached in two goes, on top of ten yesterday.
+        board.add_session(None, None, 599, "2026-11-09");
+        board.add_session(None, None, 300, "2026-11-08");
+        board.add_session(None, None, 300, "2026-11-08");
+        assert_eq!(board.focus_view(today).streak, 2);
     }
 
     fn period(id: &str, label: &str, start: &str, end: &str, is_break: bool) -> Period {

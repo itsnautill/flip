@@ -31,14 +31,20 @@ pub fn spawn(app: AppHandle) {
                 let now = Instant::now();
                 let finished = core.tick(now);
 
-                /* A finished focus session is logged once, then forgotten, so a
-                plain timer run never shows up in the study history. */
+                /* A finished focus session is logged once, then forgotten. A
+                plain countdown is logged too unless the user unticked that in
+                the Set timer dialog, so every run of the timer can count. */
                 if finished {
-                    if let Some(target) = core.focus_target.take() {
+                    let focus = core.focus_target.take();
+                    let counts = focus.is_some() || core.settings.timer_focus;
+                    if counts {
+                        let (task_id, subject_id) = match focus {
+                            Some(target) => (target.task_id, target.subject_id),
+                            None => (None, None),
+                        };
                         let secs = core.timer.preset_secs();
                         let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
-                        core.board
-                            .add_session(target.task_id, target.subject_id, secs, &today);
+                        core.board.add_session(task_id, subject_id, secs, &today);
                         saved_board = Some((core.board_path.clone(), core.board.clone()));
                         focus_done = Some(secs);
                     }

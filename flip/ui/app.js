@@ -444,10 +444,28 @@
     });
     sync();
 
+    /* A finished countdown goes into the study log too; this is the switch for
+       it, remembered in settings so the next timer is set the same way. */
+    var focusRow = Board.el("label", "check foot-check");
+    var focusBox = document.createElement("input");
+    focusBox.type = "checkbox";
+    focusBox.checked = !lastSnapshot || lastSnapshot.timerFocus !== false;
+    focusBox.addEventListener("change", function () {
+      invoke("set_timer_focus", { enabled: focusBox.checked })
+        .then(render)
+        .catch(function (err) {
+          focusBox.checked = !focusBox.checked;
+          return String(err && err.message ? err.message : err);
+        });
+    });
+    focusRow.appendChild(focusBox);
+    focusRow.appendChild(Board.el("span", "", "Count as focus session"));
+
     Board.modal({
       title: "Set timer",
       body: body,
       saveLabel: "Set timer",
+      footExtra: focusRow,
       onSave: function () {
         var secs = currentSecs();
         if (secs <= 0) return "Choose a duration of at least one second.";
@@ -463,6 +481,27 @@
   /* ---------------------------------------------------------------- settings */
 
   var pendingAccent = null;
+
+  /* Every cue the app can make, with the label the Sounds page shows. */
+  var CUES = [
+    ["chime", "Timer finished"],
+    ["complete", "Task completed"],
+    ["uncheck", "Task reopened"],
+    ["start", "Timer starts"],
+    ["pause", "Timer pauses"],
+    ["reset", "Timer reset"],
+    ["tab", "Switch sections"],
+    ["dialog", "Dialog opens"],
+    ["dismiss", "Dialog dismissed"],
+    ["confirm", "Saved"],
+    ["remove", "Deleted"],
+    ["open", "App opens"],
+    ["syncStart", "Sync starts"],
+    ["syncTick", "Sync step"],
+    ["syncLink", "Device connected"],
+    ["syncDone", "Sync finishes"],
+    ["syncFail", "Sync fails"],
+  ];
 
   /* The open sync panel, if there is one, so a sync that happens on its own
      can paint into it and be heard without anything being pressed. */
@@ -555,6 +594,17 @@
      re-rendered it, so the page reloads instead: an overlay covers the swap and
      Settings reopens on the pane it was left on. */
   var LANG_REOPEN_KEY = "flip.reopenSettings";
+  /* The reload that follows a language change is the app rebuilding itself, not
+     a launch: it arrives without the opening cue and without a dialog sound. */
+  var QUIET_BOOT_KEY = "flip.quietBoot";
+
+  var quietBoot = false;
+  try {
+    quietBoot = window.sessionStorage.getItem(QUIET_BOOT_KEY) === "1";
+    if (quietBoot) window.sessionStorage.removeItem(QUIET_BOOT_KEY);
+  } catch (_) {
+    /* private mode: every boot is a normal one */
+  }
 
   function languageOverlay() {
     var root = document.getElementById("modal-root");
@@ -588,10 +638,10 @@
       /* private mode: nothing was stored, nothing to reopen */
       return;
     }
-    if (pane) openSettings(pane);
+    if (pane) openSettings(pane, quietBoot);
   }
 
-  function openSettings(startPane) {
+  function openSettings(startPane, silent) {
     var snap = lastSnapshot || {};
     var current = String(snap.accent || "#B4622D").toUpperCase();
     var isTwelve = Boolean(snap.clock && snap.clock.is12h);
@@ -600,6 +650,7 @@
       window.FlipThemes && window.FlipThemes.modeKnown(snap.theme) ? String(snap.theme) : "light";
     var palette = String(snap.palette || "");
     var motion = String(snap.motion || "normal");
+    var streakChoice = String(snap.streakEffects || "full");
 
     var body = Board.el("div", "settings");
     var nav = Board.el("nav", "settings-nav");
@@ -616,11 +667,13 @@
     var panes = {
       general: Board.el("div", "settings-pane"),
       appearance: Board.el("div", "settings-pane"),
+      sounds: Board.el("div", "settings-pane"),
       privacy: Board.el("div", "settings-pane"),
       data: Board.el("div", "settings-pane"),
       about: Board.el("div", "settings-pane"),
     };
     var appearancePane = panes.appearance;
+    var soundsPane = panes.sounds;
     var generalPane = panes.general;
     var privacyPane = panes.privacy;
     var dataPane = panes.data;
@@ -634,6 +687,7 @@
     [
       ["general", "General"],
       ["appearance", "Appearance"],
+      ["sounds", "Sounds"],
       ["privacy", "Privacy"],
       ["data", "Data"],
       ["about", "About"],
@@ -895,6 +949,159 @@
       )
     );
 
+    /* ---- sounds ---- */
+
+    soundsPane.appendChild(Board.el("h3", "", "Volume"));
+
+    var volumeRow = Board.el("div", "setting-row column");
+    var volumeHead = Board.el("div", "setting-row");
+    var volumeText = Board.el("div", "setting-text");
+    volumeText.appendChild(Board.el("div", "setting-title", "Master volume"));
+    volumeText.appendChild(
+      Board.el("p", "sub", "Every interface sound plays at this level.")
+    );
+    volumeHead.appendChild(volumeText);
+    var volumeValue = Board.el("span", "volume-value", Math.round(soundVolume) + "%");
+    volumeHead.appendChild(volumeValue);
+    volumeRow.appendChild(volumeHead);
+
+    var volumeInput = document.createElement("input");
+    volumeInput.type = "range";
+    volumeInput.className = "volume-range";
+    volumeInput.min = "0";
+    volumeInput.max = "100";
+    volumeInput.step = "5";
+    volumeInput.value = String(Math.round(soundVolume));
+    volumeInput.setAttribute("aria-label", "Master volume");
+
+    function paintVolume() {
+      var pct = Math.round(Number(volumeInput.value));
+      volumeValue.textContent = pct + "%";
+      volumeInput.style.setProperty("--vol", pct + "%");
+      volumeInput.setAttribute("aria-valuetext", pct + "%");
+    }
+    paintVolume();
+
+    /* The drag is heard at once; only the released value reaches the disk. */
+    volumeInput.addEventListener("input", function () {
+      soundVolume = Number(volumeInput.value) || 0;
+      paintVolume();
+      applyVolume();
+    });
+    volumeInput.addEventListener("change", function () {
+      invoke("set_sound_volume", { volume: Math.round(Number(volumeInput.value)) })
+        .then(render)
+        .catch(function (err) {
+          console.error("flip: set_sound_volume failed", err);
+        });
+    });
+    volumeRow.appendChild(volumeInput);
+    soundsPane.appendChild(volumeRow);
+
+    soundsPane.appendChild(
+      settingRow(
+        "Sound effects",
+        switchControl("Sound effects", snap.sound !== false, function (on) {
+          paintSoundsEnabled(on);
+          soundOn = on;
+          invoke("set_sound", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_sound failed", err);
+            });
+        }),
+        "The master switch for every sound below."
+      )
+    );
+
+    var belowMaster = Board.el("div", "sounds-below");
+
+    var cueHead = Board.el("div", "cue-head");
+    cueHead.appendChild(Board.el("h3", "", "Effects"));
+    var cueActions = Board.el("div", "cue-actions");
+    var selectAll = Board.el("button", "btn small", "Select all");
+    var deselectAll = Board.el("button", "btn small", "Deselect all");
+    selectAll.type = "button";
+    deselectAll.type = "button";
+    cueActions.appendChild(selectAll);
+    cueActions.appendChild(deselectAll);
+    cueHead.appendChild(cueActions);
+    belowMaster.appendChild(cueHead);
+
+    var cueGrid = Board.el("div", "cue-grid");
+    var cueSwitches = [];
+    CUES.forEach(function (entry) {
+      var cueName = entry[0];
+      var row = Board.el("div", "cue-row");
+      row.appendChild(Board.el("span", "cue-name", entry[1]));
+      var controls = Board.el("div", "cue-controls");
+      /* The switch only says whether a cue fires on its own; hearing one should
+         not depend on that, so the triangle plays it either way. */
+      var preview = Board.el("button", "cue-preview");
+      preview.type = "button";
+      preview.setAttribute("aria-label", "Preview sound");
+      preview.title = "Preview sound";
+      preview.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.4 1.8 10 6l-6.6 4.2z"/></svg>';
+      preview.addEventListener("click", function () {
+        ensureAudio();
+        playSound(cueName, true);
+      });
+      controls.appendChild(preview);
+      var button = switchControl(entry[1], !soundMuted[cueName], function (on) {
+        if (on) delete soundMuted[cueName];
+        else soundMuted[cueName] = true;
+        /* Turning one back on plays it, so the choice can be heard. */
+        if (on) {
+          ensureAudio();
+          playSound(cueName);
+        }
+        invoke("set_sound_cue", { name: cueName, enabled: on })
+          .then(render)
+          .catch(function (err) {
+            console.error("flip: set_sound_cue failed", err);
+          });
+      });
+      controls.appendChild(button);
+      row.appendChild(controls);
+      cueGrid.appendChild(row);
+      cueSwitches.push({ name: cueName, button: button, preview: preview });
+    });
+    belowMaster.appendChild(cueGrid);
+    soundsPane.appendChild(belowMaster);
+
+    function setEveryCue(enabled) {
+      cueSwitches.forEach(function (entry) {
+        entry.button.setAttribute("aria-checked", String(enabled));
+        if (enabled) delete soundMuted[entry.name];
+        else soundMuted[entry.name] = true;
+      });
+      invoke("set_all_sound_cues", { enabled: enabled })
+        .then(render)
+        .catch(function (err) {
+          console.error("flip: set_all_sound_cues failed", err);
+        });
+    }
+    selectAll.addEventListener("click", function () {
+      setEveryCue(true);
+    });
+    deselectAll.addEventListener("click", function () {
+      setEveryCue(false);
+    });
+
+    /* With the master switch off the cue list is inert and visibly greyed. */
+    function paintSoundsEnabled(on) {
+      belowMaster.classList.toggle("is-off", !on);
+      belowMaster.setAttribute("aria-disabled", String(!on));
+      selectAll.disabled = !on;
+      deselectAll.disabled = !on;
+      cueSwitches.forEach(function (entry) {
+        entry.button.disabled = !on;
+        entry.preview.disabled = !on;
+      });
+    }
+    paintSoundsEnabled(snap.sound !== false);
+
     /* ---- general ---- */
 
     generalPane.appendChild(
@@ -917,14 +1124,21 @@
 
     generalPane.appendChild(
       settingRow(
-        "Sound effects",
-        switchControl("Sound effects", snap.sound !== false, function (on) {
-          invoke("set_sound", { enabled: on })
-            .then(render)
-            .catch(function (err) {
-              console.error("flip: set_sound failed", err);
-            });
-        })
+        "Streak effects",
+        segControl(
+          "Streak effects",
+          [["full", "Full"], ["notification", "Notification"], ["none", "None"]],
+          streakChoice,
+          function (value) {
+            streakChoice = value;
+            invoke("set_streak_effects", { mode: value })
+              .then(render)
+              .catch(function (err) {
+                console.error("flip: set_streak_effects failed", err);
+              });
+          }
+        ),
+        "What plays when your study streak grows."
       )
     );
 
@@ -945,6 +1159,7 @@
               /* The page is about to rebuild itself, so the dialog is asked for
                  again on the other side of the reload. */
               window.sessionStorage.setItem(LANG_REOPEN_KEY, "general");
+              window.sessionStorage.setItem(QUIET_BOOT_KEY, "1");
             } catch (_) {
               /* private mode: the language still changes, the dialog just closes */
             }
@@ -956,6 +1171,7 @@
                 console.error("flip: set_language failed", err);
                 try {
                   window.sessionStorage.removeItem(LANG_REOPEN_KEY);
+                  window.sessionStorage.removeItem(QUIET_BOOT_KEY);
                 } catch (_) {
                   /* nothing to clean up */
                 }
@@ -1093,7 +1309,12 @@
       body: body,
       saveLabel: "Done",
       hideCancel: true,
+      /* Settings has one way out, the Done button, so that button speaks the
+         dismissal the corner × used to. */
+      hideClose: true,
+      saveCue: "dismiss",
       className: "modal-settings",
+      silent: silent === true,
       onSave: function () {
         commitAccent();
       },
@@ -1397,11 +1618,23 @@
       return info;
     }
 
+    /* The sync status event can land right after the sheet has already said it
+       is done, and the sheet speaks once for that moment. */
+    var lastDoneAt = 0;
+
+    function speakDone() {
+      var now = window.performance.now();
+      if (now - lastDoneAt < 1200) return;
+      lastDoneAt = now;
+      playSound("syncDone");
+    }
+
     function finish(result) {
       var changed = Boolean(result && result.changed);
       progressFill.style.width = "100%";
       setStage("done", t("All set"), syncLabel(result));
-      playSound(changed ? "syncDone" : "syncLink");
+      if (changed) speakDone();
+      else playSound("syncLink");
       if (changed) {
         window.Board.load().catch(function () {});
       }
@@ -1532,17 +1765,20 @@
         /* A background sync only speaks up when it actually moved something. */
         if (!result || !result.changed) return;
         window.Board.load().catch(function () {});
+        var spoke = false;
         if (stage === "done") {
           stageText.textContent = syncLabel(result);
-          playSound("syncDone");
+          spoke = true;
         }
         /* This device was showing its code and the other one just pulled. */
         if (current === 2) {
           sendLine.classList.remove("busy");
           sendLine.classList.add("ok");
           sendLineText.textContent = syncLabel(result);
-          playSound("syncDone");
+          spoke = true;
         }
+        /* One card, one sound: both branches above describe the same sync. */
+        if (spoke) speakDone();
       },
     };
 
@@ -1609,12 +1845,28 @@
 
   function render(snap) {
     if (!snap) return;
+    var wasTimer = lastSnapshot && lastSnapshot.timer ? lastSnapshot.timer.state : null;
     soundOn = snap.sound !== false;
+    soundVolume = typeof snap.soundVolume === "number" ? snap.soundVolume : 100;
+    soundMuted = {};
+    (snap.soundMuted || []).forEach(function (id) {
+      soundMuted[id] = true;
+    });
+    applyVolume();
+    streakMode = String(snap.streakEffects || "full");
     applyMotion(snap.motion);
     document.documentElement.setAttribute("data-wash", snap.wash === true ? "on" : "off");
 
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     lastSnapshot = snap;
+    /* Whatever started the countdown (button, Space, Enter), its state change
+       is the one place that knows it began or paused. A reset has its own cue
+       at the command, so it is left out here. */
+    var nowTimer = snap.timer && snap.timer.state;
+    if (wasTimer && nowTimer && nowTimer !== wasTimer) {
+      if (nowTimer === "running") playSound("start");
+      else if (nowTimer === "paused") playSound("pause");
+    }
     applyTheme(snap.theme, snap.palette);
     /* A preview inside the settings dialog wins until it is committed. */
     if (pendingAccent === null) applyAccent(snap.accentHue);
@@ -1659,6 +1911,7 @@
   }
 
   function send(command, args) {
+    if (command === "timer_reset") playSound("reset");
     return invoke(command, args)
       .then(render)
       .catch(function (err) {
@@ -1697,6 +1950,7 @@
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-selected", String(active));
     });
+    layoutChrome();
 
     if (!booting) playSound("tab");
     var fresh = document.querySelector('.view[data-view="' + name + '"]');
@@ -1725,7 +1979,91 @@
     tab.addEventListener("click", function () {
       setView(tab.dataset.view);
     });
+    /* The label below the glyph is the styled tooltip, so the native one - which
+       opens a second later and would cover it - is dropped the moment the
+       pointer or the keyboard arrives. The attribute stays in the markup for
+       anything that reads it before that; the name itself is the aria-label. */
+    tab.addEventListener("pointerenter", function () {
+      tab.removeAttribute("title");
+    });
+    tab.addEventListener("focus", function () {
+      tab.removeAttribute("title");
+    });
   });
+
+  /* The selected section is one chip that travels between the four glyphs, like
+     the settings list: the tabs stay transparent and only the glyph colour
+     changes, so the row never moves and nothing reflows. */
+  var tabsNav = document.getElementById("tabs");
+  var tabsPill = document.getElementById("tabs-pill");
+
+  function moveTabsPill() {
+    if (!tabsNav || !tabsPill) return;
+    var active = tabsNav.querySelector(".tab.active");
+    if (!active) return;
+    tabsPill.style.width = active.offsetWidth + "px";
+    tabsPill.style.height = active.offsetHeight + "px";
+    tabsPill.style.transform =
+      "translate(" + active.offsetLeft + "px, " + active.offsetTop + "px)";
+    tabsPill.style.opacity = "1";
+    /* It only starts animating once it sits on the right tab, so the first paint
+       never slides it in from the corner. */
+    if (!tabsNav.classList.contains("pill-ready")) {
+      requestAnimationFrame(function () {
+        tabsNav.classList.add("pill-ready");
+      });
+    }
+  }
+
+  /* The page column is measured, not guessed, and it belongs to the app rather
+     than to whichever section is showing: the clock has no title block and its
+     own scrollbar, and reading the column there moved both pills. So the number
+     is taken on a page that has a column (padding plus the reserved scrollbar
+     gutter) and reused for every section until the window is resized. */
+  var desktopNav = window.matchMedia("(min-width: 840px)");
+  var chromeColumn = { left: 0, right: 0, padLeft: 22, padRight: 22, gutter: 0 };
+
+  function columnOf(view) {
+    var styles = getComputedStyle(view);
+    var padLeft = parseFloat(styles.paddingLeft);
+    var padRight = parseFloat(styles.paddingRight);
+    if (isFinite(padLeft)) chromeColumn.padLeft = padLeft;
+    if (isFinite(padRight)) chromeColumn.padRight = padRight;
+    /* A scrolling page reserves this gutter even when it does not need it, so
+       the clock's column lines up with the pages that do. */
+    var gutter = view.offsetWidth - view.clientWidth;
+    if (gutter > 0) chromeColumn.gutter = gutter;
+    var width = (document.documentElement.clientWidth || window.innerWidth) - chromeColumn.gutter;
+    var inner = width - chromeColumn.padLeft - chromeColumn.padRight;
+    var column = Math.min(inner, 1400);
+    var slack = Math.max(0, (inner - column) / 2);
+    chromeColumn.left = Math.round(chromeColumn.padLeft + slack);
+    chromeColumn.right = Math.round(chromeColumn.padRight + slack + chromeColumn.gutter);
+  }
+
+  function alignChrome() {
+    var head = document.getElementById("chrome");
+    var view = document.querySelector(".view.active");
+    if (!head) return;
+    if (!desktopNav.matches || !view) {
+      head.style.paddingLeft = "";
+      head.style.paddingRight = "";
+      return;
+    }
+    if (view.querySelector(".view-head")) columnOf(view);
+    if (!chromeColumn.left && !chromeColumn.right) return;
+    head.style.paddingLeft = chromeColumn.left + "px";
+    head.style.paddingRight = chromeColumn.right + "px";
+  }
+
+  function layoutChrome() {
+    alignChrome();
+    moveTabsPill();
+  }
+
+  layoutChrome();
+  window.addEventListener("resize", layoutChrome);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutChrome);
 
   window.addEventListener("popstate", function (event) {
     /* A dialog or menu closing itself removes its own history entry with a
@@ -1762,101 +2100,137 @@
   /* ---- audio ------------------------------------------------------------ */
 
   var ctx = null;
+  /* One gain stage in front of the speakers carries the master volume, so the
+     slider moves every cue at once without touching each sound. */
+  var master = null;
+  var soundOn = true;
+  var soundVolume = 100;
+  var soundMuted = {};
+
+  function volumeLevel() {
+    var value = Math.max(0, Math.min(100, Number(soundVolume) || 0));
+    return (value / 100) * 0.9;
+  }
+
+  function applyVolume() {
+    if (!ctx || !master) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(volumeLevel(), ctx.currentTime, 0.02);
+  }
 
   function ensureAudio() {
     if (!ctx) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        master.gain.value = volumeLevel();
+        master.connect(ctx.destination);
       } catch (_) {
         ctx = null;
+        master = null;
       }
     }
     if (ctx && ctx.state === "suspended") ctx.resume();
+    primeSamples();
   }
 
-  function chime() {
-    if (!soundOn) return;
-    ensureAudio();
-    if (!ctx) return;
-    var t = ctx.currentTime;
-    [
-      [880, 0, 0.14],
-      [1175, 0.16, 0.22],
-    ].forEach(function (tone) {
-      var f = tone[0];
-      var s = tone[1];
-      var d = tone[2];
-      var o = ctx.createOscillator();
-      var g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0, t + s);
-      g.gain.linearRampToValueAtTime(0.25, t + s + 0.02);
-      g.gain.setValueAtTime(0.25, t + s + Math.max(0.02, d - 0.12));
-      g.gain.linearRampToValueAtTime(0, t + s + d);
-      o.connect(g).connect(ctx.destination);
-      o.start(t + s);
-      o.stop(t + s + d + 0.02);
+  /* The cues ship as recordings in `sfx/`. Each is decoded once and kept, so
+     the second play of a cue never touches the disk again. */
+  var SOUND_FILES = {
+    chime: "sfx/chime.wav",
+    complete: "sfx/complete.wav",
+    uncheck: "sfx/uncheck.wav",
+    start: "sfx/start.wav",
+    pause: "sfx/pause.wav",
+    reset: "sfx/reset.wav",
+    tab: "sfx/tab.wav",
+    dialog: "sfx/dialog.wav",
+    /* Its own recording: the Deleted clip belongs to removing something and
+       to the toast, so sharing it made every close sound like a delete. */
+    dismiss: "sfx/dismiss.wav",
+    confirm: "sfx/confirm.wav",
+    remove: "sfx/remove.wav",
+    open: "sfx/open.wav",
+    syncStart: "sfx/syncStart.wav",
+    syncTick: "sfx/syncTick.wav",
+    syncLink: "sfx/syncLink.wav",
+    syncDone: "sfx/syncDone.wav",
+    syncFail: "sfx/syncFail.wav"
+  };
+
+  /* The recordings peak around -14 dBFS, below the old synthesis, so one fixed
+     lift restores a normal level without disturbing the balance between cues. */
+  var SAMPLE_GAIN = 2;
+
+  var samples = {};
+
+  function decodeSample(data) {
+    return new Promise(function (resolve, reject) {
+      /* Older Android webviews only understand the callback form. */
+      var pending = ctx.decodeAudioData(data, resolve, reject);
+      if (pending && typeof pending.then === "function") pending.then(resolve, reject);
     });
   }
 
-  var soundOn = true;
-
-  function tone(freq, start, dur, gain, type) {
-    var at = ctx.currentTime + start;
-    var o = ctx.createOscillator();
-    var g = ctx.createGain();
-    o.type = type || "sine";
-    o.frequency.setValueAtTime(freq, at);
-    g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(gain, at + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    o.connect(g).connect(ctx.destination);
-    o.start(at);
-    o.stop(at + dur + 0.03);
+  function loadSample(name) {
+    if (samples[name]) return samples[name];
+    var path = SOUND_FILES[name];
+    if (!ctx || !path) return null;
+    samples[name] = fetch(path)
+      .then(function (res) {
+        if (!res.ok) throw new Error("sfx " + name + " responded " + res.status);
+        return res.arrayBuffer();
+      })
+      .then(decodeSample)
+      .catch(function (err) {
+        /* A cue that cannot load goes quiet; nothing else breaks. */
+        console.error("flip: sound " + name + " failed", err);
+        return null;
+      });
+    return samples[name];
   }
 
-  var SOUNDS = {
-    tab: function () {
-      tone(520, 0, 0.07, 0.04, "triangle");
-    },
-    complete: function () {
-      tone(784, 0, 0.09, 0.08, "sine");
-      tone(1174, 0.07, 0.17, 0.06, "sine");
-    },
-    uncheck: function () {
-      tone(392, 0, 0.1, 0.05, "sine");
-    },
-    syncStart: function () {
-      tone(560, 0, 0.06, 0.035, "sine");
-    },
-    syncDone: function () {
-      tone(660, 0, 0.08, 0.05, "sine");
-      tone(990, 0.07, 0.15, 0.03, "sine");
-    },
-    syncFail: function () {
-      tone(320, 0, 0.11, 0.035, "sine");
-      tone(240, 0.09, 0.16, 0.028, "sine");
-    },
-    syncTick: function () {
-      tone(600, 0, 0.045, 0.022, "sine");
-    },
-    syncLink: function () {
-      tone(520, 0, 0.07, 0.04, "sine");
-      tone(780, 0.06, 0.13, 0.03, "sine");
-    },
-    chime: chime
-  };
+  /* Warm every cue as soon as the context exists, so the first press of a
+     button is already decoded. */
+  var priming = false;
 
-  function playSound(name) {
-    if (!soundOn) return;
-    ensureAudio();
-    if (!ctx || !SOUNDS[name]) return;
+  function primeSamples() {
+    if (priming || !ctx) return;
+    priming = true;
+    Object.keys(SOUND_FILES).forEach(function (name) {
+      loadSample(name);
+    });
+  }
+
+  function playBuffer(buffer) {
+    if (!ctx || !buffer) return;
     try {
-      SOUNDS[name]();
+      var source = ctx.createBufferSource();
+      var level = ctx.createGain();
+      source.buffer = buffer;
+      level.gain.value = SAMPLE_GAIN;
+      source.connect(level).connect(master || ctx.destination);
+      source.start();
     } catch (_) {
       /* audio is a nicety; never let it break a click */
     }
+  }
+
+  function playSound(name, audition) {
+    /* `audition` is the Settings preview: it plays even when that one cue is
+       switched off, otherwise the preview would be a silent button. */
+    if (!soundOn || (!audition && soundMuted[name]) || !SOUND_FILES[name]) return;
+    ensureAudio();
+    if (!ctx) return;
+    var sample = loadSample(name);
+    if (sample) sample.then(playBuffer);
+    /* Tell the toast stack a cue just spoke for this moment. */
+    if (window.Board && window.Board.noteCue) window.Board.noteCue();
+  }
+
+  /* The focus timer's own bell, still reachable under its old name. */
+  function chime() {
+    playSound("chime");
   }
 
   window.FlipSound = {
@@ -1886,6 +2260,80 @@
     shakeTimeout = setTimeout(function () {
       timerGroup.classList.remove("shake");
     }, 300);
+  }
+
+  /* ---- streak celebration ---------------------------------------------- */
+
+  var streakMode = "full";
+  var lastStreak = null;
+  var streakCue = null;
+  var streakCueTimer = 0;
+
+  function closeStreakCue() {
+    clearTimeout(streakCueTimer);
+    if (!streakCue) return;
+    var cue = streakCue;
+    streakCue = null;
+    cue.classList.add("is-closing");
+    setTimeout(function () {
+      if (cue.parentNode) cue.parentNode.removeChild(cue);
+    }, 240);
+  }
+
+  /* The full cutscene: the flame lights, sparks fly and the count ticks up to
+     the new streak. It leaves on its own, or on the first click. */
+  function showStreakCue(count) {
+    closeStreakCue();
+    var cue = Board.el("div", "streak-cue");
+    cue.setAttribute("role", "status");
+    cue.setAttribute("aria-live", "polite");
+    var card = Board.el("div", "streak-card");
+    var flame = Board.el("span", "streak-flame");
+    flame.innerHTML =
+      '<svg viewBox="0 0 64 72" aria-hidden="true">' +
+      '<path class="flame-outer" d="M32 2c2 10 10 14 12 24 2 9-2 17-6 21 1-9-3-14-8-17 1 9-3 13-6 16-4-5-6-10-6-16 0-9 7-14 14-28z"/>' +
+      '<path class="flame-inner" d="M32 36c1 6 6 8 6 14a6 6 0 0 1-12 0c0-5 4-7 6-14z"/>' +
+      "</svg>";
+    var sparks = Board.el("span", "streak-sparks");
+    for (var i = 0; i < 10; i++) {
+      var spark = Board.el("i");
+      var angle = -Math.PI / 2 + (i - 4.5) * 0.32;
+      var distance = 52 + (i % 3) * 14;
+      spark.style.setProperty("--x", Math.round(Math.cos(angle) * distance) + "px");
+      spark.style.setProperty("--y", Math.round(Math.sin(angle) * distance) + "px");
+      spark.style.setProperty("--delay", (i % 4) * 40 + "ms");
+      sparks.appendChild(spark);
+    }
+    flame.appendChild(sparks);
+    card.appendChild(flame);
+    var number = Board.el("span", "streak-count", String(Math.max(1, count)));
+    card.appendChild(number);
+    card.appendChild(Board.el("span", "streak-label", "day streak"));
+    cue.appendChild(card);
+    cue.addEventListener("click", closeStreakCue);
+    document.body.appendChild(cue);
+    streakCue = cue;
+
+    var from = Math.max(0, count - 1);
+    var started = window.performance.now();
+    function tick(now) {
+      if (!streakCue) return;
+      var progress = Math.min(1, (now - started) / 420);
+      number.textContent = String(Math.round(from + (count - from) * progress));
+      if (progress < 1) window.requestAnimationFrame(tick);
+    }
+    window.requestAnimationFrame(tick);
+    streakCueTimer = setTimeout(closeStreakCue, 2800);
+  }
+
+  function celebrateStreak(count) {
+    if (streakMode === "none" || count < 1) return;
+    if (streakMode === "notification") {
+      var t = window.I18n ? window.I18n.t : function (s) { return s; };
+      window.Board.toast(String(count) + " " + t("day streak"), { duration: 4200 });
+      return;
+    }
+    showStreakCue(count);
   }
 
   /* ---- idle cursor hide ------------------------------------------------- */
@@ -2062,8 +2510,10 @@
     }
 
     var key = e.key.toLowerCase();
+    /* Reset is a timer action: on the clock face R would silently throw
+       away a countdown the user cannot see. */
     if (key === "r") {
-      if (!e.repeat) send("timer_reset");
+      if (!e.repeat && !modeIsClock) send("timer_reset");
       return;
     }
     if (key === "s") {
@@ -2094,8 +2544,10 @@
       });
       await listen("timer-finished", function () {
         pulse();
-        chime();
-        if (!lastSnapshot || !lastSnapshot.focusActive) {
+        playSound("chime");
+        /* A run that was logged as study time says so through the
+           focus-finished event, so only an uncounted run needs its own toast. */
+        if (!lastSnapshot || (!lastSnapshot.focusActive && !lastSnapshot.timerFocus)) {
           window.Board.toast("Time's up");
         }
       });
@@ -2156,6 +2608,8 @@
   if (currentView !== "dashboard") setView("dashboard", true);
   booting = false;
 
+
+
   /* The timetable and the task board are the two largest builds in the app and
      neither is on screen at launch, so they are built after the first frame.
      Board.on hands them whatever data has already arrived. */
@@ -2168,9 +2622,22 @@
     window.Tasks.init();
   }
 
+  /* A finished session reloads the board; when the run of study days grows,
+     that is the moment to celebrate it. */
+  window.Board.on(function (view) {
+    var streak = view && view.focus ? Number(view.focus.streak) || 0 : 0;
+    if (lastStreak === null) {
+      lastStreak = streak;
+      return;
+    }
+    if (streak > lastStreak) celebrateStreak(streak);
+    lastStreak = streak;
+  });
+
   window.Board.load().catch(function (err) {
     console.error("flip: get_board failed", err);
   });
+
 
   start();
 

@@ -31,6 +31,152 @@
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="m3.css">
   <link rel="stylesheet" href="refine.css">
+  <!-- The launch: a disc breaks in two and the halves fly out to become the
+       navigation pill and the tool bar. The sequence is timed from the first
+       painted frame, so it is never over before the window has drawn; Space
+       jumps straight to the end. A language change reloads in silence and must
+       not flash any of it. -->
+  <script>
+    (function () {
+      var doc = document.documentElement;
+      var quiet = false;
+      try {
+        quiet = sessionStorage.getItem("flip.quietBoot") === "1";
+      } catch (_) {}
+      if (quiet) doc.setAttribute("data-quiet-boot", "on");
+      else doc.className += " flip-booting";
+
+      var t1 = 0;
+      var t2 = 0;
+      var t3 = 0;
+      var t4 = 0;
+
+      function splash() {
+        return document.getElementById("boot-splash");
+      }
+
+      function fly(half, target) {
+        if (!half || !target) return;
+        /* Layout box, not the visual rect: the rect still carries the split
+           offset (and a running transition), so it would land the pill short.
+           offsetLeft/offsetWidth are the untransformed geometry. */
+        var box = half.offsetParent;
+        if (!box) return;
+        var origin = box.getBoundingClientRect();
+        var fromLeft = origin.left + half.offsetLeft;
+        var fromTop = origin.top + half.offsetTop;
+        var fromWidth = half.offsetWidth;
+        var fromHeight = half.offsetHeight;
+        var to = target.getBoundingClientRect();
+        if (!fromWidth || !fromHeight || !to.width) return;
+        /* Morph the box instead of scaling it: a non-uniform scale also
+           stretches the rounded ends into skewed ovals while it flies, so the
+           pill has to be grown in layout space to keep its corners perfect. */
+        half.style.width = fromWidth + "px";
+        half.style.height = fromHeight + "px";
+        void half.offsetWidth; /* flush, so the move starts from here */
+        half.style.width = to.width + "px";
+        half.style.height = to.height + "px";
+        half.style.transform =
+          "translate(" + (to.left - fromLeft) + "px," + (to.top - fromTop) + "px)";
+      }
+
+      /* The end of the show: the app fades in under the two pills and they step
+         aside. `quick` is the Space key, which skips the whole thing. */
+      function finish(quick) {
+        var node = splash();
+        if (!node) return;
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+        clearTimeout(t4);
+        /* Space skips everything, including the arrival sound: no dashboard
+           fade, no cue, just the app already there. */
+        if (quick) {
+          doc.classList.remove("flip-booting");
+          if (node.parentNode) node.parentNode.removeChild(node);
+          return;
+        }
+        doc.classList.add("boot-reveal");
+        doc.classList.remove("flip-booting");
+        if (window.FlipSound) {
+          try {
+            window.FlipSound.play("open");
+          } catch (_) {}
+        }
+        t4 = setTimeout(function () {
+          doc.classList.remove("boot-reveal");
+        }, 1500);
+        node.className += " is-landing";
+        t3 = setTimeout(function () {
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }, 340);
+      }
+
+      function run() {
+        var node = splash();
+        if (!node) {
+          doc.classList.remove("flip-booting");
+          return;
+        }
+        /* The disc has to be the exact surface of the bars it becomes, and the
+           header resolves --panel a shade apart from the page, so take the
+           colour from the real navigation pill rather than guessing it. */
+        var nav = document.getElementById("tabs");
+        if (nav) {
+          var face = getComputedStyle(nav).backgroundColor;
+          var blobs = node.querySelectorAll(".boot-blob");
+          for (var i = 0; i < blobs.length; i++) {
+            if (face && face !== "rgba(0, 0, 0, 0)") blobs[i].style.backgroundColor = face;
+          }
+        }
+        var left = node.querySelector(".boot-half-left");
+        var right = node.querySelector(".boot-half-right");
+        /* One continuous move: the disc swells, then opens on its vertical seam
+           and both halves leave on the same push, straight to their bars. There
+           is no beat between the break and the flight, so nothing sits parked. */
+        node.className += " is-armed";
+        t1 = setTimeout(function () {
+          if (!node.parentNode) return;
+          node.className += " is-splitting is-flying";
+          fly(left, document.getElementById("tabs"));
+          fly(right, document.querySelector(".chrome-right"));
+          t2 = setTimeout(function () {
+            if (!node.parentNode) return;
+            /* The header and the dashboard arrive underneath. */
+            finish(false);
+          }, 820);
+        }, 380);
+      }
+
+      function start() {
+        if (quiet) {
+          var cover = splash();
+          if (cover && cover.parentNode) cover.parentNode.removeChild(cover);
+          doc.classList.remove("flip-booting");
+          return;
+        }
+        /* Two frames: the first paints the cover, the second starts the show. */
+        requestAnimationFrame(function () {
+          requestAnimationFrame(run);
+        });
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key !== " " && event.key !== "Spacebar" && event.code !== "Space") return;
+        if (!splash()) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        finish(true);
+      }, true);
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+      } else {
+        start();
+      }
+    })();
+  </script>
   <script src="i18n.js" defer></script>
   <script src="flipcard.js" defer></script>
   <script src="board.js" defer></script>
@@ -48,22 +194,30 @@
   <script src="m3.js" defer></script>
 </head>
 <body>
+  <div id="boot-splash" class="boot-splash" aria-hidden="true">
+    <div class="boot-orb">
+      <i class="boot-half boot-half-left"><b class="boot-blob"></b></i>
+      <i class="boot-half boot-half-right"><b class="boot-blob"></b></i>
+    </div>
+  </div>
+
   <header id="chrome" data-tauri-drag-region>
     <span class="brand">Flip</span>
     <nav id="tabs" role="tablist" aria-label="Sections">
-      <button class="tab active" role="tab" id="tab-dashboard" data-view="dashboard" aria-selected="true" aria-controls="dashboard">
+      <span id="tabs-pill" aria-hidden="true"></span>
+      <button class="tab active" role="tab" id="tab-dashboard" data-view="dashboard" aria-selected="true" aria-controls="dashboard" aria-label="Dashboard" title="Dashboard">
         <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.6 12 4l8 6.6V19a1.4 1.4 0 0 1-1.4 1.4h-4.1v-5.7H9.5v5.7H5.4A1.4 1.4 0 0 1 4 19z"></path></svg>
         <span class="tab-label">Dashboard</span>
       </button>
-      <button class="tab" role="tab" id="tab-timer" data-view="timer" aria-selected="false" aria-controls="stage">
+      <button class="tab" role="tab" id="tab-timer" data-view="timer" aria-selected="false" aria-controls="stage" aria-label="Timer" title="Timer">
         <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"></circle><path d="M12 10v4l2.6 1.6M9.5 2.5h5M12 2.5V6"></path></svg>
         <span class="tab-label">Timer</span>
       </button>
-      <button class="tab" role="tab" id="tab-timetable" data-view="timetable" aria-selected="false" aria-controls="timetable">
+      <button class="tab" role="tab" id="tab-timetable" data-view="timetable" aria-selected="false" aria-controls="timetable" aria-label="Timetable" title="Timetable">
         <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="3"></rect><path d="M3.5 10.2h17M8 3.5v4M16 3.5v4"></path></svg>
         <span class="tab-label">Timetable</span>
       </button>
-      <button class="tab" role="tab" id="tab-tasks" data-view="tasks" aria-selected="false" aria-controls="tasks">
+      <button class="tab" role="tab" id="tab-tasks" data-view="tasks" aria-selected="false" aria-controls="tasks" aria-label="Tasks" title="Tasks">
         <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5l2 2 3.5-3.5M4.5 16.5l2 2 3.5-3.5"></path><path d="M12.5 7.5H20M12.5 17.5H20"></path></svg>
         <span class="tab-label">Tasks</span>
       </button>
@@ -242,6 +396,6 @@
 
   <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
   <div id="modal-root"></div>
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="toast-stack" class="toast-stack" role="status" aria-live="polite"></div>
 </body>
 </html>
