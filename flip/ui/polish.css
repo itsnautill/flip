@@ -1488,9 +1488,68 @@ html[data-motion="snappy"] .toast-progress i {
 
 /* ------------------------------------------------------------------ setup */
 
+/* The wizard is a fixed card: the step scrolls inside it and the buttons stay
+   pinned to the bottom edge, so a tall step (three theme cards, the accent row)
+   can never push Back and Continue out of the panel. */
 .setup-overlay .modal.setup {
   width: min(680px, 92vw);
   max-width: min(680px, 92vw);
+  max-height: min(92vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.setup-overlay .modal.setup .setup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 26px 26px 6px;
+}
+
+.setup-overlay .modal.setup .setup-foot {
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 14px 26px 18px;
+  border-top: 1px solid var(--line);
+}
+
+/* A label sits above its control, and both start on the same left edge as the
+   title and the theme cards. */
+.setup-step .setup-control {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.setup-step .theme-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 6px 0 2px;
+}
+
+.setup-step .theme-card {
+  min-width: 0;
+}
+
+.setup-step .theme-preview {
+  overflow: hidden;
+}
+
+.setup-step .accent-swatches {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 620px) {
+  .setup-step .theme-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .setup-step .setup-kicker {
@@ -2587,6 +2646,22 @@ input[type="tel"]:focus-visible {
 
 .theme-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Appearance is one short column now: smaller theme cards, no notes under
+   them, and the hue slider carrying the whole accent section. */
+.modal-settings .theme-grid-custom {
+  gap: 8px;
+  margin: 2px 0 4px;
+}
+
+.modal-settings .theme-card {
+  gap: 6px;
+  padding: 8px;
+}
+
+.modal-settings .theme-card .theme-preview {
+  padding: 6px;
 }
 
 .hue-field {
@@ -5009,7 +5084,9 @@ html.flip-booting #app {
   transition: background-color .55s ease;
 }
 
-/* A pool of the accent light on the empty stage, breathing while it waits. */
+/* A pool of the accent light on the empty stage, breathing while it waits.
+   The animation only scales it, so opacity stays with the transitions below
+   and the glow can dim into the page's own glow instead of cutting out. */
 .boot-splash::before {
   content: "";
   position: absolute;
@@ -5018,8 +5095,9 @@ html.flip-booting #app {
   bottom: 0;
   left: 0;
   background: radial-gradient(38% 34% at 50% 50%, var(--wash-a), transparent 70%);
+  opacity: .9;
   animation: boot-bloom 3.4s ease-in-out infinite;
-  transition: opacity .5s ease;
+  transition: opacity .6s cubic-bezier(.4, 0, .2, 1);
 }
 
 /* Take-off: the stage clears, so the halves cross the app's own backdrop. */
@@ -5027,10 +5105,30 @@ html.flip-booting #app {
   background-color: transparent;
 }
 
+/* Off the stage: the waiting breath stops and the bloom dims, keeping a
+   little light under the halves while they travel. */
+.boot-splash.is-splitting::before {
+  animation-play-state: paused;
+  opacity: .5;
+}
+
 .boot-splash.is-flying::before {
-  /* The bloom is an animation, and an animation outranks a plain opacity
-     declaration, so it has to stop before the stage can go clear. */
-  animation: none;
+  opacity: .38;
+}
+
+/* Landed: the stage glow leaves over the same beat the page glow arrives. */
+.boot-splash.is-landing::before {
+  opacity: 0;
+  transition: opacity .7s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* The dashboard's own glow waits for the handover, so the two never swap in a
+   single frame. */
+body::before {
+  transition: opacity .7s cubic-bezier(.4, 0, .2, 1);
+}
+
+html.flip-booting body::before {
   opacity: 0;
 }
 
@@ -5059,10 +5157,12 @@ html.flip-booting #app {
   transform-origin: 0 0;
   /* The box itself morphs to the bar, so its radius is never scaled
      non-uniformly: the rounded ends stay true circles all the way. */
+  /* A long, flattening ease: quick off the mark, then it settles into the bar
+     instead of arriving at speed. */
   transition:
-    transform .82s cubic-bezier(.4, 0, .16, 1),
-    width .82s cubic-bezier(.4, 0, .16, 1),
-    height .82s cubic-bezier(.4, 0, .16, 1),
+    transform .88s cubic-bezier(.18, .92, .22, 1),
+    width .88s cubic-bezier(.18, .92, .22, 1),
+    height .88s cubic-bezier(.18, .92, .22, 1),
     border-radius .42s ease,
     opacity .24s ease;
 }
@@ -5107,7 +5207,7 @@ html.flip-booting #app {
 }
 
 .boot-splash.is-flying .boot-blob {
-  animation: boot-goo .82s cubic-bezier(.4, 0, .16, 1) both;
+  animation: boot-goo .88s cubic-bezier(.18, .92, .22, 1) both;
   box-shadow:
     0 16px 30px -18px rgba(0, 0, 0, .5),
     inset 0 0 0 1px rgba(255, 255, 255, .06);
@@ -5164,12 +5264,10 @@ html.boot-reveal #dash-grid > .widget:nth-child(n + 8) {
 @keyframes boot-bloom {
   0%,
   100% {
-    opacity: .75;
     transform: scale(1);
   }
 
   50% {
-    opacity: 1;
     transform: scale(1.12);
   }
 }

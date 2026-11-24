@@ -42,6 +42,8 @@ pub struct Snapshot {
     pub motion: String,
     /// "full", "notification" or "none".
     pub streak_effects: String,
+    /// Whether the window plays its opening animation.
+    pub startup_anim: bool,
     /// Bigger targets and spacing for touch screens.
     pub touch: bool,
     /// Interface zoom in percent; the window applies it.
@@ -170,6 +172,7 @@ impl Core {
             onboarded: self.settings.onboarded,
             motion: self.settings.motion.clone(),
             streak_effects: self.settings.streak_effects.clone(),
+            startup_anim: self.settings.startup_anim,
             touch: self.settings.touch,
             zoom: self.settings.zoom,
             wash: self.settings.wash,

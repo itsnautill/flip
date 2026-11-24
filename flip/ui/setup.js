@@ -12,8 +12,6 @@
   var invoke =
     window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core.invoke : null;
 
-  var ACCENTS = ["#B4622D", "#B25C6B", "#4F7A5B", "#3F6E8C", "#6B5CA5", "#8A6A3B"];
-
   /* The wizard offers the three modes; the custom palettes live in Settings. */
   var THEMES = [
     ["system", "System"],
@@ -214,6 +212,11 @@
       card.appendChild(name);
       card.addEventListener("click", function () {
         paint(option[0]);
+        /* Repaint before the round trip: the wizard is the first thing anyone
+           sees, and waiting on the backend made a card look dead. */
+        if (window.FlipThemes) {
+          window.FlipThemes.paint(option[0], window.FlipThemes.saved()[1]);
+        }
         invoke("set_theme", { theme: option[0] })
           .then(apply)
           .catch(function (err) {
@@ -239,30 +242,38 @@
 
     wrap.appendChild(themeGrid());
 
+    /* The same one control Settings uses: a hue slider, no colour buttons. */
     var accentRow = el("div", "setup-control");
     accentRow.appendChild(el("span", "setup-label", "Accent"));
-    var swatches = el("div", "accent-swatches");
-    swatches.setAttribute("role", "group");
-    swatches.setAttribute("aria-label", "Accent colour");
-    ACCENTS.forEach(function (hex) {
-      var button = el("button", "accent-swatch");
-      button.type = "button";
-      button.style.setProperty("--sw", hex);
-      button.setAttribute("aria-label", "Accent " + hex);
-      button.addEventListener("click", function () {
-        Array.prototype.forEach.call(swatches.children, function (node) {
-          node.setAttribute("aria-pressed", String(node === button));
-        });
-        invoke("set_accent", { accent: hex })
-          .then(apply)
-          .catch(function (err) {
-            console.error("flip: set_accent failed", err);
-          });
+    var slider = null;
+    if (window.FlipColor && window.FlipColor.hueSlider) {
+      slider = window.FlipColor.hueSlider({
+        value: 258,
+        label: "Accent",
+        accent: true,
+        onChange: function (hue) {
+          /* Painted now, saved when the drag settles. */
+          window.FlipColor.applyAccent(hue);
+        },
+        onCommit: function (hue) {
+          /* A palette owns the accent, so it lets go before the hue lands. */
+          invoke("set_palette", { palette: "" })
+            .then(function () {
+              return invoke("set_accent_hue", { hue: hue });
+            })
+            .then(apply)
+            .catch(function (err) {
+              console.error("flip: set_accent_hue failed", err);
+            });
+        },
       });
-      swatches.appendChild(button);
-    });
-    accentRow.appendChild(swatches);
+      accentRow.appendChild(slider.element);
+    }
     wrap.appendChild(accentRow);
+
+    snapshot().then(function (snap) {
+      if (slider && snap && typeof snap.accentHue === "number") slider.set(snap.accentHue);
+    });
 
     return wrap;
   }

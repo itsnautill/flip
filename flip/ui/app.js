@@ -643,7 +643,6 @@
 
   function openSettings(startPane, silent) {
     var snap = lastSnapshot || {};
-    var current = String(snap.accent || "#B4622D").toUpperCase();
     var isTwelve = Boolean(snap.clock && snap.clock.is12h);
     var currentLang = String(snap.language || "en");
     var theme =
@@ -760,7 +759,6 @@
       if (hue !== null) {
         accentHue = hue;
         if (slider) slider.set(hue);
-        markPresets(hue);
         pendingAccent = null;
         applyAccent(hue);
       }
@@ -813,10 +811,6 @@
       button.title = mode[2];
     });
     appearancePane.appendChild(modeRow);
-    appearancePane.appendChild(
-      Board.el("p", "mode-note", "Every theme below follows this mode.")
-    );
-
     appearancePane.appendChild(Board.el("h3", "", "Themes"));
 
     var grid = Board.el("div", "theme-grid theme-grid-custom");
@@ -840,7 +834,6 @@
       name.appendChild(Board.el("span", "theme-label", choice.name));
       name.appendChild(Board.el("span", "theme-check"));
       card.appendChild(name);
-      card.appendChild(Board.el("span", "theme-note", choice.note));
       card.addEventListener("click", function () {
         pickTheme(theme, choice.id);
       });
@@ -873,42 +866,10 @@
 
     appearancePane.appendChild(Board.el("h3", "", "Accent"));
 
+    /* One slider, no colour buttons: it reaches every accent there is and
+       keeps the Appearance page a single short column. */
     var accentRow = Board.el("div", "setting-row column");
-    var presetRow = Board.el("div", "accent-presets");
-    presetRow.setAttribute("role", "group");
-    presetRow.setAttribute("aria-label", "Accent colour");
-    var accentHue = window.FlipColor ? Number(snap.accentHue) || 51 : 51;
-    var presetButtons = [];
-
-    function markPresets(hue) {
-      presetButtons.forEach(function (entry) {
-        entry.button.setAttribute("aria-pressed", String(Math.round(hue) === entry.hue));
-      });
-    }
-
-    if (window.FlipColor) {
-      window.FlipColor.presets.forEach(function (preset) {
-        var swatch = window.FlipColor.subjectColorFromHue(preset.hue);
-        var button = Board.el("button", "accent-swatch");
-        button.type = "button";
-        button.style.setProperty("--sw", swatch.border);
-        button.setAttribute("aria-label", preset.name);
-        button.title = preset.name;
-        button.setAttribute("aria-pressed", String(Math.round(accentHue) === preset.hue));
-        button.addEventListener("click", function () {
-          releasePalette();
-          accentHue = preset.hue;
-          markPresets(accentHue);
-          slider.set(accentHue);
-          pendingAccent = null;
-          applyAccent(accentHue);
-          commitAccent(accentHue);
-        });
-        presetRow.appendChild(button);
-        presetButtons.push({ button: button, hue: preset.hue });
-      });
-    }
-    accentRow.appendChild(presetRow);
+    var accentHue = window.FlipColor ? Number(snap.accentHue) || 258 : 258;
 
     var slider = window.FlipColor
       ? window.FlipColor.hueSlider({
@@ -918,7 +879,6 @@
           onChange: function (hue) {
             releasePalette();
             accentHue = hue;
-            markPresets(hue);
             /* Live paint without touching the disk until the drag settles. */
             pendingAccent = hue;
             applyAccent(hue);
@@ -926,7 +886,6 @@
           onCommit: function (hue) {
             releasePalette();
             accentHue = hue;
-            markPresets(hue);
             commitAccent(hue);
           },
         })
@@ -1204,6 +1163,25 @@
               });
           }
         )
+      )
+    );
+
+    generalPane.appendChild(
+      settingRow(
+        "Startup animation",
+        switchControl("Startup animation", snap.startupAnim !== false, function (on) {
+          try {
+            window.localStorage.setItem("flip.startupAnim", on ? "on" : "off");
+          } catch (_) {
+            /* the backend keeps the choice even if storage refuses it */
+          }
+          invoke("set_startup_anim", { enabled: on })
+            .then(render)
+            .catch(function (err) {
+              console.error("flip: set_startup_anim failed", err);
+            });
+        }),
+        "Plays the opening animation when Flip starts."
       )
     );
 
@@ -1856,6 +1834,13 @@
     streakMode = String(snap.streakEffects || "full");
     applyMotion(snap.motion);
     document.documentElement.setAttribute("data-wash", snap.wash === true ? "on" : "off");
+    /* The opening animation starts before any snapshot arrives, so the choice
+       is mirrored where the boot script can read it synchronously. */
+    try {
+      window.localStorage.setItem("flip.startupAnim", snap.startupAnim === false ? "off" : "on");
+    } catch (_) {
+      /* a refused store only means the next launch keeps the default */
+    }
 
     if (window.FlipTelemetry) window.FlipTelemetry.send(snap);
     lastSnapshot = snap;
@@ -2155,7 +2140,11 @@
     syncTick: "sfx/syncTick.wav",
     syncLink: "sfx/syncLink.wav",
     syncDone: "sfx/syncDone.wav",
-    syncFail: "sfx/syncFail.wav"
+    syncFail: "sfx/syncFail.wav",
+    /* The two the opening animation adds: a soft pass as the halves leave and
+       a tiny settle when they land. Both are recorded quiet on purpose. */
+    launch: "sfx/launch.wav",
+    snap: "sfx/snap.wav"
   };
 
   /* The recordings peak around -14 dBFS, below the old synthesis, so one fixed

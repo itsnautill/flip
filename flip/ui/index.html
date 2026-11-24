@@ -43,6 +43,12 @@
       try {
         quiet = sessionStorage.getItem("flip.quietBoot") === "1";
       } catch (_) {}
+      /* Settings > General can switch the opening animation off; the choice is
+         mirrored in localStorage because the show starts before any IPC. */
+      var animOff = false;
+      try {
+        animOff = localStorage.getItem("flip.startupAnim") === "off";
+      } catch (_) {}
       if (quiet) doc.setAttribute("data-quiet-boot", "on");
       else doc.className += " flip-booting";
 
@@ -108,9 +114,16 @@
           doc.classList.remove("boot-reveal");
         }, 1500);
         node.className += " is-landing";
+        /* The settle, then the two glows finish trading places: the stage's
+           bloom is gone by the time the cover leaves. */
+        if (window.FlipSound) {
+          try {
+            window.FlipSound.play("snap");
+          } catch (_) {}
+        }
         t3 = setTimeout(function () {
           if (node.parentNode) node.parentNode.removeChild(node);
-        }, 340);
+        }, 760);
       }
 
       function run() {
@@ -139,6 +152,12 @@
         t1 = setTimeout(function () {
           if (!node.parentNode) return;
           node.className += " is-splitting is-flying";
+          /* Too quiet to notice on purpose: a short pass as the halves leave. */
+          if (window.FlipSound) {
+            try {
+              window.FlipSound.play("launch");
+            } catch (_) {}
+          }
           fly(left, document.getElementById("tabs"));
           fly(right, document.querySelector(".chrome-right"));
           t2 = setTimeout(function () {
@@ -150,7 +169,7 @@
       }
 
       function start() {
-        if (quiet) {
+        if (quiet || animOff) {
           var cover = splash();
           if (cover && cover.parentNode) cover.parentNode.removeChild(cover);
           doc.classList.remove("flip-booting");

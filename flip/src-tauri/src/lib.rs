@@ -273,6 +273,7 @@ pub fn run() {
             commands::set_sound_cue,
             commands::set_all_sound_cues,
             commands::set_streak_effects,
+            commands::set_startup_anim,
             commands::set_onboarded,
             commands::set_motion,
             commands::set_telemetry,

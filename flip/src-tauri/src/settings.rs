@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::board::{hue_from_hex, normalise_hue};
 
-/// The hue the app ships with: the warm rust Flip has always used.
-pub const DEFAULT_ACCENT_HUE: f64 = 51.0;
+/// The hue the app ships with: blue, the one 1.3.6 opens on.
+pub const DEFAULT_ACCENT_HUE: f64 = 258.0;
 
 /// Bumped when the settings shape changes. Version 3 stores the accent as a
 /// hue only; files that still carry an API key are read but never written back
@@ -160,6 +160,9 @@ pub struct Settings {
     /// session. On by default; the Set timer dialog can turn it off.
     #[serde(default = "default_true")]
     pub timer_focus: bool,
+    /// The opening animation plays on launch unless this is off.
+    #[serde(default = "default_true")]
+    pub startup_anim: bool,
     pub dashboard: Dashboard,
     /// This install's own id, stamped on every board change so a sync can tell
     /// which copy is the newer one.
@@ -204,6 +207,7 @@ impl Default for Settings {
             accent: String::new(),
             focus_secs: DEFAULT_FOCUS_SECS,
             timer_focus: true,
+            startup_anim: true,
             dashboard: Dashboard::default(),
             device_id: String::new(),
             sync_code: String::new(),

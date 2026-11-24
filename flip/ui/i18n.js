@@ -165,6 +165,8 @@
     "Start a focus session": "Bắt đầu phiên tập trung",
     "Edit task details": "Sửa chi tiết việc",
     "Close": "Đóng",
+    "Startup animation": "Hiệu ứng khởi động",
+    "Plays the opening animation when Flip starts.": "Phát hiệu ứng mở đầu khi Flip khởi động.",
     "Removed from the week": "Đã bỏ khỏi tuần",
     "Day": "Ngày",
     "Schedule task": "Xếp việc",

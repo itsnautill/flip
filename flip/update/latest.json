@@ -1,5 +1,5 @@
 {
-  "version": "1.3.5",
-  "notes": "Adds sound effects across the app and a new opening animation. Every action has its own cue, with a volume slider, a switch per sound, preview buttons and select/deselect all in Settings > Sounds. On launch the disc splits into two halves that fly into the tab pill and the toolbar while the interface fades in. Settings now closes with its Done button alone, which plays the dismissal sound. Streak effects can be a cutscene, a toast or off, finished countdowns can be added to the study log, toasts stack instead of covering each other, the gradient background switch keeps its state, and R no longer resets the timer while a dialog is open.",
-  "url": "https://github.com/itsnautill/flip/releases/download/v1.3.5/Flip_1.3.5_x64-setup.exe"
+  "version": "1.3.6",
+  "notes": "Fixes the first-run setup: the theme cards paint as you pick them, the accent is a hue slider that works and saves, and the wizard's footer stays inside its card on every step. Blue is the accent Flip opens on. The Appearance page is shorter: no colour swatches, no notes under the theme cards. The opening animation trades its glow with the dashboard's instead of snapping, moves on a softer curve, and adds two very quiet sounds as the disc leaves and settles. The unused iOS icon set is gone.",
+  "url": "https://github.com/itsnautill/flip/releases/download/v1.3.6/Flip_1.3.6_x64-setup.exe"
 }

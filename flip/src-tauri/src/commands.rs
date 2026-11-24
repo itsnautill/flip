@@ -317,6 +317,22 @@ pub fn set_motion(core: State<'_, SharedCore>, motion: String) -> Snapshot {
     c.snapshot(Instant::now())
 }
 
+/// The opening animation on launch; on unless the user turns it off.
+#[tauri::command]
+pub fn set_startup_anim(core: State<'_, SharedCore>, enabled: bool) -> Snapshot {
+    let mut c = lock(core.inner());
+    if c.settings.startup_anim != enabled {
+        c.settings.startup_anim = enabled;
+        let updated = c.settings.clone();
+        let snapshot = c.snapshot(Instant::now());
+        let path = c.settings_path.clone();
+        drop(c);
+        settings::save(&path, &updated);
+        return snapshot;
+    }
+    c.snapshot(Instant::now())
+}
+
 #[tauri::command]
 pub fn set_hour_format(core: State<'_, SharedCore>, use12h: bool) -> Snapshot {
     let mut c = lock(core.inner());
